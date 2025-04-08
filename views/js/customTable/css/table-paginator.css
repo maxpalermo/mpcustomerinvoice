@@ -1,0 +1,233 @@
+/* Stili specifici per il paginator e variabili CSS */
+:host {
+    display: block; /* o inline-block se si preferisce */
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    font-size: 14px;
+
+    /* Variabili Default (tema chiaro/moderno) */
+    --paginator-bg-color: #f8f9fa; /* Sfondo container */
+    --paginator-padding: 10px 15px;
+    --paginator-border-top: 1px solid #e0e0e0;
+
+    --button-bg: #ffffff;
+    --button-text: #007bff;
+    --button-border: 1px solid #dee2e6;
+    --button-hover-bg: #e9ecef;
+    --button-hover-border: #adb5bd;
+    --button-active-bg: #007bff;
+    --button-active-text: #ffffff;
+    --button-active-border: #007bff;
+    --button-disabled-bg: #f8f9fa;
+    --button-disabled-text: #adb5bd;
+    --button-disabled-border: #dee2e6;
+    --button-size: 36px;
+    --button-margin: 2px;
+    --button-radius: 4px;
+    --ellipsis-color: #6c757d;
+
+    /* Variabili usate dal selettore (default tema chiaro) */
+    --button-bg: #ffffff;
+    --button-text: #007bff;
+    --button-border: 1px solid #dee2e6;
+    --button-hover-border: #adb5bd;
+    --button-active-border: #007bff;
+    --button-disabled-bg: #f8f9fa;
+    --button-radius: 4px;
+    --button-size: 36px; /* Altezza di riferimento */
+    --table-text-color: #333; /* Colore testo generale */
+    --ellipsis-color: #6c757d; /* Colore testo secondario/label */
+
+    /* Variabili specifiche per Select (possono ereditare da bottoni) */
+    --select-bg: var(--button-bg);
+    --select-text: var(--table-text-color, #333);
+    --select-border: var(--button-border);
+    --select-radius: var(--button-radius);
+    --select-padding: 0 30px 0 10px; /* dx: spazio freccia, sx: testo */
+    --select-arrow-color: var(--button-text); /* Colore freccia default */
+    --select-focus-border: var(--button-active-border);
+    --select-height: var(--button-size);
+}
+
+.paginator-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: var(--paginator-padding);
+    background-color: var(--paginator-bg-color);
+    border-top: var(--paginator-border-top);
+}
+
+/* Stili bottoni ed ellipsis (identici a prima) */
+button,
+span {
+    /* ... (stessi stili di prima per bottoni e span.ellipsis) ... */
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 var(--button-margin);
+    min-width: var(--button-size);
+    height: var(--button-size);
+    padding: 0 10px;
+    border: var(--button-border);
+    border-radius: var(--button-radius);
+    background-color: var(--button-bg);
+    color: var(--button-text);
+    font-size: inherit;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+button:hover {
+    background-color: var(--button-hover-bg);
+    border-color: var(--button-hover-border);
+}
+button.active {
+    background-color: var(--button-active-bg);
+    color: var(--button-active-text);
+    border-color: var(--button-active-border);
+    font-weight: 600;
+    cursor: default;
+    box-shadow: none;
+}
+button:disabled,
+button.disabled {
+    background-color: var(--button-disabled-bg);
+    color: var(--button-disabled-text);
+    border-color: var(--button-disabled-border);
+    cursor: not-allowed;
+    box-shadow: none;
+    opacity: 0.7;
+}
+span.ellipsis {
+    border: none;
+    background: none;
+    box-shadow: none;
+    cursor: default;
+    padding: 0 5px;
+    min-width: auto;
+    color: var(--ellipsis-color);
+}
+
+/* Contenitore per label e select */
+.items-per-page-selector {
+    display: inline-flex; /* Mette label e select in linea */
+    align-items: center; /* Allinea verticalmente */
+    gap: 6px; /* Spazio tra label e select */
+    font-size: calc(var(--table-font-size, 14px) * 0.9); /* Testo leggermente più piccolo */
+    color: var(--ellipsis-color); /* Usa colore tenue per label */
+    margin: 5px 0; /* Aggiungi margine verticale se necessario in modalità wrap */
+}
+
+.items-per-page-selector label {
+    white-space: nowrap; /* Evita che la label vada a capo */
+    cursor: default; /* Cursore standard per la label */
+}
+
+/* Stile base del select moderno */
+.items-per-page-selector select {
+    /* --- Reset e Aspetto Base --- */
+    appearance: none; /* Rimuovi stile browser di default */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    box-sizing: border-box; /* Padding e border inclusi nella dimensione */
+    outline: none; /* Rimuovi outline di default al focus */
+
+    /* --- Dimensioni e Spaziatura --- */
+    height: var(--select-height);
+    padding: var(--select-padding);
+    line-height: calc(var(--select-height) - 2px); /* Centra testo verticalmente (approx) */
+
+    /* --- Colori e Font --- */
+    background-color: var(--select-bg);
+    color: var(--select-text);
+    font-size: inherit; /* Eredita da .items-per-page-selector */
+    font-family: inherit; /* Eredita font principale */
+
+    /* --- Bordi --- */
+    border: var(--select-border);
+    border-radius: var(--select-radius);
+
+    /* --- Freccia Custom (SVG come background) --- */
+    /* L'SVG usa 'currentColor' per ereditare il colore del testo (--select-text o --select-arrow-color se impostata) */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='currentColor' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center; /* Posiziona freccia a destra, centrata */
+    background-size: 10px 10px; /* Dimensione dell'icona freccia */
+
+    /* --- Interazioni --- */
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Stato Hover */
+.items-per-page-selector select:hover {
+    border-color: var(--button-hover-border); /* Usa stesso colore hover dei bottoni */
+}
+
+/* Stato Focus */
+.items-per-page-selector select:focus {
+    border-color: var(--select-focus-border); /* Colore bordo focus */
+    /* Ombra focus stile Bootstrap (opzionale ma carina) */
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Stato Disabilitato */
+.items-per-page-selector select:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+    background-color: var(--button-disabled-bg); /* Usa sfondo disabilitato */
+    color: var(--button-disabled-text); /* Usa colore testo disabilitato */
+}
+
+/* ----- Tema Scuro ----- */
+:host([theme="dark"]) {
+    --paginator-bg-color: #34495e;
+    --paginator-border-top: 1px solid #46627f;
+
+    --button-bg: #3a5068;
+    --button-text: #ecf0f1;
+    --button-border: 1px solid #46627f;
+    --button-hover-bg: #46627f;
+    --button-hover-border: #567a9a;
+    --button-active-bg: #3498db;
+    --button-active-text: #ffffff;
+    --button-active-border: #3498db;
+    --button-disabled-bg: #2c3e50;
+    --button-disabled-text: #566a7f;
+    --button-disabled-border: #34495e;
+    --ellipsis-color: #95a5a6;
+
+    /* Assicurati che le variabili base del tema scuro siano definite qui o ereditate */
+    --select-bg: var(--button-bg, #3a5068);
+    --select-text: var(--button-text, #ecf0f1);
+    --select-border: var(--button-border, 1px solid #46627f);
+    --select-focus-border: var(--button-active-border, #3498db);
+    --ellipsis-color: #95a5a6; /* Colore label nel tema scuro */
+    /* Il colore della freccia SVG dovrebbe aggiornarsi automaticamente
+       perché usa 'currentColor' e --select-text viene aggiornato. */
+}
+
+/* ----- Tema Minimal ----- */
+:host([theme="minimal"]) {
+    --paginator-bg-color: transparent;
+    --paginator-border-top: 1px dashed #ccc;
+    --button-bg: transparent;
+    --button-text: #007bff;
+    --button-border: none;
+    --button-hover-bg: #efefef;
+    --button-active-bg: #007bff;
+    --button-active-text: #ffffff;
+    --button-disabled-text: #ccc;
+    --button-disabled-bg: transparent;
+    --button-radius: 50%; /* Cerchi */
+    box-shadow: none;
+    padding: 10px 0;
+
+    /* Assicurati che le variabili base del tema minimal siano definite */
+    --select-bg: transparent;
+    --select-text: #555;
+    --select-border: 1px solid #ccc;
+    --select-radius: 4px; /* O mantieni --button-radius se è diverso */
+    --select-focus-border: #aaa;
+    --ellipsis-color: #777;
+}

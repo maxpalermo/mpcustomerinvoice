@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Table + Paginator (con Items/Page Select)</title>
+     <style>
+        /* Stili generali per la pagina di esempio */
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            padding: 20px;
+            background-color: #f0f0f0;
+            color: #333;
+            line-height: 1.5;
+        }
+        h1 { color: #1a2533; margin-bottom: 1.5em; }
+
+        /* Stile per il contenitore che raggruppa tabella e paginator */
+        .table-paginator-wrapper {
+            border-radius: 8px; overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            margin-bottom: 30px; position: relative;
+            background-color: #fff;
+        }
+         custom-table { margin-bottom: 0; } /* Rimuove spazio sotto tabella */
+
+        /* Stile per l'overlay di caricamento */
+        .loading-overlay { /* ... come prima ... */
+             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+             background-color: rgba(255, 255, 255, 0.8); display: flex;
+             align-items: center; justify-content: center; font-weight: bold;
+             color: #555; z-index: 10; opacity: 0;
+             transition: opacity 0.3s ease-in-out; pointer-events: none;
+         }
+        .table-paginator-wrapper.loading .loading-overlay { opacity: 1; pointer-events: auto; }
+    </style>
+</head>
+<body>
+
+    <h1>Tabella Utenti con Selettore Items/Pagina</h1>
+
+    <div class="table-paginator-wrapper" id="table-wrapper">
+        <custom-table
+            id="ajax-table"
+            items-per-page="5"  /* Aggiornato valore iniziale */
+            total-items="0"
+            current-page="1"
+           >
+        </custom-table>
+
+        <table-paginator
+            id="ajax-paginator"
+            current-page="1"
+            total-pages="1"
+            items-per-page="5" /* Imposta lo stesso valore iniziale della tabella */
+            page-size-options="[5, 10, 20, 50]" /* Opzioni personalizzate */
+            >
+            </table-paginator>
+
+        <div class="loading-overlay">Attendere...</div>
+    </div>
+
+    <script src="TablePaginator.js"></script>
+    <script src="CustomTable.js"></script>
+
+    <script>
+        // Riferimenti DOM
+        const ajaxTable = document.getElementById('ajax-table');
+        const ajaxPaginator = document.getElementById('ajax-paginator');
+        const tableWrapper = document.getElementById('table-wrapper');
+
+        // Stato Applicazione
+        let currentFilters = {};
+        // Leggi valori iniziali dagli attributi o usa default
+        let currentPage = parseInt(ajaxPaginator.getAttribute('current-page')) || 1;
+        let itemsPerPage = parseInt(ajaxPaginator.getAttribute('items-per-page')) || 5;
+        let totalItems = 0;
+
+        // --- Dati Completi Simulati (SERVER) ---
+        const allUsers = [ /* ... stessi 12 utenti di prima ... */
+            { id: 1, name: 'Mario Rossi', email: 'mario.rossi@email.com', status: 'attivo' }, { id: 2, name: 'Luigi Verdi', email: 'luigi.verdi@email.com', status: 'inattivo' }, { id: 3, name: 'Anna Bianchi', email: 'anna.bianchi@email.com', status: 'sospeso' }, { id: 4, name: 'Giovanni Neri', email: 'gio.neri@email.com', status: 'attivo' }, { id: 5, name: 'Paola Blu', email: 'paola.blu@email.com', status: 'attivo' }, { id: 6, name: 'Franco Gialli', email: 'franco.gialli@email.com', status: 'attivo' }, { id: 7, name: 'Serena Viola', email: 'serena.viola@email.com', status: 'inattivo' }, { id: 8, name: 'Roberto Arancio', email: 'rob.arancio@email.com', status: 'attivo' }, { id: 9, name: 'Elisa Marrone', email: 'elisa.marrone@email.com', status: 'sospeso' }, { id: 10, name: 'Davide Grigi', email: 'davide.grigi@email.com', status: 'attivo' }, { id: 11, name: 'Laura Celeste', email: 'laura.celeste@email.com', status: 'attivo' }, { id: 12, name: 'Simone Rosa', email: 'simone.rosa@email.com', status: 'inattivo' },
+        ];
+
+        // --- Funzione Simulazione Chiamata AJAX (invariata) ---
+        function fetchUsers(page = 1, items = itemsPerPage, filters = {}) { /* ... come prima ... */
+             console.log(`Simulazione fetch: Page=${page}, Items=${items}, Filters=`, filters);
+             tableWrapper.classList.add('loading');
+             return new Promise(resolve => { setTimeout(() => {
+                 let filteredData = allUsers.filter(user => Object.keys(filters).every(key => String(user[key]||'').toLowerCase().includes(filters[key].toLowerCase())));
+                 const totalFilteredItems = filteredData.length;
+                 const start = (page - 1) * items; const end = start + items;
+                 const paginatedData = filteredData.slice(start, end);
+                 tableWrapper.classList.remove('loading');
+                 console.log(`Dati restituiti: ${paginatedData.length} items, Totale Filtrato: ${totalFilteredItems}`);
+                 resolve({ data: paginatedData, totalItems: totalFilteredItems });
+             }, 500); });
+         }
+
+        // --- Impostazione Colonne Tabella (invariato) ---
+        const userColumns = [ /* ... come prima ... */
+             { title: 'ID', key: 'id' }, { title: 'Nome', key: 'name', filterable: true }, { title: 'Email', key: 'email', filterable: true },
+             { title: 'Stato', key: 'status', filterable: true, render: (statusValue) => {
+                 let badgeClass = 'badge-info'; if (statusValue === 'attivo') badgeClass = 'badge-success'; if (statusValue === 'inattivo') badgeClass = 'badge-danger'; if (statusValue === 'sospeso') badgeClass = 'badge-warning';
+                 const span = document.createElement('span'); span.className = `badge ${badgeClass}`; span.textContent = statusValue; return span;
+              }}
+        ];
+        ajaxTable.columns = userColumns;
+
+        // --- Funzione Helper per Caricare Dati e Aggiornare UI ---
+        async function loadAndUpdate(page = currentPage, filters = currentFilters) {
+             console.log(`Richiesto caricamento: Pagina=${page}, Items=${itemsPerPage}, Filtri=`, filters);
+             // Aggiorna stato pagina corrente nell'app PRIMA della chiamata
+             currentPage = page;
+
+             const result = await fetchUsers(page, itemsPerPage, filters);
+
+             // Aggiorna stato totale nell'app
+             totalItems = result.totalItems;
+             const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+
+             // Aggiorna il componente Tabella
+             ajaxTable.data = result.data;
+             ajaxTable.totalItems = totalItems;
+             ajaxTable.currentPage = currentPage;
+             // Assicura che itemsPerPage sulla tabella sia corretto (potrebbe non servire se non lo usa)
+             ajaxTable.itemsPerPage = itemsPerPage;
+
+             // Aggiorna il componente Paginator
+             ajaxPaginator.totalPages = totalPages;
+             ajaxPaginator.currentPage = currentPage;
+             // Assicura che itemsPerPage sul paginator sia corretto
+             ajaxPaginator.itemsPerPage = itemsPerPage;
+
+
+             console.log(`Caricamento completato. UI aggiornata. Pagina ${currentPage}/${totalPages}. Totale ${totalItems}`);
+        }
+
+        // --- Gestione Evento 'filter-change' dalla TABELLA ---
+        ajaxTable.addEventListener('filter-change', async (event) => {
+            currentFilters = event.detail.filters;
+            console.log("Evento 'filter-change' ricevuto! Filtri:", currentFilters);
+            // Ricarica dalla PAGINA 1 con i nuovi filtri
+            await loadAndUpdate(1, currentFilters);
+        });
+
+        // --- Gestione Evento 'page-change' dal PAGINATOR ---
+        ajaxPaginator.addEventListener('page-change', async (event) => {
+            const requestedPage = event.detail.page;
+            console.log(`Evento 'page-change' (Paginator) ricevuto! Pagina: ${requestedPage}`);
+            // Ricarica la pagina richiesta MANTENENDO i filtri correnti
+            await loadAndUpdate(requestedPage, currentFilters);
+        });
+
+        // --- NUOVO: Gestione Evento 'items-per-page-change' dal PAGINATOR ---
+        ajaxPaginator.addEventListener('items-per-page-change', async (event) => {
+            const newSize = event.detail.itemsPerPage;
+            console.log(`Evento 'items-per-page-change' ricevuto! Nuovo size: ${newSize}`);
+            // Aggiorna lo stato itemsPerPage dell'applicazione
+            itemsPerPage = newSize;
+            // Ricarica i dati dalla PAGINA 1 con la nuova dimensione e i filtri correnti
+            await loadAndUpdate(1, currentFilters);
+        });
+
+
+        // --- Caricamento Iniziale Dati ---
+        async function initialLoad() {
+             console.log("Avvio caricamento iniziale...");
+             // Leggi valori iniziali dagli attributi HTML
+             currentPage = parseInt(ajaxPaginator.getAttribute('current-page')) || 1;
+             itemsPerPage = parseInt(ajaxPaginator.getAttribute('items-per-page')) || 5;
+             // Carica i dati iniziali
+             await loadAndUpdate(currentPage, {});
+             console.log("Caricamento iniziale completato.");
+        }
+        // Avvia caricamento
+        initialLoad();
+
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Table con Filtri e Paginazione</title>
+     <style>
+        body { font-family: sans-serif; padding: 20px; background-color: #f0f0f0; }
+        custom-table { margin-bottom: 30px; }
+        .loading-overlay { /* ... come prima ... */ }
+        .table-wrapper { position: relative; }
+    </style>
+</head>
+<body>
+
+    <h1>Tabella Utenti con Filtri e Paginazione</h1>
+
+    <div class="table-wrapper">
+        <custom-table
+            id="ajax-table"
+            items-per-page="4" /* Ridotto per testare meglio */
+            total-items="0"
+            current-page="1"
+           > <div class="loading-overlay" slot="loading">Attendere...</div>
+        </custom-table>
+    </div>
+
+    <script src="CustomTable.js"></script>
+    <script>
+        const ajaxTableElement = document.getElementById('ajax-table');
+        let currentFilters = {}; // Mantiene lo stato dei filtri nell'applicazione
+
+        // --- Dati Completi Simulati (SERVER) ---
+        const allUsers = [
+            // ... (stessi dati di prima: 12 utenti) ...
+            { id: 1, name: 'Mario Rossi', email: 'mario.rossi@email.com', status: 'attivo' },
+            { id: 2, name: 'Luigi Verdi', email: 'luigi.verdi@email.com', status: 'inattivo' },
+            { id: 3, name: 'Anna Bianchi', email: 'anna.bianchi@email.com', status: 'sospeso' },
+            { id: 4, name: 'Giovanni Neri', email: 'gio.neri@email.com', status: 'attivo' },
+            { id: 5, name: 'Paola Blu', email: 'paola.blu@email.com', status: 'attivo' },
+            { id: 6, name: 'Franco Gialli', email: 'franco.gialli@email.com', status: 'attivo' },
+            { id: 7, name: 'Serena Viola', email: 'serena.viola@email.com', status: 'inattivo' },
+            { id: 8, name: 'Roberto Arancio', email: 'rob.arancio@email.com', status: 'attivo' },
+            { id: 9, name: 'Elisa Marrone', email: 'elisa.marrone@email.com', status: 'sospeso' },
+            { id: 10, name: 'Davide Grigi', email: 'davide.grigi@email.com', status: 'attivo' },
+            { id: 11, name: 'Laura Celeste', email: 'laura.celeste@email.com', status: 'attivo' },
+            { id: 12, name: 'Simone Rosa', email: 'simone.rosa@email.com', status: 'inattivo' },
+        ];
+
+        // --- Funzione Simulazione Chiamata AJAX (AGGIORNATA con FILTRI) ---
+        function fetchUsers(page = 1, itemsPerPage = 4, filters = {}) {
+            console.log(`Simulazione fetch: Page=${page}, Items=${itemsPerPage}, Filters=`, filters);
+            ajaxTableElement.parentElement.classList.add('loading');
+
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    // 1. Applica Filtri (case-insensitive)
+                    let filteredData = allUsers.filter(user => {
+                        return Object.keys(filters).every(filterKey => {
+                            const filterValue = filters[filterKey].toLowerCase();
+                            const userValue = String(user[filterKey] || '').toLowerCase();
+                            return userValue.includes(filterValue);
+                        });
+                    });
+
+                    // 2. Calcola Totale dopo filtro
+                    const totalFilteredItems = filteredData.length;
+
+                    // 3. Applica Paginazione ai dati filtrati
+                    const start = (page - 1) * itemsPerPage;
+                    const end = start + itemsPerPage;
+                    const paginatedData = filteredData.slice(start, end);
+
+                    ajaxTableElement.parentElement.classList.remove('loading');
+                    console.log(`Dati restituiti: ${paginatedData.length} items, Totale Filtrato: ${totalFilteredItems}`);
+
+                    resolve({
+                        data: paginatedData,
+                        totalItems: totalFilteredItems // RESTITUISCE IL TOTALE FILTRATO!
+                    });
+                }, 500);
+            });
+        }
+
+        // --- Impostazione Colonne (con 'filterable') ---
+        const userColumns = [
+             { title: 'ID', key: 'id' }, // ID non filtrabile in questo esempio
+             { title: 'Nome', key: 'name', filterable: true }, // Nome è filtrabile
+             { title: 'Email', key: 'email', filterable: true }, // Email è filtrabile
+             {
+                 title: 'Stato', key: 'status', filterable: true, // Anche stato filtrabile
+                 render: (statusValue) => { /* ... render badge ... */
+                     let badgeClass = 'badge-info';
+                     if (statusValue === 'attivo') badgeClass = 'badge-success';
+                     if (statusValue === 'inattivo') badgeClass = 'badge-danger';
+                     if (statusValue === 'sospeso') badgeClass = 'badge-warning';
+                     const span = document.createElement('span');
+                     span.className = `badge ${badgeClass}`;
+                     span.textContent = statusValue;
+                     return span;
+                 }
+             },
+        ];
+        ajaxTableElement.columns = userColumns;
+
+
+         // --- Funzione Helper per Caricare Dati ---
+         // Rende il codice degli event listener più pulito
+        async function loadTableData(page = 1, filters = currentFilters) {
+             const itemsPerPage = ajaxTableElement.itemsPerPage;
+             const result = await fetchUsers(page, itemsPerPage, filters);
+
+             // Aggiorna prima totalItems, poi i dati
+             // Questo assicura che il paginator si aggiorni correttamente
+             // anche se la pagina corrente dovesse diventare invalida
+             ajaxTableElement.totalItems = result.totalItems;
+             ajaxTableElement.data = result.data;
+
+             // Assicura che la prop/attributo currentPage sia aggiornato
+             // Potrebbe non essere necessario se _goToPage gestisce già l'attributo
+              if (ajaxTableElement.currentPage !== page && page <= ajaxTableElement.totalPages) {
+                // Forza aggiornamento attributo se necessario (es. dopo filtro)
+                 ajaxTableElement.setAttribute('current-page', page);
+                 ajaxTableElement._currentPage = page; // Aggiorna stato interno (accesso privato non ideale, ma per esempio)
+                 ajaxTableElement._renderPaginator(); // Ridisegna paginator
+             } else if (page > ajaxTableElement.totalPages && ajaxTableElement.totalPages > 0) {
+                  // Se la pagina richiesta è > del totale dopo filtro, la tabella
+                  // avrà forzato internamente l'ultima pagina valida in totalItems.setter
+                  // Non serve fare altro qui.
+             }
+
+
+             console.log(`Dati caricati per pagina ${ajaxTableElement.currentPage} con filtri:`, filters);
+        }
+
+
+        // --- Gestione Evento 'filter-change' ---
+        ajaxTableElement.addEventListener('filter-change', async (event) => {
+            currentFilters = event.detail.filters; // Aggiorna stato filtri globale
+            console.log("Evento 'filter-change' ricevuto! Filtri:", currentFilters);
+            // Ricarica i dati dalla PAGINA 1 con i nuovi filtri
+            await loadTableData(1, currentFilters);
+        });
+
+        // --- Gestione Evento 'page-change' ---
+        ajaxTableElement.addEventListener('page-change', async (event) => {
+            const { page, itemsPerPage, filters } = event.detail;
+             // 'filters' nell'evento page-change è utile se lo stato globale non fosse disponibile
+            console.log(`Evento 'page-change' ricevuto! Pagina: ${page}, Filtri correnti:`, currentFilters);
+            // Ricarica i dati per la pagina richiesta MANTENENDO i filtri correnti
+            await loadTableData(page, currentFilters);
+        });
+
+
+        // --- Caricamento Iniziale Dati ---
+        initialLoad();
+        async function initialLoad() {
+             console.log("Avvio caricamento iniziale...");
+             await loadTableData(ajaxTableElement.currentPage); // Carica pagina iniziale senza filtri
+        }
+
+    </script>
+
+</body>
+</html>

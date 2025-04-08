@@ -1,0 +1,8 @@
+services:
+  mpcustomerinvoice.validator.italian_tax_code:
+    class: MpSoft\MpCustomerInvoice\Validator\ItalianTaxCodeValidator
+    tags:
+      - {
+          name: validator.constraint_validator,
+          alias: mpcustomerinvoice.italian_tax_code,
+        }

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Table + Paginator Components</title>
+    <style>
+        /* Stili generali per la pagina di esempio */
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            padding: 20px;
+            background-color: #f0f0f0;
+            color: #333;
+            line-height: 1.5;
+        }
+
+        h1 {
+            color: #1a2533;
+            margin-bottom: 1.5em;
+        }
+
+        /* Stile per il contenitore che raggruppa tabella e paginator */
+        .table-paginator-wrapper {
+            border-radius: 8px; /* Arrotonda angoli wrapper */
+            overflow: hidden; /* Nascondi angoli interni */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* Ombra più definita */
+            margin-bottom: 30px;
+            position: relative; /* Necessario per l'overlay di caricamento */
+            background-color: #fff; /* Sfondo bianco per il wrapper */
+        }
+
+        /* Stile per l'overlay di caricamento */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.8); /* Sfondo semi-trasparente */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #555;
+            z-index: 10;
+            opacity: 0; /* Nascosto per default */
+            transition: opacity 0.3s ease-in-out; /* Transizione fluida */
+            pointer-events: none; /* Non interagibile quando nascosto */
+        }
+
+        /* Mostra l'overlay quando il wrapper ha la classe 'loading' */
+        .table-paginator-wrapper.loading .loading-overlay {
+            opacity: 1;
+            pointer-events: auto; /* Interagibile (blocca sotto) quando visibile */
+        }
+
+         /* Rimuove il margine inferiore della tabella quando è nel wrapper */
+        custom-table {
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Tabella Utenti con Componente Paginator Separato</h1>
+
+    <div class="table-paginator-wrapper" id="table-wrapper">
+        <custom-table
+            id="ajax-table"
+            items-per-page="4"
+            total-items="0"
+            current-page="1"
+           > </custom-table>
+
+        <table-paginator
+            id="ajax-paginator"
+            current-page="1"
+            total-pages="1" /* Inizializzato a 1 pagina (verrà aggiornato) */
+           >
+        </table-paginator>
+
+        <div class="loading-overlay">Attendere...</div>
+    </div>
+
+    <script src="TablePaginator.js"></script>
+    <script src="CustomTable.js"></script>
+
+    <script>
+        // Selettori elementi DOM
+        const ajaxTable = document.getElementById('ajax-table');
+        const ajaxPaginator = document.getElementById('ajax-paginator');
+        const tableWrapper = document.getElementById('table-wrapper');
+
+        // Stato dell'applicazione (fuori dai componenti)
+        let currentFilters = {};
+        let currentPage = 1;
+        let itemsPerPage = parseInt(ajaxTable.getAttribute('items-per-page')) || 4;
+        let totalItems = 0;
+
+        // --- Dati Completi Simulati (questo sarebbe sul SERVER) ---
+        const allUsers = [
+            { id: 1, name: 'Mario Rossi', email: 'mario.rossi@email.com', status: 'attivo' },
+            { id: 2, name: 'Luigi Verdi', email: 'luigi.verdi@email.com', status: 'inattivo' },
+            { id: 3, name: 'Anna Bianchi', email: 'anna.bianchi@email.com', status: 'sospeso' },
+            { id: 4, name: 'Giovanni Neri', email: 'gio.neri@email.com', status: 'attivo' },
+            { id: 5, name: 'Paola Blu', email: 'paola.blu@email.com', status: 'attivo' },
+            { id: 6, name: 'Franco Gialli', email: 'franco.gialli@email.com', status: 'attivo' },
+            { id: 7, name: 'Serena Viola', email: 'serena.viola@email.com', status: 'inattivo' },
+            { id: 8, name: 'Roberto Arancio', email: 'rob.arancio@email.com', status: 'attivo' },
+            { id: 9, name: 'Elisa Marrone', email: 'elisa.marrone@email.com', status: 'sospeso' },
+            { id: 10, name: 'Davide Grigi', email: 'davide.grigi@email.com', status: 'attivo' },
+            { id: 11, name: 'Laura Celeste', email: 'laura.celeste@email.com', status: 'attivo' },
+            { id: 12, name: 'Simone Rosa', email: 'simone.rosa@email.com', status: 'inattivo' },
+            { id: 13, name: 'Giulia Verde', email: 'giulia.verde@email.com', status: 'attivo' },
+            { id: 14, name: 'Fabio Bianco', email: 'fabio.bianco@email.com', status: 'inattivo' },
+            { id: 15, name: 'Carla Rossa', email: 'carla.rossa@email.com', status: 'sospeso' },
+            { id: 16, name: 'Daniele Giallo', email: 'daniele.giallo@email.com', status: 'attivo' },
+            { id: 17, name: 'Lorenzo Blu', email: 'lorenzo.blu@email.com', status: 'attivo' },
+            { id: 18, name: 'Sara Viola', email: 'sara.viola@email.com', status: 'inattivo' },
+            { id: 19, name: 'Andrea Arancio', email: 'andrea.arancio@email.com', status: 'attivo' },
+            { id: 20, name: 'Roberta Marrone', email: 'roberta.marrone@email.com', status: 'sospeso' },
+            { id: 21, name: 'Giovanna Grigi', email: 'giovanna.grigi@email.com', status: 'attivo' },
+            { id: 22, name: 'Luca Celeste', email: 'luca.celeste@email.com', status: 'attivo' },
+            { id: 23, name: 'Elena Rosa', email: 'elena.rosa@email.com', status: 'inattivo' },
+            { id: 24, name: 'Simona Verde', email: 'simona.verde@email.com', status: 'attivo' },
+            { id: 25, name: 'Giuseppe Bianco', email: 'giuseppe.bianco@email.com', status: 'inattivo' },
+            { id: 26, name: 'Alessia Rossa', email: 'alessia.rossa@email.com', status: 'sospeso' },
+            { id: 27, name: 'Manuel Giallo', email: 'manuel.giallo@email.com', status: 'attivo' },
+            { id: 28, name: 'Chiara Blu', email: 'chiara.blu@email.com', status: 'attivo' },
+            { id: 29, name: 'Massimo Viola', email: 'massimo.viola@email.com', status: 'inattivo' },
+            { id: 30, name: 'Cinzia Arancio', email: 'cinzia.arancio@email.com', status: 'attivo' },
+            { id: 31, name: 'Lorenzo Marrone', email: 'lorenzo.marrone@email.com', status: 'sospeso' },
+            { id: 32, name: 'Gianluca Grigi', email: 'gianluca.grigi@email.com', status: 'attivo' },
+            { id: 33, name: 'Matteo Celeste', email: 'matteo.celeste@email.com', status: 'attivo' },
+            { id: 34, name: 'Giovanni Rosa', email: 'giovanni.rosa@email.com', status: 'inattivo' },
+            { id: 35, name: 'Giulietta Verde', email: 'giulietta.verde@email.com', status: 'attivo' },
+            { id: 36, name: 'Giorgio Bianco', email: 'giorgio.bianco@email.com', status: 'inattivo' },
+            { id: 37, name: 'Cristina Rossa', email: 'cristina.rossa@email.com', status: 'sospeso' },
+            { id: 38, name: 'Mirko Giallo', email: 'mirko.giallo@email.com', status: 'attivo' },
+            { id: 39, name: 'Silvia Blu', email: 'silvia.blu@email.com', status: 'attivo' },
+            { id: 40, name: 'Stefano Viola', email: 'stefano.viola@email.com', status: 'inattivo' },
+            { id: 41, name: 'Emanuela Arancio', email: 'emanuela.arancio@email.com', status: 'attivo' },
+            { id: 42, name: 'Matteo Marrone', email: 'matteo.marrone@email.com', status: 'sospeso' },
+            { id: 43, name: 'Gianluigi Grigi', email: 'gianluigi.grigi@email.com', status: 'attivo' },
+            { id: 44, name: 'Giovanna Celeste', email: 'giovanna.celeste@email.com', status: 'attivo' },
+            { id: 45, name: 'Roberto Rosa', email: 'roberto.rosa@email.com', status: 'inattivo' },
+            { id: 46, name: 'Giulia Verde', email: 'giulia.verde@email.com', status: 'attivo' },
+            { id: 47, name: 'Giovanni Bianco', email: 'giovanni.bianco@email.com', status: 'inattivo' },
+            { id: 48, name: 'Cinzia Rossa', email: 'cinzia.rossa@email.com', status: 'sospeso' },
+            { id: 49, name: 'Luca Giallo', email: 'luca.giallo@email.com', status: 'attivo' },
+            { id: 50, name: 'Lorenzo Blu', email: 'lorenzo.blu@email.com', status: 'attivo' },
+            { id: 51, name: 'Stefano Viola', email: 'stefano.viola@email.com', status: 'inattivo' },
+            { id: 52, name: 'Gianluca Arancio', email: 'gianluca.arancio@email.com', status: 'attivo' },
+            { id: 53, name: 'Matteo Marrone', email: 'matteo.marrone@email.com', status: 'sospeso' },
+            { id: 54, name: 'Gianluigi Grigi', email: 'gianluigi.grigi@email.com', status: 'attivo' },
+            { id: 55, name: 'Giovanna Celeste', email: 'giovanna.celeste@email.com', status: 'attivo' },
+            { id: 56, name: 'Roberto Rosa', email: 'roberto.rosa@email.com', status: 'inattivo' },
+        ];
+
+        // --- Funzione Simulazione Chiamata AJAX ---
+        function fetchUsers(page = 1, itemsPerPage = 4, filters = {}) {
+            console.log(`Simulazione fetch: Page=${page}, Items=${itemsPerPage}, Filters=`, filters);
+            tableWrapper.classList.add('loading'); // Mostra overlay
+
+            return new Promise(resolve => {
+                // Simula ritardo di rete
+                setTimeout(() => {
+                    // 1. Applica Filtri (case-insensitive)
+                    let filteredData = allUsers.filter(user => {
+                        return Object.keys(filters).every(filterKey => {
+                            const filterValue = filters[filterKey].toLowerCase();
+                            const userValue = String(user[filterKey] || '').toLowerCase();
+                            return userValue.includes(filterValue);
+                        });
+                    });
+
+                    // 2. Calcola Totale dopo filtro
+                    const totalFilteredItems = filteredData.length;
+
+                    // 3. Applica Paginazione ai dati filtrati
+                    const start = (page - 1) * itemsPerPage;
+                    const end = start + itemsPerPage;
+                    const paginatedData = filteredData.slice(start, end);
+
+                    tableWrapper.classList.remove('loading'); // Nascondi overlay
+                    console.log(`Dati restituiti: ${paginatedData.length} items, Totale Filtrato: ${totalFilteredItems}`);
+
+                    // Risolvi la promessa con i dati e il totale filtrato
+                    resolve({
+                        data: paginatedData,
+                        totalItems: totalFilteredItems
+                    });
+                }, 500); // Ritardo di 500ms
+            });
+        }
+
+        // --- Impostazione Colonne Tabella (con 'filterable') ---
+        const userColumns = [
+            { title: 'ID', key: 'id' },
+            { title: 'Nome', key: 'name', filterable: true },
+            { title: 'Email', key: 'email', filterable: true },
+            {
+                title: 'Stato', key: 'status', filterable: true,
+                render: (statusValue) => {
+                    // Funzione per creare il badge di stato
+                    let badgeClass = 'badge-info'; // Default
+                    if (statusValue === 'attivo') badgeClass = 'badge-success';
+                    if (statusValue === 'inattivo') badgeClass = 'badge-danger';
+                    if (statusValue === 'sospeso') badgeClass = 'badge-warning';
+                    // Crea un elemento SPAN invece di stringa HTML per sicurezza
+                    const span = document.createElement('span');
+                    // Applica le classi definite negli stili interni del componente tabella
+                    span.className = `badge ${badgeClass}`;
+                    span.textContent = statusValue;
+                    return span; // Restituisce l'elemento nodo SPAN
+                }
+            },
+        ];
+        // Imposta le colonne sul componente tabella
+        ajaxTable.columns = userColumns;
+
+         // --- Funzione Helper per Caricare Dati e Aggiornare UI ---
+        async function loadAndUpdate(page = currentPage, filters = currentFilters) {
+            console.log(`Richiesto caricamento: Pagina=${page}, Filtri=`, filters);
+            // Aggiorna stato pagina corrente nell'app
+            currentPage = page;
+            // Leggi itemsPerPage aggiornato (potrebbe cambiare)
+            itemsPerPage = parseInt(ajaxTable.getAttribute('items-per-page')) || 4;
+
+            // Esegui la chiamata (simulata)
+            const result = await fetchUsers(page, itemsPerPage, filters);
+            console.log("Trovati " + result.totalItems + " utenti");
+
+            // Aggiorna stato totale nell'app
+            totalItems = result.totalItems;
+            // Calcola il numero totale di pagine
+            const totalPages = Math.ceil(totalItems / itemsPerPage) || 1; // Almeno 1 pagina
+
+            // Aggiorna il componente Tabella
+            ajaxTable.data = result.data; // Fornisci solo i dati della pagina corrente
+            ajaxTable.totalItems = totalItems; // Utile per info display nella tabella
+            ajaxTable.currentPage = currentPage; // Utile per info display nella tabella
+
+            // Aggiorna il componente Paginator
+            ajaxPaginator.totalPages = totalPages;
+            ajaxPaginator.currentPage = currentPage; // Assicura che sia sincronizzato
+
+            console.log(`Caricamento completato. UI aggiornata. Pagina ${currentPage}/${totalPages}. Totale ${totalItems}`);
+        }
+
+        // --- Gestione Evento 'filter-change' dalla TABELLA ---
+        ajaxTable.addEventListener('filter-change', async (event) => {
+            currentFilters = event.detail.filters; // Aggiorna stato filtri globale
+            console.log("Evento 'filter-change' ricevuto! Nuovi Filtri:", currentFilters);
+            // Quando i filtri cambiano, ricarica sempre dalla PAGINA 1
+            await loadAndUpdate(1, currentFilters);
+        });
+
+        // --- Gestione Evento 'page-change' dal PAGINATOR ---
+        ajaxPaginator.addEventListener('page-change', async (event) => {
+            const requestedPage = event.detail.page;
+            console.log(`Evento 'page-change' (dal Paginator) ricevuto! Pagina richiesta: ${requestedPage}`);
+            // Ricarica i dati per la pagina richiesta MANTENENDO i filtri correnti
+            await loadAndUpdate(requestedPage, currentFilters);
+        });
+
+        // --- Caricamento Iniziale Dati ---
+        // Funzione asincrona per il caricamento iniziale
+        async function initialLoad() {
+            console.log("Avvio caricamento iniziale...");
+            // Leggi valori iniziali dagli attributi HTML se necessario
+            currentPage = parseInt(ajaxPaginator.getAttribute('current-page')) || 1;
+            itemsPerPage = parseInt(ajaxTable.getAttribute('items-per-page')) || 4;
+            // Carica i dati iniziali (pagina 1, senza filtri)
+            await loadAndUpdate(currentPage, {}); // Carica pagina iniziale
+            console.log("Caricamento iniziale completato.");
+        }
+        // Avvia il caricamento iniziale quando lo script viene eseguito
+        initialLoad();
+
+    </script>
+
+</body>
+</html>

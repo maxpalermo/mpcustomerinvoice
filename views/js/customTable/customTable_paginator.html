@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Table con Paginazione AJAX</title>
+     <style>
+        body { font-family: sans-serif; padding: 20px; background-color: #f0f0f0; }
+        custom-table { margin-bottom: 30px; }
+        .loading-overlay { /* Stile per feedback caricamento */
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(255, 255, 255, 0.7);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; color: #555; z-index: 10;
+            opacity: 0; transition: opacity 0.3s ease; pointer-events: none;
+        }
+        custom-table.loading .loading-overlay { opacity: 1; pointer-events: auto; }
+         /* Stile base per il contenitore della tabella se necessario */
+         .table-wrapper { position: relative; }
+    </style>
+</head>
+<body>
+
+    <h1>Tabella Utenti Paginata (Simulazione AJAX)</h1>
+
+    <div class="table-wrapper">
+        <custom-table
+            id="ajax-table"
+            items-per-page="5"
+            total-items="0" /* Inizializzato a 0, sarà impostato dopo il primo fetch */
+            current-page="1"
+            theme="dark" /* Esempio con tema */
+        >
+             <div class="loading-overlay" slot="loading">Attendere...</div>
+        </custom-table>
+    </div>
+
+    <script src="customTable.js"></script>
+    <script>
+        const ajaxTableElement = document.getElementById('ajax-table');
+
+        // --- Dati Completi Simulati (questo sarebbe sul SERVER) ---
+        const allUsers = [
+            { id: 1, name: 'Mario Rossi', email: 'mario.rossi@email.com', status: 'attivo' },
+            { id: 2, name: 'Luigi Verdi', email: 'luigi.verdi@email.com', status: 'inattivo' },
+            { id: 3, name: 'Anna Bianchi', email: 'anna.bianchi@email.com', status: 'sospeso' },
+            { id: 4, name: 'Giovanni Neri', email: 'gio.neri@email.com', status: 'attivo' },
+            { id: 5, name: 'Paola Blu', email: 'paola.blu@email.com', status: 'attivo' },
+            { id: 6, name: 'Franco Gialli', email: 'franco.gialli@email.com', status: 'attivo' },
+            { id: 7, name: 'Serena Viola', email: 'serena.viola@email.com', status: 'inattivo' },
+            { id: 8, name: 'Roberto Arancio', email: 'rob.arancio@email.com', status: 'attivo' },
+            { id: 9, name: 'Elisa Marrone', email: 'elisa.marrone@email.com', status: 'sospeso' },
+            { id: 10, name: 'Davide Grigi', email: 'davide.grigi@email.com', status: 'attivo' },
+            { id: 11, name: 'Laura Celeste', email: 'laura.celeste@email.com', status: 'attivo' },
+            { id: 12, name: 'Simone Rosa', email: 'simone.rosa@email.com', status: 'inattivo' },
+            { id: 13, name: 'Giulia Verde', email: 'giulia.verde@email.com', status: 'attivo' },
+            { id: 14, name: 'Fabio Bianco', email: 'fabio.bianco@email.com', status: 'inattivo' },
+            { id: 15, name: 'Carla Rossa', email: 'carla.rossa@email.com', status: 'sospeso' },
+            { id: 16, name: 'Daniele Giallo', email: 'daniele.giallo@email.com', status: 'attivo' },
+            { id: 17, name: 'Lorenzo Blu', email: 'lorenzo.blu@email.com', status: 'attivo' },
+            { id: 18, name: 'Sara Viola', email: 'sara.viola@email.com', status: 'inattivo' },
+            { id: 19, name: 'Andrea Arancio', email: 'andrea.arancio@email.com', status: 'attivo' },
+            { id: 20, name: 'Roberta Marrone', email: 'roberta.marrone@email.com', status: 'sospeso' },
+            { id: 21, name: 'Giovanna Grigi', email: 'giovanna.grigi@email.com', status: 'attivo' },
+            { id: 22, name: 'Luca Celeste', email: 'luca.celeste@email.com', status: 'attivo' },
+            { id: 23, name: 'Elena Rosa', email: 'elena.rosa@email.com', status: 'inattivo' },
+            { id: 24, name: 'Simona Verde', email: 'simona.verde@email.com', status: 'attivo' },
+            { id: 25, name: 'Giuseppe Bianco', email: 'giuseppe.bianco@email.com', status: 'inattivo' },
+            { id: 26, name: 'Alessia Rossa', email: 'alessia.rossa@email.com', status: 'sospeso' },
+            { id: 27, name: 'Manuel Giallo', email: 'manuel.giallo@email.com', status: 'attivo' },
+            { id: 28, name: 'Chiara Blu', email: 'chiara.blu@email.com', status: 'attivo' },
+            { id: 29, name: 'Massimo Viola', email: 'massimo.viola@email.com', status: 'inattivo' },
+            { id: 30, name: 'Cinzia Arancio', email: 'cinzia.arancio@email.com', status: 'attivo' },
+            { id: 31, name: 'Lorenzo Marrone', email: 'lorenzo.marrone@email.com', status: 'sospeso' },
+            { id: 32, name: 'Gianluca Grigi', email: 'gianluca.grigi@email.com', status: 'attivo' },
+            { id: 33, name: 'Matteo Celeste', email: 'matteo.celeste@email.com', status: 'attivo' },
+            { id: 34, name: 'Giovanni Rosa', email: 'giovanni.rosa@email.com', status: 'inattivo' },
+            { id: 35, name: 'Giulietta Verde', email: 'giulietta.verde@email.com', status: 'attivo' },
+            { id: 36, name: 'Giorgio Bianco', email: 'giorgio.bianco@email.com', status: 'inattivo' },
+            { id: 37, name: 'Cristina Rossa', email: 'cristina.rossa@email.com', status: 'sospeso' },
+            { id: 38, name: 'Mirko Giallo', email: 'mirko.giallo@email.com', status: 'attivo' },
+            { id: 39, name: 'Silvia Blu', email: 'silvia.blu@email.com', status: 'attivo' },
+            { id: 40, name: 'Stefano Viola', email: 'stefano.viola@email.com', status: 'inattivo' },
+            { id: 41, name: 'Emanuela Arancio', email: 'emanuela.arancio@email.com', status: 'attivo' },
+            { id: 42, name: 'Matteo Marrone', email: 'matteo.marrone@email.com', status: 'sospeso' },
+            { id: 43, name: 'Gianluigi Grigi', email: 'gianluigi.grigi@email.com', status: 'attivo' },
+            { id: 44, name: 'Giovanna Celeste', email: 'giovanna.celeste@email.com', status: 'attivo' },
+            { id: 45, name: 'Roberto Rosa', email: 'roberto.rosa@email.com', status: 'inattivo' },
+            { id: 46, name: 'Giulia Verde', email: 'giulia.verde@email.com', status: 'attivo' },
+            { id: 47, name: 'Giovanni Bianco', email: 'giovanni.bianco@email.com', status: 'inattivo' },
+            { id: 48, name: 'Cinzia Rossa', email: 'cinzia.rossa@email.com', status: 'sospeso' },
+            { id: 49, name: 'Luca Giallo', email: 'luca.giallo@email.com', status: 'attivo' },
+            { id: 50, name: 'Lorenzo Blu', email: 'lorenzo.blu@email.com', status: 'attivo' },
+            { id: 51, name: 'Stefano Viola', email: 'stefano.viola@email.com', status: 'inattivo' },
+            { id: 52, name: 'Gianluca Arancio', email: 'gianluca.arancio@email.com', status: 'attivo' },
+            { id: 53, name: 'Matteo Marrone', email: 'matteo.marrone@email.com', status: 'sospeso' },
+            { id: 54, name: 'Gianluigi Grigi', email: 'gianluigi.grigi@email.com', status: 'attivo' },
+            { id: 55, name: 'Giovanna Celeste', email: 'giovanna.celeste@email.com', status: 'attivo' },
+            { id: 56, name: 'Roberto Rosa', email: 'roberto.rosa@email.com', status: 'inattivo' },
+
+        ];
+
+        // --- Funzione Simulazione Chiamata AJAX ---
+        function fetchUsers(page = 1, itemsPerPage = 5) {
+            console.log(`Simulazione fetch AJAX per pagina ${page}, ${itemsPerPage} items...`);
+             // Mostra overlay caricamento (aggiungendo una classe al parent)
+             ajaxTableElement.parentElement.classList.add('loading');
+
+            return new Promise(resolve => {
+                // Simula ritardo di rete
+                setTimeout(() => {
+                    const start = (page - 1) * itemsPerPage;
+                    const end = start + itemsPerPage;
+                    const paginatedData = allUsers.slice(start, end);
+
+                    // Nascondi overlay caricamento
+                    ajaxTableElement.parentElement.classList.remove('loading');
+                     console.log("Dati simulati ricevuti:", paginatedData);
+
+                    resolve({
+                        data: paginatedData,
+                        totalItems: allUsers.length // Il server restituirebbe il totale
+                    });
+                }, 500); // Ritardo di 500ms
+            });
+        }
+
+        // --- Impostazione Colonne (una sola volta) ---
+        const userColumns = [
+             { title: 'ID', key: 'id' }, { title: 'Nome', key: 'name' }, { title: 'Email', key: 'email' },
+            {
+                title: 'Stato', key: 'status',
+                render: (statusValue) => { /* ... (render badge come prima) ... */
+                    let badgeClass = 'badge-info';
+                    if (statusValue === 'attivo') badgeClass = 'badge-success';
+                    if (statusValue === 'inattivo') badgeClass = 'badge-danger';
+                    if (statusValue === 'sospeso') badgeClass = 'badge-warning';
+                    const span = document.createElement('span');
+                    span.className = `badge ${badgeClass}`;
+                    span.textContent = statusValue;
+                    return span;
+                }
+            },
+            // Potresti aggiungere altre colonne o azioni se necessario
+        ];
+        ajaxTableElement.columns = userColumns;
+
+
+        // --- Gestione Evento 'page-change' ---
+        ajaxTableElement.addEventListener('page-change', async (event) => {
+            const { page, itemsPerPage } = event.detail;
+            console.log(`Evento 'page-change' ricevuto! Richiesta pagina: ${page}`);
+
+            // 1. Chiamata (simulata) AJAX per ottenere i dati della nuova pagina
+            const result = await fetchUsers(page, itemsPerPage);
+
+            // 2. Aggiorna la proprietà 'data' della tabella con i nuovi dati ricevuti
+            ajaxTableElement.data = result.data;
+
+            // 3. Assicurati che totalItems sia corretto (di solito fatto una volta, ma riaffermalo se necessario)
+            ajaxTableElement.totalItems = result.totalItems;
+
+            // 4. Opzionale: Aggiorna URL o stato dell'app se necessario
+            // history.pushState({}, '', `?page=${page}`);
+        });
+
+
+        // --- Caricamento Iniziale Dati (Pagina 1) ---
+        async function initialLoad() {
+            const initialPage = ajaxTableElement.currentPage; // Legge dall'attributo se presente o default
+            const itemsPerPage = ajaxTableElement.itemsPerPage;
+            const result = await fetchUsers(initialPage, itemsPerPage);
+
+            ajaxTableElement.totalItems = result.totalItems; // Imposta il totale PRIMA dei dati
+            ajaxTableElement.data = result.data; // Imposta i dati iniziali
+            // Non serve impostare currentPage qui perché è già 1 (o letto da attributo)
+            // e il paginator si aggiorna quando totalItems è impostato.
+        }
+
+        initialLoad(); // Avvia il caricamento iniziale
+
+    </script>
+
+</body>
+</html>

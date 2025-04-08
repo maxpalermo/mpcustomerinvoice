@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="it">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Esempio Custom Table Tematizzata</title>
+        <style>
+            body {
+                font-family: sans-serif;
+                padding: 20px;
+                background-color: #f0f0f0; /* Sfondo pagina per vedere i bordi */
+            }
+            custom-table {
+                margin-bottom: 30px; /* Spazio tra le tabelle */
+            }
+            button#theme-switcher {
+                margin-bottom: 20px;
+                padding: 8px 15px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Tabella Utenti (Tema Default Moderno)</h1>
+        <custom-table id="user-table"></custom-table>
+
+        <hr />
+
+        <h1>Tabella Prodotti (Tema Scuro)</h1>
+        <custom-table id="product-table" theme="dark"></custom-table>
+
+        <hr />
+
+        <h1>Tabella Ordini (Tema Minimal)</h1>
+        <custom-table id="order-table" theme="minimal"></custom-table>
+
+        <button id="theme-switcher">Passa Tabella Utenti a Tema Scuro</button>
+
+        <script src="./customTable.js"></script>
+
+        <script>
+            // --- Configurazione Tabella Utenti (come prima) ---
+            const userTableElement = document.getElementById("user-table");
+            const userColumns = [
+                { title: "ID", key: "id" },
+                { title: "Nome", key: "name" },
+                { title: "Email", key: "email" },
+                {
+                    title: "Stato",
+                    key: "status",
+                    render: (statusValue) => {
+                        let badgeClass = "badge-info";
+                        if (statusValue === "attivo") badgeClass = "badge-success";
+                        if (statusValue === "inattivo") badgeClass = "badge-danger";
+                        if (statusValue === "sospeso") badgeClass = "badge-warning";
+                        const span = document.createElement("span");
+                        span.className = `badge ${badgeClass}`;
+                        span.textContent = statusValue;
+                        return span; // Restituisce l'elemento SPAN
+                    }
+                },
+                {
+                    title: "Azioni",
+                    key: "id",
+                    render: (userId, rowData) => {
+                        const container = document.createElement("div");
+                        const editButton = document.createElement("button");
+                        editButton.textContent = "Modifica";
+                        editButton.style.marginRight = "5px";
+                        editButton.onclick = () => alert(`Modifica utente ID: ${userId}, Nome: ${rowData.name}`);
+
+                        const deleteButton = document.createElement("button");
+                        deleteButton.textContent = "Elimina";
+                        deleteButton.classList.add("danger"); // Aggiungi classe per stile danger
+                        deleteButton.onclick = () => {
+                            if (confirm(`Eliminare ${rowData.name}?`)) alert(`Elimina utente ID: ${userId}`);
+                        };
+
+                        container.appendChild(editButton);
+                        container.appendChild(deleteButton);
+                        return container;
+                    }
+                }
+            ];
+            const userData = [
+                { id: 1, name: "Mario Rossi", email: "mario.rossi@email.com", status: "attivo" },
+                { id: 2, name: "Luigi Verdi", email: "luigi.verdi@email.com", status: "inattivo" },
+                { id: 3, name: "Anna Bianchi", email: "anna.bianchi@email.com", status: "sospeso" },
+                { id: 4, name: "Giovanni Neri", email: "gio.neri@email.com", status: "attivo" }
+            ];
+            userTableElement.columns = userColumns;
+            userTableElement.data = userData;
+
+            // --- Configurazione Tabella Prodotti (come prima, ma ora sarà scura) ---
+            const productTableElement = document.getElementById("product-table");
+            productTableElement.columns = [
+                /* ... stesse colonne di prima ... */ { title: "Codice", key: "sku" },
+                { title: "Nome Prodotto", key: "productName" },
+                { title: "Prezzo", key: "price", render: (price) => `€ ${Number(price).toFixed(2)}` },
+                { title: "Disponibile", key: "inStock", render: (inStock) => (inStock ? "✔ Sì" : "✘ No") }
+            ];
+            productTableElement.data = [
+                /* ... stessi dati di prima ... */ { sku: "ABC-123", productName: "Smartphone X", price: 599.9, inStock: true },
+                { sku: "DEF-456", productName: "Laptop Pro", price: 1249.0, inStock: false },
+                { sku: "GHI-789", productName: "Cuffie Wireless", price: 89.5, inStock: true }
+            ];
+            // Nota: non serve reimpostare le props qui perché i dati sono già nello stato precedente
+            // Ma se cambiassero dinamicamente, dovresti riassegnarli.
+
+            // --- Configurazione Tabella Ordini (Minimal) ---
+            const orderTableElement = document.getElementById("order-table");
+            orderTableElement.columns = [
+                { title: "Ordine #", key: "orderId" },
+                { title: "Data", key: "date" },
+                { title: "Totale", key: "total", render: (t) => `€ ${Number(t).toFixed(2)}` },
+                { title: "Stato", key: "status" }
+            ];
+            orderTableElement.data = [
+                { orderId: "ORD-001", date: "2025-04-05", total: 150.75, status: "Spedito" },
+                { orderId: "ORD-002", date: "2025-04-06", total: 45.0, status: "In Lavorazione" }
+            ];
+
+            // --- Esempio cambio tema via JS ---
+            const switcherButton = document.getElementById("theme-switcher");
+            switcherButton.onclick = () => {
+                // Cambia tema alla tabella utenti
+                const currentTheme = userTableElement.theme;
+                if (currentTheme === "dark") {
+                    userTableElement.theme = null; // Rimuove l'attributo, torna al default
+                    switcherButton.textContent = "Passa Tabella Utenti a Tema Scuro";
+                } else {
+                    userTableElement.theme = "dark"; // Imposta l'attributo via JS property
+                    switcherButton.textContent = "Passa Tabella Utenti a Tema Default";
+                }
+                // Puoi anche usare: userTableElement.setAttribute('theme', 'dark');
+                // o userTableElement.removeAttribute('theme');
+            };
+        </script>
+    </body>
+</html>

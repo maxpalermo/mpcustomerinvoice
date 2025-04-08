@@ -1,0 +1,235 @@
+/* custom-table.css */
+
+/* ----- Variabili Base e Stili Host ----- */
+:host {
+    /* Colori, Font, Padding, etc. */
+    --table-bg-color: #ffffff;
+    --table-text-color: #333333;
+    --table-border-color: #e0e0e0;
+    --header-bg-color: #f8f9fa;
+    --header-text-color: #212529;
+    --row-hover-bg-color: #f1f3f5;
+    --row-alternate-bg-color: #f8f9fa;
+    --cell-padding: 12px 15px;
+    /* --table-border-radius: 8px; -- Rimosso, gestito dal wrapper esterno */
+    --table-border-style: 1px solid var(--table-border-color);
+    --row-border-bottom: 1px solid var(--table-border-color);
+    --table-font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    --table-font-size: 14px;
+    --header-font-weight: 600;
+    --button-bg-color: #007bff; /* Per bottoni interni, se usati in render() */
+    --button-text-color: white;
+    --button-border-color: #007bff;
+    --button-hover-bg-color: #0056b3;
+    --button-padding: 6px 12px;
+    --button-border-radius: 4px;
+    --badge-success-bg: #d4edda; /* Per badge interni */
+    --badge-success-text: #155724;
+    --badge-warning-bg: #fff3cd;
+    --badge-warning-text: #856404;
+    --badge-danger-bg: #f8d7da;
+    --badge-danger-text: #721c24;
+    --badge-info-bg: #d1ecf1;
+    --badge-info-text: #0c5460;
+    --badge-padding: 0.3em 0.6em;
+    --badge-font-size: 75%;
+    --badge-border-radius: 0.25rem;
+    --filter-input-bg: #ffffff;
+    --filter-input-text: var(--table-text-color);
+    --filter-input-border: #ced4da;
+    --filter-input-focus-border: #80bdff;
+    --filter-input-placeholder: #6c757d;
+    --filter-input-padding: 6px 8px;
+    --filter-input-margin-top: 8px;
+
+    display: block; /* Comportamento blocco */
+    font-family: var(--table-font-family);
+    font-size: var(--table-font-size);
+    color: var(--table-text-color);
+    /* background-color e border-radius sono ora sul wrapper esterno */
+}
+
+/* Contenitore generale interno */
+.table-main-container {
+    /* Nessuno stile specifico necessario qui ora */
+}
+
+/* Contenitore tabella per scrolling */
+.table-scroll-container {
+    overflow-x: auto; /* Scroll orizzontale solo se necessario */
+}
+
+/* Stili tabella */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    border-spacing: 0;
+    background-color: var(--table-bg-color); /* Sfondo tabella */
+}
+
+/* Stili Celle Header e Dati */
+th,
+td {
+    padding: var(--cell-padding);
+    text-align: left;
+    vertical-align: middle;
+    border: none; /* Rimuovi tutti i bordi interni di default */
+    border-bottom: var(--row-border-bottom); /* Solo linea sotto ogni riga */
+}
+
+/* Stili Header Specifici */
+th {
+    background-color: var(--header-bg-color);
+    color: var(--header-text-color);
+    font-weight: var(--header-font-weight);
+    font-size: calc(var(--table-font-size) * 0.95);
+    border-bottom-width: 2px; /* Linea sotto header più spessa */
+    vertical-align: top;
+    padding-bottom: calc(var(--cell-padding) / 2);
+    position: sticky; /* Header sticky durante lo scroll verticale */
+    top: 0;
+    z-index: 1;
+}
+.th-content {
+    /* Contenitore titolo in TH */
+    display: block;
+    margin-bottom: var(--filter-input-margin-top);
+}
+
+/* Stili Corpo Tabella */
+tbody tr:nth-child(even) {
+    background-color: var(--row-alternate-bg-color);
+}
+tbody tr:hover {
+    background-color: var(--row-hover-bg-color);
+}
+
+/* Placeholder per tbody vuoto */
+.empty-tbody-placeholder td {
+    text-align: center;
+    padding: 20px;
+    color: var(--filter-input-placeholder, #6c757d);
+    background-color: var(--table-bg-color);
+}
+
+/* Stili Input Filtro */
+.filter-input {
+    display: block;
+    width: calc(100% - 16px); /* Adatta larghezza al padding */
+    padding: var(--filter-input-padding);
+    font-size: calc(var(--table-font-size) * 0.9);
+    color: var(--filter-input-text);
+    background-color: var(--filter-input-bg);
+    border: 1px solid var(--filter-input-border);
+    border-radius: var(--button-border-radius);
+    box-sizing: border-box;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.filter-input::placeholder {
+    color: var(--filter-input-placeholder);
+    opacity: 0.8;
+}
+.filter-input:focus {
+    border-color: var(--filter-input-focus-border);
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Stili Elementi interni (Bottoni, Badge) */
+/* Necessari solo se usati nel render() delle celle */
+/* Questi stili sono definiti nel contesto del componente tabella */
+::slotted(button), /* Se i bottoni vengono passati via slot */
+button {
+    /* Se i bottoni sono creati nel render() */
+    padding: var(--button-padding);
+    cursor: pointer;
+    border: 1px solid var(--button-border-color);
+    background-color: var(--button-bg-color);
+    color: var(--button-text-color);
+    border-radius: var(--button-border-radius);
+    font-size: inherit;
+    transition: background-color 0.2s ease;
+}
+::slotted(button):hover,
+button:hover {
+    background-color: var(--button-hover-bg-color);
+}
+/* ... (stili per .danger, .badge come prima se necessario) ... */
+.badge {
+    display: inline-block;
+    padding: var(--badge-padding);
+    font-size: var(--badge-font-size);
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: var(--badge-border-radius);
+}
+.badge-success {
+    background-color: var(--badge-success-bg);
+    color: var(--badge-success-text);
+}
+.badge-warning {
+    background-color: var(--badge-warning-bg);
+    color: var(--badge-warning-text);
+}
+.badge-danger {
+    background-color: var(--badge-danger-bg);
+    color: var(--badge-danger-text);
+}
+.badge-info {
+    background-color: var(--badge-info-bg);
+    color: var(--badge-info-text);
+}
+
+/* Stili Contenitore Slot */
+.slot-container {
+    /* Rimuovi stili specifici del paginator da qui */
+    /* Lascia che sia il wrapper esterno o il componente nello slot a definire aspetto */
+    padding: 0; /* Nessun padding di default */
+}
+
+/* ----- Tema Scuro ----- */
+:host([theme="dark"]) {
+    /* Sovrascrittura variabili per tema scuro (SENZA variabili paginator) */
+    --table-bg-color: #2c3e50;
+    --table-text-color: #ecf0f1;
+    --table-border-color: #34495e;
+    --header-bg-color: #34495e;
+    --header-text-color: #ecf0f1;
+    --row-hover-bg-color: #46627f;
+    --row-alternate-bg-color: #3a5068;
+    --button-bg-color: #3498db;
+    --button-text-color: #ffffff;
+    --button-border-color: #3498db;
+    --button-hover-bg-color: #2980b9;
+    --badge-success-bg: #27ae60;
+    --badge-success-text: #ffffff;
+    --badge-warning-bg: #f39c12;
+    --badge-warning-text: #ffffff;
+    --badge-danger-bg: #e74c3c;
+    --badge-danger-text: #ffffff;
+    --badge-info-bg: #3498db;
+    --badge-info-text: #ffffff;
+    --filter-input-bg: #3a5068;
+    --filter-input-text: var(--table-text-color);
+    --filter-input-border: #46627f;
+    --filter-input-focus-border: #3498db;
+    --filter-input-placeholder: #95a5a6;
+}
+
+/* ----- Tema Minimal ----- */
+:host([theme="minimal"]) {
+    /* Sovrascrittura variabili per tema minimal */
+    --row-border-bottom: 1px dashed #ccc;
+    --header-bg-color: transparent;
+    --header-font-weight: 700;
+    --row-alternate-bg-color: transparent;
+    --row-hover-bg-color: #efefef;
+    --table-border-style: none;
+    .slot-container {
+        padding: 10px 0;
+        border-top: 1px dashed #ccc;
+    }
+}
