@@ -1,0 +1,33 @@
+{% extends 'admin/templateAdminPage.html.twig' %}
+
+{% block content %}
+
+    <div class="panel">
+        <div class="panel-heading">
+            <span class="icon icon-user"></span>
+            <span>Elenco clienti</span>
+        </div>
+        <div class="panel-body">
+            <table class="table table-bordered table-condensed table-striped" id="table-customers"></table>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block scripts %}
+    {{ parent() }}
+    <script src="{{ asset('js/admin/adminTableCustomers.js') }}"></script>
+    <script type="text/javascript">
+        const jobAreas = {{ jobAreas|raw }};
+        const jobPositions = {{ jobPositions|raw }};
+        const customerPageLink = "{{ customerPageLink|raw }}";
+        const adminTableCustomers = new AdminTableCustomers('table-customers', adminControllerUrl, '', jobAreas, jobPositions);
+
+        window.customerPageLink = customerPageLink;
+
+        document.addEventListener("DOMContentLoaded", async(e) => {
+            console.log("DOMContentLoaded AdminMpCustomerInvoice");
+            adminTableCustomers.init();
+        });
+    </script>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends 'admin/templateAdminPage.html.twig' %}
+
+{% block content %}
+    <div class="d-flex justify-content-start align-items-start gap-2">
+        <div class="panel">
+            <div class="panel-heading">
+                <span class="icon icon-list"></span>
+                <span>Elenco Settori</span>
+            </div>
+            <div class="panel-body">
+                <div id="toolbar-jobs-area">
+                    <button type="button" class="btn btn-primary" id="btn-add-jobs-area">
+                        <span class="material-icons">add</span>
+                        <span>Aggiungi Settore</span>
+                    </button>
+                </div>
+                <table class="table table-bordered table-condensed table-striped" id="table-jobs-area"></table>
+            </div>
+        </div>
+        <div class="panel">
+            <div class="panel-heading">
+                <span class="icon icon-list"></span>
+                <span>Elenco Professioni</span>
+            </div>
+            <div class="panel-body">
+                <div id="toolbar-jobs-position">
+                    <button type="button" class="btn btn-primary" id="btn-add-jobs-position">
+                        <span class="material-icons">add</span>
+                        <span>Aggiungi Professione</span>
+                    </button>
+                </div>
+                <table class="table table-bordered table-condensed table-striped" id="table-jobs-position"></table>
+            </div>
+        </div>
+        <div class="panel grow-1">
+            <div class="panel-heading">
+                <span class="icon icon-list"></span>
+                <span>Associazione Professioni</span>
+            </div>
+            <div class="panel-body">
+                <div id="toolbar-jobs-link">
+                    <button type="button" class="btn btn-primary" id="btn-add-jobs-link">
+                        <span class="material-icons">add</span>
+                        <span>Aggiungi Associazione</span>
+                    </button>
+                </div>
+                <table class="table table-bordered table-condensed table-striped" id="table-jobs-link"></table>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block scripts %}
+    {{ parent() }}
+    <script src="{{ asset('js/admin/adminTableJobsArea.js') }}"></script>
+    <script src="{{ asset('js/admin/adminTableJobsPosition.js') }}"></script>
+    <script src="{{ asset('js/admin/adminTableJobsLink.js') }}"></script>
+    <script type="text/javascript">
+        const adminTableJobsArea = new AdminTableJobsArea('table-jobs-area', adminControllerUrl, 'toolbar-jobs-area');
+        const adminTableJobsPosition = new AdminTableJobsPosition('table-jobs-position', adminControllerUrl, 'toolbar-jobs-position');
+        const adminTableJobsLink = new AdminTableJobsLink('table-jobs-link', adminControllerUrl, 'toolbar-jobs-link');
+
+        document.addEventListener("DOMContentLoaded", async(e) => {
+            console.log("DOMContentLoaded AdminMpCustomerInvoice");
+            adminTableJobsArea.init();
+            adminTableJobsPosition.init();
+            adminTableJobsLink.init();
+        });
+    </script>
+{% endblock %}

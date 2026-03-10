@@ -1,0 +1,144 @@
+{% block styles %}
+<link href="{{ asset('js/bs-table/bootstrap-table.min.css') }}" rel="stylesheet">
+<link href="{{ asset('js/bs-table/extensions/filter-control/bootstrap-table-filter-control.min.css') }}" rel="stylesheet">
+
+<style>
+    .table-bordered {
+        border: 1px solid #ccc;
+    }
+
+    .table-bordered thead tr th {
+        border: 1px solid #ccc;
+    }
+
+    .table-bordered tbody tr td {
+        border: 1px solid #ccc;
+    }
+
+    thead.thead-dark {
+        background-color: #343a40;
+        color: #fff;
+        padding: 8px;
+    }
+
+    thead.thead-dark tr th {
+        border: 1px solid #ccc !important;
+        padding: 0.5rem !important;
+    }
+
+    .page-container {
+        display: flex;
+        justify-content: start;
+        align-items: top;
+        gap: 2rem;
+    }
+
+    .d-flex {
+        display: flex;
+        flex-direction: row;
+    }
+
+    .gap-1 {
+        gap: 0.5rem;
+    }
+
+    .gap-2 {
+        gap: 1rem;
+    }
+
+    .gap-3 {
+        gap: 1.5rem;
+    }
+
+    .gap-4 {
+        gap: 2rem;
+    }
+
+    .justify-content-start {
+        justify-content: start;
+    }
+
+    .justify-content-center {
+        justify-content: center;
+    }
+
+    .justify-content-end {
+        justify-content: end;
+    }
+
+    .align-items-start {
+        align-items: start;
+    }
+
+    .align-items-center {
+        align-items: center;
+    }
+
+    .align-items-end {
+        align-items: end;
+    }
+
+    .grow-1 {
+        flex-grow: 1;
+    }
+
+    .pt-2 {
+        padding-top: 0.5rem;
+    }
+
+    .border-top {
+        margin-top: 2rem;
+        border-top: 1px solid #ccc;
+    }
+
+    .alert-body {
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .group-list {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .group-list li {
+        margin-bottom: 0.5rem;
+        padding-left: 1rem;
+    }
+
+    .group-list li::before {
+        content: "\2022";
+        color: #000;
+        display: inline-block;
+        width: 1rem;
+    }
+</style>
+{% endblock %}
+
+<section class="bootstrap page-container" style="width: 100%;">
+    <div class="alert-body"></div>
+    {% block content %}
+    {% endblock %}
+</section>
+
+{% block scripts %}
+    <script src="{{ asset('js/bs-table/bootstrap-table.min.js') }}"></script>
+    <script src="{{ asset('js/bs-table/locale/bootstrap-table-it-IT.min.js') }}"></script>
+    <script src="{{ asset('js/bs-table/extensions/multiple-sort/bootstrap-table-multiple-sort.min.js') }}"></script>
+    <script src="{{ asset('js/bs-table/extensions/filter-control/bootstrap-table-filter-control.min.js') }}"></script>
+
+    <script type="text/javascript">
+        jQuery.migrateMute = true;
+        const adminControllerUrl = "{{ adminControllerUrl | raw }}";
+
+        function showAlert(message) {
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-success';
+            alert.innerHTML = message;
+
+            document.querySelector('.alert-body').innerHTML = '';
+            document.querySelector('.alert-body').appendChild(alert);
+        }
+    </script>
+{% endblock %}

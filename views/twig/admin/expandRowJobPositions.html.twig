@@ -1,0 +1,25 @@
+<table class="table table-bordered table-condensed table-striped" style="padding: 1rem">
+    <thead class="thead thead-dark">
+        <tr>
+            <th>ID</th>
+            <th>PROFESSIONE</th>
+            <th>AZIONI</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for jobPosition in jobPositions %}
+            <tr>
+                <td>{{ jobPosition.id }}</td>
+                <td>{{ jobPosition.job_position }}</td>
+                <td>
+                    <div class="d-flex justify-content-center align-items-center">
+                        <button class="btn btn-primary btn-sm" type="button" name="btnRemoveLink" data-id-job-position="{{ jobPosition.id }}">
+                            <i class="material-icons">delete</i>
+                            <span>Elimina</span>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>

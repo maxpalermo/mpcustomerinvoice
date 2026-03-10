@@ -2,7 +2,7 @@
 <module>
     <name>mpcustomerinvoice</name>
     <displayName><![CDATA[MP Customer Invoice]]></displayName>
-    <version><![CDATA[1.0.0]]></version>
+    <version><![CDATA[1.2.0]]></version>
     <description><![CDATA[Gestisce i codici della fatturazione elettronica.]]></description>
     <author><![CDATA[Massimiliano Palermo]]></author>
     <tab><![CDATA[administration]]></tab>

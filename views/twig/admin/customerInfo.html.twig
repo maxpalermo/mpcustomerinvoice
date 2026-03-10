@@ -1,0 +1,121 @@
+<script src="{{ asset('js/admin/adminCustomerInfo.js') }}"></script>
+
+<template id="mpcustomerinvoice-personal-info">
+    <div class="row mb-1 adminCustomerContainer">
+        <div class="col-4 text-right">
+            Soggetto
+        </div>
+        <div class="col-8">
+            <span class="eurosolutionId badge badge-success rounded" style="font-size: {{ fontSize }}; border-radius: 0;">
+                <i class="material-icons">person</i>
+                {{ subject }}
+            </span> 
+        </div>
+    </div>
+    <div class="row mb-1 adminCustomerContainer">
+        <div class="col-4 text-right">
+            Partita IVA
+        </div>
+        <div class="col-8">
+            <span style="font-size: {{ fontSize }};">
+                {{ vat_number }}
+            </span> 
+        </div>
+    </div>
+    <div class="row mb-1 adminCustomerContainer">
+        <div class="col-4 text-right">
+            Codice Fiscale
+        </div>
+        <div class="col-8">
+            <span style="font-size: {{ fontSize }};">
+                {{ dni }}
+            </span> 
+        </div>
+    </div>
+    <div class="row mb-1 adminCustomerContainer">
+        <div class="col-4 text-right">
+            SDI
+        </div>
+        <div class="col-8">
+            <span style="font-size: {{ fontSize }};">
+                {{ sdi }}
+            </span> 
+        </div>
+    </div>
+    <div class="row mb-1 adminCustomerContainer">
+        <div class="col-4 text-right">
+            PEC
+        </div>
+        <div class="col-8">
+            <span style="font-size: {{ fontSize }};">
+                {{ pec }}
+            </span> 
+        </div>
+    </div>
+    <div class="row mb-1 adminCustomerContainer">
+        <div class="col-4 text-right">
+            CIG
+        </div>
+        <div class="col-8">
+            <span style="font-size: {{ fontSize }};">
+                {{ cig }}
+            </span> 
+        </div>
+    </div>
+    <div class="row mb-1 adminCustomerContainer">
+        <div class="col-4 text-right">
+            CUP
+        </div>
+        <div class="col-8">
+            <span style="font-size: {{ fontSize }};">
+                {{ cup }}
+            </span> 
+        </div>
+    </div>
+    <div class="row mb-1 adminCustomerContainer">
+        <div class="col-4 text-right">
+            ID EUROSOLUTION
+        </div>
+        <div class="col-8">
+            <span style="font-size: {{ fontSize }};">
+                {{ id_eurosolution }}
+            </span> 
+        </div>
+    </div>
+    <div class="row mb-1 adminCustomerContainer">
+        <div class="col-4 text-right">
+            SETTORE
+        </div>
+        <div class="col-8">
+            <span style="font-size: {{ fontSize }};">
+                {{ job_area }}
+            </span> 
+        </div>
+    </div>
+    <div class="row mb-1 adminCustomerContainer">
+        <div class="col-4 text-right">
+            PROFESSIONE
+        </div>
+        <div class="col-8">
+            <span style="font-size: {{ fontSize }};">
+                {{ job_position }}
+            </span> 
+        </div>
+    </div>
+</template>
+
+<script type="text/javascript">
+    const MPCUSTOMERINVOICE_controller = "{{ controller }}";
+    const MPCUSTOMERINVOICE_customerId = {{ id_customer }};
+    const MPCUSTOMERINVOICE_employeeId = {{ id_employee }};
+
+    //creo un nuovo custom event
+    const MpCustomerInvoiceReady = new CustomEvent('MpCustomerInvoiceReady', {
+        detail: {
+            MPCUSTOMERINVOICE_employeeId: MPCUSTOMERINVOICE_employeeId??0,
+            MPCUSTOMERINVOICE_customerId: MPCUSTOMERINVOICE_customerId??0,
+        },
+    });
+    console.log('CALL MpCustomerInvoiceReady');
+    document.dispatchEvent(MpCustomerInvoiceReady);
+</script>

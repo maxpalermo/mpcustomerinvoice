@@ -1,0 +1,254 @@
+<script type="text/javascript">
+    function ElementFromHtml(html) {
+        const template = document.createElement("template");
+        template.innerHTML = html.trim();
+        const element = template.content.firstElementChild;
+        template.remove();
+
+        return element;
+    }
+
+    function getFieldType() {
+        const html = `
+            <div class="form-group row ">
+                <label class="col-md-3 form-control-label" for="field-type">Tipo</label>
+                <div class="col-md-6 js-input-column">
+                <select id="field-type" class="form-control form-control-select" name="type">
+                    <option value="" selected>Scegli, per favore</option>
+                    <option value="ENTE">ENTE</option>
+                    <option value="PARTITA_IVA">PARTITA IVA</option>
+                    <option value="PRIVATO">PRIVATO</option>
+                </select>
+            </div>
+            <div class="col-md-3 form-control-comment">Seleziona</div>
+            </div>
+        `;
+
+        const el = ElementFromHtml(html);
+        return el;
+    }
+
+    function getFormContainer() {
+        const html = `<div id="customerInvoiceContainer"></div>`;
+        const el = ElementFromHtml(html);
+
+        return el;
+    }
+
+    function getHtmlElement(label, id, name, type, comment, maxlength = 255, required = false) {
+        console.log("REQUIRED: ", required);
+
+        const requiredAttr = required ? "required" : "";
+        const requiredLabelClass = required ? "required" : "";
+        const requiredText = required ? `<span class="text-danger">Richiesto</span>` : "Opzionale";
+
+        const html = `
+            <div class="form-group row ">
+                <label class="col-md-3 form-control-label ${requiredLabelClass}" for="${id}">${label}</label>
+                <div class="col-md-6 js-input-column" data-group="customerInvoice">
+                    <input id="${id}" class="form-control" name="${name}" type="${type}" value="" ${requiredAttr} maxlength="${maxlength}">
+                    <span class="form-control-comment">${comment}</span>
+                </div>
+
+                <div class="col-md-3 form-control-comment">${requiredText}</div>
+            </div>
+        `;
+
+        return ElementFromHtml(html);
+    }
+
+    function getDni() {
+        return getHtmlElement("Codice Fiscale", "dni", "dni", "text", "(max 16 caratteri)", 16, true);
+    }
+
+    function getVatNumber() {
+        return getHtmlElement("Partita IVA", "vat_number", "vat_number", "text", "(max 16 caratteri)", 16, true);
+    }
+
+    function getCIG() {
+        return getHtmlElement("Codice Identificativo Gara (CIG)", "cig", "cig", "text", "(max 10 caratteri)", 10, true);
+    }
+
+    function getCUP() {
+        return getHtmlElement("Codice Unico di Progetto (CUP)", "cup", "cup", "text", "(max 15 caratteri)", 15, true);
+    }
+
+    function getSDI() {
+        return getHtmlElement("Sistema di Interscambio (SDI)", "sdi", "sdi", "text", "(max 7 caratteri)", 7, true);
+    }
+
+    function getPEC() {
+        return getHtmlElement("Posta Elettronica Certificata (PEC)", "pec", "pec", "email", "", 255, false);
+    }
+
+    function getSeparator() {
+        const el = `<div class="form-group row"><hr /></div>`;
+        return ElementFromHtml(el);
+    }
+
+    async function showFieldsType(type, container) {
+        const nodes = container.querySelectorAll('[data-group="customerInvoice"]');
+        nodes.forEach((node) => {
+            const row = node.closest(".form-group.row");
+            if (row) row.remove();
+        });
+        const hr = container.querySelectorAll("hr");
+        hr.forEach((node) => {
+            const row = node.closest(".form-group.row");
+            if (row) row.remove();
+        });
+
+        switch (type) {
+            case "ENTE":
+                container.append(getSeparator());
+                container.append(getDni());
+                container.append(getCIG());
+                container.append(getCUP());
+                container.append(getSeparator());
+                break;
+            case "PARTITA_IVA":
+                container.append(getSeparator());
+                container.append(getVatNumber());
+                container.append(getSDI());
+                container.append(getPEC());
+                container.append(getSeparator());
+                break;
+            case "PRIVATO":
+                container.append(getSeparator());
+                container.append(getDni());
+                container.append(getSeparator());
+                break;
+        }
+    }
+
+    async function bindOnChangeWantInvoice(e) {
+        let containerEl = document.getElementById("customerInvoiceContainer");
+
+        if (!containerEl) {
+            containerEl = getFormContainer();
+            wantInvoice = document.getElementById("field-want_invoice");
+            if (wantInvoice) {
+                wantInvoice.closest(".form-group.row").insertAdjacentElement("afterend", containerEl);
+            }
+        }
+
+        const value = e.target.closest("select").value;
+
+        if (value == 1) {
+            containerEl.innerHTML = "";
+            const fieldTypeEl = getFieldType();
+            containerEl.append(fieldTypeEl);
+
+            const fieldTypeSelect = fieldTypeEl.querySelector("select");
+            if (fieldTypeSelect) {
+                fieldTypeSelect.removeEventListener("change", bindOnChangeFieldType);
+                fieldTypeSelect.addEventListener("change", bindOnChangeFieldType);
+            }
+        } else {
+            containerEl.innerHTML = "";
+        }
+    }
+
+    async function bindOnChangeFieldType(e) {
+        const value = e.target.value;
+        showFieldsType(value, e.target.closest("#customerInvoiceContainer"));
+    }
+
+    function initFormControls() {
+        const dni = document.getElementsByName("dni");
+        console.log("DNI", dni);
+
+        if (dni && dni.length) {
+            Array.from(dni).forEach((node) => {
+                if (node) {
+                    console.log("nodo DNI eliminato");
+
+                    node.remove();
+                }
+            });
+        }
+
+        const vat = document.getElementsByName("vat_number");
+        console.log("VAT", vat);
+
+        if (vat && vat.length) {
+            Array.from(vat).forEach((node) => {
+                if (node) {
+                    console.log("Nodo VAT eliminato");
+
+                    node.remove();
+                }
+            });
+        }
+
+        container = getFormContainer();
+
+        wantInvoice = document.getElementById("field-want_invoice");
+        if (wantInvoice) {
+            const parent = wantInvoice.closest(".form-group.row");
+            wantInvoice.removeEventListener("change", bindOnChangeWantInvoice);
+            wantInvoice.addEventListener("change", bindOnChangeWantInvoice);
+        }
+    }
+
+    function base64Decode(str) {
+        // Decodifica Base64 → stringa binaria
+        const binaryString = atob(str);
+        // Converte la stringa binaria in un array di byte
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        // Decodifica UTF-8
+        return new TextDecoder().decode(bytes);
+    }
+
+    function fillJobArea() {
+        const jobArea = document.getElementById("field-id_customer_invoice_job_area");
+        const jobAreaPos = document.getElementById("field-id_customer_invoice_job_position");
+        if (jobArea && jobAreaPos) {
+            jobAreaPos.innerHTML = `<option value="">Scegli per favore</option>`;
+            jobArea.innerHTML = `<option value="">Scegli per favore</option>`;
+
+            const jobAreas = Array.isArray(jobs) ? jobs : Object.values(jobs);
+            jobAreas.forEach((job) => {
+                const jobEl = document.createElement("option");
+                jobEl.value = job.id;
+                jobEl.textContent = job.name;
+                jobArea.append(jobEl);
+            });
+
+            jobArea.addEventListener("change", (e) => {
+                fillJobPositions(e.target.value);
+            });
+        }
+    }
+
+    function fillJobPositions(idJobArea) {
+        const jobsEl = document.getElementById("field-id_customer_invoice_job_position");
+        if (jobsEl) {
+            jobsEl.innerHTML = `<option value="">Scegli per favore</option>`;
+
+            const source = Array.isArray(jobs) ? jobs.find((j) => String(j.id) === String(idJobArea)) : jobs?.[idJobArea];
+            const jobsChildren = source?.jobs || [];
+            jobsChildren.forEach((job) => {
+                const el = document.createElement("option");
+                el.value = job.id;
+                el.textContent = job.name;
+
+                jobsEl.append(el);
+            });
+        }
+    }
+
+    const jobsB64 = "{{ jobs_b64 }}";
+    const jobs = JSON.parse(base64Decode(jobsB64));
+
+    document.addEventListener("DOMContentLoaded", async (e) => {
+        console.log("DOMContentLoaded: [registration.html.twig]");
+
+        const endpoint = "{{ endpoint }}";
+        initFormControls();
+        fillJobArea();
+    });
+</script>

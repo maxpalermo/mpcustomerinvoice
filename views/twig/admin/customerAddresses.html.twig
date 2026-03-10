@@ -1,0 +1,55 @@
+<div class="panel">
+    <div class="panel-heading">
+        Elenco Indirizzi
+    </div>
+    <div class="panel-body">
+    {%if addresses %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>tipo</th>
+                    <th>Indirizzo</th>
+                    <th>Dettagli</th>
+                    <th>Cap</th>
+                    <th>Città</th>
+                    <th>Provincia</th>
+                    <th>Nazione</th>
+                    <th>Telefono</th>
+                    <th>Cellulare</th>
+                    <th>Azioni</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for address in addresses %}
+                <tr>
+                    <td>
+                        <div style="padding: 8px;">
+                        {%if idAddressInvoice == address['id_address'] %}
+                            <span class="material-icons" style="position: relative;top: 6px;">receipt_long</span>
+                            <span class="label label-success">Fatturazione</span>
+                        {% else %}
+                            <span class="material-icons" style="position: relative;top: 6px;">local_shipping</span>
+                            <span class="label label-info">Spedizione</span>
+                        {% endif %}
+                        </div>
+                    </td>
+                    <td>{{ address.address1 | upper }}</td>
+                    <td>{{ address.address2 | upper }}</td>
+                    <td>{{ address.postcode }}</td>
+                    <td>{{ address.city | upper }}</td>
+                    <td>{{ address.state | upper }}</td>
+                    <td>{{ address.country | upper }}</td>
+                    <td>{{ address.phone }}</td>
+                    <td>{{ address.phone_mobile }}</td>
+                    <td class="text-center">
+                        <a target="_blank" href="{{ address.addressPageUrl }}" class="btn btn-primary btn-xs" title="Visualizza la scheda indirizzo"><i class="material-icons">home</i></a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="alert alert-warning">Nessun indirizzo trovato</div>
+    {% endif %}
+    </div>
+</div>
