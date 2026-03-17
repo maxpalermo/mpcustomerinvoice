@@ -77,4 +77,24 @@ class MpCustomerInvoiceCustomerModuleFrontController extends ModuleFrontControll
             'jobPositions' => $jobPositions,
         ];
     }
+
+    public function hasStatesAction()
+    {
+        $id_lang = (int) Context::getContext()->language->id;
+        $countryId = (int) Tools::getValue('countryId');
+        $country = new \Country($countryId, $id_lang);
+
+        if (Validate::isLoadedObject($country)) {
+            return [
+                'hasStates' => $country->contains_states,
+                'options' => State::getStatesByIdCountry($countryId),
+                'need_zip_code' => $country->need_zip_code,
+                'zip_code_format' => $country->zip_code_format,
+            ];
+        }
+
+        return [
+            'hasStates' => false,
+        ];
+    }
 }

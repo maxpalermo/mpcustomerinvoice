@@ -74,10 +74,13 @@ class HookManager
     public function hookDisplayBeforeBodyClosingTag($configuration)
     {
         $controller = Tools::getValue('controller');
+        $idLang = (int) Context::getContext()->language->id;
+
         if ($controller == 'registration') {
             $params = [
                 'endpoint' => $this->context->link->getModuleLink($this->module->name, 'Customer'),
                 'jobs_b64' => base64_encode(json_encode($this->getJobs())),
+                'countriesJson' => json_encode(\Country::getCountries($idLang)),
             ];
             $html = $this->module->renderTwig('front/registration', $params);
 

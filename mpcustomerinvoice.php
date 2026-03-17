@@ -259,14 +259,38 @@ class MpCustomerInvoice extends Module implements WidgetInterface
         $controller = Tools::strtolower(Tools::getValue('controller'));
 
         if ($controller == 'registration' || $controller == 'order') {
-            return;
+            // 1. Carica jQuery (necessario per Chosen)
+            $this->context->controller->addJquery();
+
+            // 2. Carica i file di Chosen dal core (i percorsi rimangono questi anche in PS 8)
             $this->context->controller->registerJavascript(
-                'mpcustomerinvoice-admin',
-                'modules/mpcustomerinvoice/views/assets/js/registration/registrationPage.js',
-                [
-                    'priority' => 100,
-                ]
+                'remote-chosen-js',
+                'js/jquery/plugins/jquery.chosen.js',
+                ['position' => 'bottom', 'priority' => 100]
             );
+
+            $this->context->controller->registerStylesheet(
+                'remote-chosen-css',
+                'js/jquery/plugins/pages/jquery.chosen.css',
+                ['media' => 'all', 'priority' => 100]
+            );
+
+            // 3. Carica il TUO script di inizializzazione
+            $this->context->controller->registerJavascript(
+                'module-my-chosen-init',
+                'modules/' . $this->name . '/views/js/init_chosen.js',
+                ['position' => 'bottom', 'priority' => 150]
+            );
+
+            /*
+             * $this->context->controller->registerJavascript(
+             *     'mpcustomerinvoice-admin',
+             *     'modules/mpcustomerinvoice/views/assets/js/registration/registrationPage.js',
+             *     [
+             *         'priority' => 100,
+             *     ]
+             * );
+             */
         }
     }
 
