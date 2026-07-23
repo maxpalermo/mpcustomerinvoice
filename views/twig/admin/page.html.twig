@@ -1,5 +1,5 @@
-<link rel="stylesheet" href="{{ asset('js/bs-table/bootstrap-table.min.css') }}">
-<link rel="stylesheet" href="{{ asset('js/bs-table/extensions/filter-control/bootstrap-table-filter-control.min.css') }}">
+<link rel="stylesheet" href="{{ asset('js/bs-table/bootstrap-table.min.css') }}" />
+<link rel="stylesheet" href="{{ asset('js/bs-table/extensions/filter-control/bootstrap-table-filter-control.min.css') }}" />
 
 <style>
     .page-container {
@@ -59,9 +59,9 @@
                     <li>Modificare i dati <span class="badge badge-warning">Pending</span></li>
                 </ul>
             </div>
-            <button class="btn btn-primary" onclick="startImportV16();">Importa</button>
+            <button class="btn btn-primary" onclick="startImportV16()">Importa</button>
             <div class="panel-body alert-body"></div>
-      </div>
+        </div>
     </div>
 </section>
 <section class="page-container">
@@ -78,29 +78,30 @@
 <script src="{{ asset('js/bs-table/locale/bootstrap-table-it-IT.min.js') }}"></script>
 <script src="{{ asset('js/bs-table/extensions/filter-control/bootstrap-table-filter-control.min.js') }}"></script>
 <script src="{{ asset('js/bs-table/extensions/multiple-sort/bootstrap-table-multiple-sort.min.js') }}"></script>
+<script src="{{ asset('js/admin/fixBootstrapTable.js') }}"></script>
 <script src="{{ asset('js/admin/adminTableCustomers.js') }}"></script>
 
 <script type="text/javascript">
     jQuery.migrateMute = true;
     const adminControllerUrl = "{{ adminControllerUrl | raw }}";
-    const adminTableCustomers = new AdminTableCustomers('table-import-result', adminControllerUrl);
+    const adminTableCustomers = new AdminTableCustomers("table-import-result", adminControllerUrl);
 
-    document.addEventListener("DOMContentLoaded", async(e) => {
+    document.addEventListener("DOMContentLoaded", async (e) => {
         console.log("DOMContentLoaded AdminMpCustomerInvoice");
         adminTableCustomers.init();
     });
 
     function showAlert(message) {
-        const alert = document.createElement('div');
-        alert.className = 'alert alert-success';
+        const alert = document.createElement("div");
+        alert.className = "alert alert-success";
         alert.innerHTML = message;
 
-        document.querySelector('.alert-body').innerHTML = '';
-        document.querySelector('.alert-body').appendChild(alert);
+        document.querySelector(".alert-body").innerHTML = "";
+        document.querySelector(".alert-body").appendChild(alert);
     }
 
     async function startImportV16() {
-        const responseTruncate = await fetch(adminControllerUrl + '&action=truncateTable&ajax=1');
+        const responseTruncate = await fetch(adminControllerUrl + "&action=truncateTable&ajax=1");
         const dataTruncate = await responseTruncate.json();
         if (!dataTruncate.success) {
             console.error("Errore: " + dataTruncate.error);
@@ -110,10 +111,10 @@
         showAlert("Tabella svuotata");
 
         let step = 1;
-        const limit=500;
+        const limit = 500;
 
-        while(true) {
-            let offset = (step-1) * limit;
+        while (true) {
+            let offset = (step - 1) * limit;
             const responseGetCustomersData = await fetch(adminControllerUrl + `&action=getCustomersApiData&ajax=1&limit=${limit}&offset=${offset}`);
             const dataGetCustomersData = await responseGetCustomersData.json();
             if (!dataGetCustomersData.success) {
@@ -130,16 +131,16 @@
 
             const request = {
                 ajax: 1,
-                action: 'importV16',
-                data: JSON.stringify(dataResponse)
+                action: "importV16",
+                data: JSON.stringify(dataResponse),
             };
 
             const responseImport = await fetch(adminControllerUrl, {
-                method: 'POST',
+                method: "POST",
                 headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
+                    "Content-Type": "application/x-www-form-urlencoded",
                 },
-                body: new URLSearchParams(request)
+                body: new URLSearchParams(request),
             });
 
             const dataImportJson = await responseImport.json();

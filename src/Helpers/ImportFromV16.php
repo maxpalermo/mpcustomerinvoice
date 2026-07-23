@@ -56,7 +56,7 @@ class ImportFromV16
         $query = "
             SELECT
                 a.id_customer, '' as cuu, a.uid as sdi, a.pec, a.cig, a.cup, a.id_eur as `id_eurosolution`, a.id_job_area, a.id_job_name as id_job_position,
-                addr.id_address as id_address_invoice, addr.vat_number, addr.dni as dni, addr.subject as type
+                addr.id_address as id_address_invoice, addr.company, addr.vat_number, addr.dni as dni, addr.subject as type
             FROM
                 `{$pfx}customer` a
             LEFT JOIN
@@ -152,7 +152,7 @@ class ImportFromV16
                     $row['type'] = 'PRIVATO';
                     break;
                 default:
-                    continue;
+                    continue 2;
             }
 
             $row['is_foreign'] = 0;

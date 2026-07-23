@@ -29,19 +29,24 @@ if (!defined('_PS_VERSION_')) {
 
 class ModelCustomerInvoice extends ObjectModel
 {
-    public $id_eurosolution;
-    public $type;
-    public $vat_number;
-    public $dni;
+    public const TYPE_CUSTOMER_ENTE = 'ENTE';
+    public const TYPE_CUSTOMER_PARTITA_IVA = 'PARTITA_IVA';
+    public const TYPE_CUSTOMER_PRIVATO = 'PRIVATO';
+
+    public $id_eurosolution; // Codice Eurosolution
+    public $type; // [ENTE,PARTITA_IVA, PRIVATO]
+    public $company;
+    public $vat_number; // Partita IVA
+    public $dni;  // Codice Fiscale
     public $cuu;  // Codice Univoco dal portale IPA
     public $sdi;  // Codice destinatario
     public $pec;  // Indirizzo email pec
     public $cig;  // Codice di identificazione del gestore
     public $cup;  // Codice univoco di pagamento
-    public $id_address_invoice;
+    public $id_address_invoice; // Id indirizzo di fatturazione
     public $is_foreign;  // Indica se il cliente è un cliente straniero
-    public $id_customer_invoice_job_area;
-    public $id_customer_invoice_job_position;
+    public $id_customer_invoice_job_area; // Id area di lavoro
+    public $id_customer_invoice_job_position; // Id posizione di lavoro
     public $date_add;
     public $date_upd;
     protected static $model_name = 'ModelCustomerInvoice';
@@ -60,6 +65,12 @@ class ModelCustomerInvoice extends ObjectModel
                 'type' => self::TYPE_STRING,
                 'validate' => 'isString',
                 'size' => 24,
+                'required' => false,
+            ],
+            'company' => [
+                'type' => self::TYPE_STRING,
+                'validate' => 'isString',
+                'size' => 255,
                 'required' => false,
             ],
             'vat_number' => [
@@ -146,6 +157,7 @@ class ModelCustomerInvoice extends ObjectModel
                 `id_customer` int(11) NOT NULL AUTO_INCREMENT,
                 `id_eurosolution` int(11) DEFAULT NULL,
                 `type` varchar(24) DEFAULT NULL,
+                `company` varchar(255) DEFAULT NULL,
                 `vat_number` varchar(16) DEFAULT NULL,
                 `dni` varchar(16) DEFAULT NULL,
                 `cuu` varchar(6) DEFAULT NULL,

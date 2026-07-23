@@ -1,0 +1,23 @@
+{% extends 'admin/templateAdminPage.html.twig' %}
+
+{% block content %}
+    <div class="panel">
+        <div class="panel-heading">
+            <span class="icon icon-file-text"></span>
+            <span>Test Intercettazione PDF Custom</span>
+        </div>
+        <div class="panel-body">
+            <div class="alert alert-success">
+                <h4><i class="icon icon-check-circle"></i> Funziona!</h4>
+                <p>La richiesta per la generazione del PDF è stata intercettata con successo.</p>
+                <ul>
+                    <li><strong>Tipo Documento:</strong> {{ document_type }}</li>
+                    <li><strong>ID Ordine:</strong> {{ id_order }}</li>
+                </ul>
+            </div>
+            <a href="{{ adminControllerUrl }}&action=showOrdersPage" class="btn btn-default">
+                <i class="icon icon-arrow-left"></i> Torna alla lista ordini
+            </a>
+        </div>
+    </div>
+{% endblock %}

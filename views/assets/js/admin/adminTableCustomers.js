@@ -20,7 +20,7 @@ class AdminTableCustomers {
             console.error('Table with id "' + tableId + '" not found');
             return;
         }
-        if (toolbarId != null) {
+        if (toolbarId) {
             this.toolbarId = toolbarId;
             this.toolbar = document.getElementById(toolbarId);
             if (!this.toolbar) {
@@ -28,7 +28,6 @@ class AdminTableCustomers {
                 return;
             }
         }
-        this.init();
     }
 
     init() {
@@ -38,23 +37,15 @@ class AdminTableCustomers {
 
     initTable() {
         const self = this;
+        self.requestState = {
+            limit: 25,
+            offset: 0,
+            sort: "id_customer",
+            order: "asc",
+            filter: {},
+        };
+
         $(self.table).bootstrapTable({
-            url: self.adminControllerUrl,
-            method: "post",
-            contentType: "application/x-www-form-urlencoded",
-            queryParams: function (params) {
-                console.log("QUERY PARAMS:", params);
-                return {
-                    ajax: 1,
-                    action: "renderCustomersData",
-                    limit: params.limit,
-                    offset: params.offset,
-                    search: params.search == undefined ? "" : params.search,
-                    sort: params.sort == undefined ? "c.id_customer" : params.sort,
-                    order: params.order == undefined ? "asc" : params.order,
-                    filter: params.filter == undefined ? "" : params.filter,
-                };
-            },
             filterControl: true,
             filterControlVisible: true,
             filterControlSearchClear: true,
@@ -106,8 +97,7 @@ class AdminTableCustomers {
             onPostBody: function () {
                 console.log("Bootstrap Table initialized successfully");
                 self.bindActionButtons();
-                self.setBootstrapTableIcons();
-                self.fixBootstrapTable();
+                fixBootstrapTable(self.tableId);
             },
             columns: [
                 {
@@ -217,6 +207,13 @@ class AdminTableCustomers {
                     },
                 },
                 {
+                    field: "cuu",
+                    title: "CUU",
+                    align: "left",
+                    sortable: true,
+                    filterControl: "input",
+                },
+                {
                     field: "sdi",
                     title: "SDI",
                     align: "left",
@@ -286,6 +283,59 @@ class AdminTableCustomers {
                 },
             ],
         });
+
+        $(self.table).on("page-change.bs.table", function (event, page, pageSize) {
+            self.requestState.limit = pageSize;
+            self.requestState.offset = (page - 1) * pageSize;
+            self.loadTableData();
+        });
+        $(self.table).on("sort.bs.table", function (event, name, order) {
+            self.requestState.sort = name;
+            self.requestState.order = order;
+            self.requestState.offset = 0;
+            self.loadTableData();
+        });
+        $(self.table).on("column-search.bs.table", function (event, field, text) {
+            if (text) {
+                self.requestState.filter[field] = text;
+            } else {
+                delete self.requestState.filter[field];
+            }
+            self.requestState.offset = 0;
+            self.loadTableData();
+        });
+        $(self.table).on("refresh.bs.table", function () {
+            self.loadTableData();
+        });
+        self.loadTableData();
+    }
+
+    async loadTableData() {
+        const request = new URLSearchParams({
+            ajax: "1",
+            action: "renderCustomersData",
+            limit: String(this.requestState.limit),
+            offset: String(this.requestState.offset),
+            sort: this.requestState.sort,
+            order: this.requestState.order,
+            filter: JSON.stringify(this.requestState.filter),
+        });
+
+        try {
+            const response = await fetch(this.adminControllerUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+                body: request,
+            });
+            const data = await response.json();
+            if (!response.ok || !Array.isArray(data.rows)) {
+                throw new Error("Risposta non valida");
+            }
+            $(this.table).bootstrapTable("load", data);
+        } catch (error) {
+            $(this.table).bootstrapTable("load", { total: 0, rows: [] });
+            console.error("Errore caricamento clienti:", error);
+        }
     }
 
     fixBootstrapTable() {
@@ -296,7 +346,7 @@ class AdminTableCustomers {
 
             if ($menuDiv.length) {
                 // Se non è già <ul>, converti
-                if ($menuDiv.prop("tagName") !== "UL") {
+                if ($menuDiv.prop("tagName") === "UL") {
                     var $ul = $('<ul class="dropdown-menu" role="menu"></ul>');
 
                     $menuDiv.find("a").each(function () {
@@ -313,17 +363,15 @@ class AdminTableCustomers {
 
             // Assicura data-toggle (non data-bs-toggle) e inizializza il plugin
             var $btn = $group.find("> .dropdown-toggle");
-            if ($btn.attr("data-bs-toggle") === "dropdown") {
-                $btn.removeAttr("data-bs-toggle").attr("data-toggle", "dropdown");
+            if ($btn.attr("data-toggle") !== "dropdown") {
+                $btn.attr("data-toggle", "dropdown");
             }
-            if (typeof $.fn.dropdown === "function") {
-                $btn.dropdown();
-            }
+            $btn.removeAttr("data-bs-toggle");
         });
 
-        $("button[name=refresh] i").removeClass("material-icons").addClass("icon icon-refresh").val("");
+        $("button[name=refresh] i").attr("class", "material-icons").text("refresh");
 
-        $(".fixed-table-pagination .dropdown-toggle")
+        $(".fixed-table-pagination .dropdown-toggle.bs3-compat")
             .off("click")
             .on("click", function (e) {
                 e.preventDefault();
@@ -335,7 +383,7 @@ class AdminTableCustomers {
                 $menu.toggleClass("show");
             });
 
-        $("button[name=filterControlSwitch]").html("<i class='icon icon-filter'></i>");
+        $("button[name=filterControlSwitch] i").attr("class", "material-icons").text("filter_list");
 
         $(document)
             .off("click.bs-table-page-size")
@@ -352,7 +400,8 @@ class AdminTableCustomers {
     setBootstrapTableIcons() {
         // Assicura che le icone di Bootstrap Table siano correttamente caricate
         $(".fixed-table-toolbar .search input").addClass("form-control");
-        $(".fixed-table-toolbar .columns label").addClass("checkbox-inline");
+        $(".fixed-table-toolbar .columns label").removeClass("checkbox-inline").addClass("dropdown-item");
+        $(".fixed-table-toolbar .columns label input").removeClass("checkbox-inline").addClass("mr-2");
     }
 
     getJobAreas() {

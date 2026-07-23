@@ -1,0 +1,232 @@
+.badge-info {
+    background-color: #17a2b8 !important;
+    color: #fff !important;
+}
+
+.badge-success {
+    background-color: #28a745 !important;
+    color: #fff !important;
+}
+
+.badge-dark {
+    background-color: #343a40 !important;
+    color: #fff !important;
+}
+
+.badge-warning {
+    background-color: #ffc107 !important;
+    color: #000 !important;
+}
+
+.badge-danger {
+    background-color: #dc3545 !important;
+    color: #fff !important;
+}
+
+/* ========================================
+   CONTENITORE DROPDOWN
+   ======================================== */
+
+.dropdown-menu .dropdown-item {
+    text-decoration: none;
+}
+
+.dropdown-menu .dropdown-item:hover,
+.dropdown-menu .dropdown-item:focus,
+.dropdown-menu .dropdown-item:active {
+    text-decoration: none;
+}
+
+.dropdown-menu {
+    background: #ffffff;
+    border: none;
+    border-radius: 12px;
+    padding: 8px;
+    min-width: 80px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06);
+    animation: dropdownFade 0.2s ease;
+}
+
+/* Elementi del dropdown */
+.dropdown-item {
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #1a1a2e;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    text-align: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Hover effect */
+.dropdown-item:hover {
+    background: #2c8592;
+    color: #ffffff !important;
+    transform: translateX(4px);
+}
+
+/* Elemento attivo */
+.dropdown-item.active {
+    background: #17a2b8;
+    color: #ffffff !important;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+/* Hover sull'elemento attivo */
+.dropdown-item.active:hover {
+    background: #2c8592;
+    color: #ffffff !important;
+    transform: translateX(4px);
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
+}
+
+/* Animazione di entrata */
+@keyframes dropdownFade {
+    from {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Separatore visivo tra gli elementi (opzionale) */
+.dropdown-item:not(:last-child) {
+    margin-bottom: 2px;
+}
+
+/* ========================================
+   PAGINAZIONE - CON PREV/NEXT PIÙ GRANDI
+   ======================================== */
+
+/* Tutti gli elementi della paginazione */
+.pagination .page-item .page-link {
+    border-radius: 0 !important;
+    background-color: #ffffff;
+    color: #1a1a2e;
+    border: 1px solid #dee2e6;
+    text-decoration: none !important;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 10px;
+    font-size: 14px;
+}
+
+/* Pulsanti Prev e Next - più grandi */
+.pagination .page-pre .page-link,
+.pagination .page-next .page-link {
+    min-width: 44px !important;
+    height: 44px !important;
+    font-size: 22px !important;
+    font-weight: 300;
+    padding: 0 16px !important;
+}
+
+/* ========================================
+   FOCUS - 3 BORDI COLORATI (senza destro)
+   ======================================== */
+
+/* Stato focus per tutti i link */
+.pagination .page-link:focus {
+    outline: none !important;
+    box-shadow: none !important;
+    /* Bordo su 3 lati: sinistro, alto, basso */
+    border-left: 2px solid #17a2b8 !important;
+    border-top: 2px solid #17a2b8 !important;
+    border-bottom: 2px solid #17a2b8 !important;
+    border-right: 1px solid #dee2e6 !important;
+    /* Mantiene il bordo originale a destra */
+    background-color: #ffffff;
+    color: #17a2b8;
+    position: relative;
+    z-index: 1;
+}
+
+/* Focus per elemento attivo */
+.pagination .page-item.active .page-link:focus {
+    background-color: #17a2b8 !important;
+    color: #FFFFFF !important;
+    border-left: 2px solid #138496 !important;
+    border-top: 2px solid #138496 !important;
+    border-bottom: 2px solid #138496 !important;
+    border-right: 1px solid #117a8b !important;
+}
+
+/* Focus per prev/next */
+.pagination .page-pre .page-link:focus,
+.pagination .page-next .page-link:focus {
+    border-left: 2px solid #17a2b8 !important;
+    border-top: 2px solid #17a2b8 !important;
+    border-bottom: 2px solid #17a2b8 !important;
+    border-right: 1px solid #dee2e6 !important;
+}
+
+/* ========================================
+   STATO ATTIVO (come da sistema)
+   ======================================== */
+
+.pagination .page-item.active,
+.pagination .page-item.active .page-link {
+    background-color: #17a2b8 !important;
+    color: #FFFFFF !important;
+    border-color: #17a2b8 !important;
+    border-radius: 0 !important;
+}
+
+/* Hover per elementi non attivi */
+.pagination .page-item:not(.active) .page-link:hover {
+    background-color: #e9ecef !important;
+    color: #17a2b8 !important;
+    border-color: #17a2b8 !important;
+    text-decoration: none !important;
+}
+
+/* Elementi disabled (puntini) */
+.pagination .page-item.disabled .page-link {
+    background-color: #f8f9fa !important;
+    color: #6c757d !important;
+    border-color: #dee2e6 !important;
+    cursor: not-allowed;
+}
+
+.pagination .page-item.disabled .page-link:focus {
+    border-left: 2px solid #6c757d !important;
+    border-top: 2px solid #6c757d !important;
+    border-bottom: 2px solid #6c757d !important;
+    border-right: 1px solid #dee2e6 !important;
+}
+
+/* ========================================
+   RIMUOVI SOTTOLINEATURA
+   ======================================== */
+
+a,
+a:hover,
+a:focus {
+    text-decoration: none !important;
+}
+
+/* ========================================
+   SE VUOI UN EFFETTO FOCUS PIÙ EVIDENTE
+   ======================================== */
+
+.pagination .page-link:focus {
+    outline: none !important;
+    box-shadow: none !important;
+    border-left: 3px solid #17a2b8 !important;
+    border-top: 3px solid #17a2b8 !important;
+    border-bottom: 3px solid #17a2b8 !important;
+    border-right: 1px solid #dee2e6 !important;
+    transform: scale(1.05);
+    z-index: 2;
+}

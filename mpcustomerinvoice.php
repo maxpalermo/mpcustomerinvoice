@@ -28,7 +28,6 @@ use MpSoft\MpCustomerInvoice\Helpers\GetTwigEnvironment;
 use MpSoft\MpCustomerInvoice\Helpers\HookManager;
 use MpSoft\MpCustomerInvoice\Helpers\InstallMenu;
 use MpSoft\MpCustomerInvoice\Models\ModelCustomerInvoice;
-use MpSoft\MpCustomerInvoice\Models\ModelCustomerInvoiceBrtAddresses;
 use MpSoft\MpCustomerInvoice\Models\ModelCustomerInvoiceJobArea;
 use MpSoft\MpCustomerInvoice\Models\ModelCustomerInvoiceJobLink;
 use MpSoft\MpCustomerInvoice\Models\ModelCustomerInvoiceJobPosition;
@@ -44,7 +43,7 @@ class MpCustomerInvoice extends Module implements WidgetInterface
     {
         $this->name = 'mpcustomerinvoice';
         $this->tab = 'administration';
-        $this->version = '1.3.2';
+        $this->version = '1.3.61';
         $this->author = 'Massimiliano Palermo';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -55,7 +54,7 @@ class MpCustomerInvoice extends Module implements WidgetInterface
 
         parent::__construct();
 
-        $this->displayName = $this->trans('MP Customer Invoice', [], 'Modules.Mpcustomerinvoice.Admin');
+        $this->displayName = $this->trans('MP Gestione Fattura Elettronica', [], 'Modules.Mpcustomerinvoice.Admin');
         $this->description = $this->trans('Gestisce i codici della fatturazione elettronica.', [], 'Modules.Mpcustomerinvoice.Admin');
         $this->id_lang = (int) $this->context->language->id;
         $this->hookManager = new HookManager($this);
@@ -68,40 +67,40 @@ class MpCustomerInvoice extends Module implements WidgetInterface
         return parent::install() &&
             $this->registerHook(
                 [
-                    'actionAdminControllerSetMedia',
-                    'actionAdminCustomersControllerFormModifier',
-                    'actionAdminCustomersControllerSaveAfter',
-                    'actionAdminCustomersFormSubmit',
+                    'actionGenerateDocumentReference',
+                    'actionDispatcherBefore',
+                    'actionDispatcherAfter',
+                    'actionObjectCartUpdateBefore',
                     'actionFrontControllerSetMedia',
+                    'actionAdminControllerSetMedia',
+                    'displayBeforeBodyClosingTag',
+                    'displayAdminOrderMain',
+                    'displayCustomerAccount',
+                    //'actionAdminCustomersControllerFormModifier',
+                    //'actionAdminCustomersControllerSaveAfter',
+                    //'actionAdminCustomersFormSubmit',
                     'additionalCustomerFormFields',
                     'actionCustomerAccountAdd',
-                    'actionCustomerAccountUpdate',
-                    'actionBeforeSubmitAccount',
-                    'actionObjectCustomerDeleteAfter',
-                    'actionCustomerGridDefinitionModifier',
-                    'actionCustomerGridQueryBuilderModifier',
-                    'actionCustomerGridDataModifier',
-                    'actionCustomerFormDataProviderData',
-                    'actionOrderGridDefinitionModifier',
-                    'actionOrderGridQueryBuilderModifier',
-                    'actionOrderGridDataModifier',
-                    'actionAfterCreateCustomerFormHandler',
-                    'actionAfterUpdateCustomerFormHandler',
-                    'actionCustomerFormBuilderModifier',
-                    'additionalCustomerAddressFields',
-                    'validateCustomerFormFields',
-                    'displayAdminCustomersForm',
-                    'displayBeforeBodyClosingTag',
+                    //'actionCustomerAccountUpdate',
+                    //'actionBeforeSubmitAccount',
+                    //'actionObjectCustomerDeleteAfter',
+                    //'actionCustomerFormDataProviderData',
+                    //'actionObjectAddressAddAfter',
+                    //'actionAfterCreateCustomerFormHandler',
+                    //'actionAfterUpdateCustomerFormHandler',
+                    //'actionCustomerFormBuilderModifier',
+                    //'additionalCustomerAddressFields',
+                    //'validateCustomerFormFields',
+                    //'displayAdminCustomersForm',
                 ]
             ) &&
             $installMenu->installMenu(
                 'AdminMpCustomerInvoice',
-                'MP Gestione Clienti',
-                'AdminParentCustomer',
-                'account_circle'
+                'MP Fattura Elettronica',
+                'SELL',
+                'receipt'
             ) &&
             ModelCustomerInvoice::install() &&
-            ModelCustomerInvoiceBrtAddresses::install() &&
             ModelCustomerInvoiceJobArea::install() &&
             ModelCustomerInvoiceJobPosition::install() &&
             ModelCustomerInvoiceJobLink::install();
@@ -162,103 +161,560 @@ class MpCustomerInvoice extends Module implements WidgetInterface
 
     public function getContent()
     {
-        $message = [];
-        if (Tools::isSubmit('submitConfiguration')) {
-            $this->saveConfiguration();
-            $message = [
-                'type' => 'success',
-                'content' => $this->l('Configuration updated'),
-            ];
-        }
-        $tpl = $this->getLocalPath() . 'views/templates/admin/configuration.tpl';
-        $template = $this->context->smarty->createTemplate($tpl, $this->context->smarty);
-        $params = [
-            'orderStates' => OrderState::getOrderStates($this->id_lang),
-            'message' => $message,
-            'PAYMENT_MODULES' => PaymentModule::getPaymentModules(),
-            'CUSTOMER_PREFIX' => $this->getConfig('CUSTOMER_PREFIX', ''),
-            'TYPE_ORDER' => $this->getConfig('TYPE_ORDER', 0),
-            'TYPE_INVOICE' => $this->getConfig('TYPE_INVOICE', 0),
-            'TYPE_RETURN' => $this->getConfig('TYPE_RETURN', 0),
-            'TYPE_SLIP' => $this->getConfig('TYPE_SLIP', 0),
-            'TYPE_DELIVERY' => $this->getConfig('TYPE_DELIVERY', 0),
-            'PAYMENT_SELECTED' => $this->getConfig('PAYMENT_SELECTED', []),
-            'EXPORT_FILE_NAME' => $this->getConfig('EXPORT_FILE_NAME', 'export'),
-        ];
-        $template->assign($params);
+        Tools::redirectAdmin($this->context->link->getAdminLink('AdminMpCustomerInvoice', true, [], ['action' => 'showSetupPage']));
 
-        return $template->fetch();
+        return '';
     }
 
-    private function saveConfiguration()
-    {
-        $this->setConfig('PAYMENT_SELECTED', Tools::getValue('PAYMENT_SELECTED'), []);
-        $this->setConfig('CUSTOMER_PREFIX', Tools::getValue('CUSTOMER_PREFIX'), '');
-        $this->setConfig('TYPE_ORDER', Tools::getValue('TYPE_ORDER'), 0);
-        $this->setConfig('TYPE_DELIVERY', Tools::getValue('TYPE_DELIVERY'), 0);
-        $this->setConfig('TYPE_INVOICE', Tools::getValue('TYPE_INVOICE'), 0);
-        $this->setConfig('TYPE_RETURN', Tools::getValue('TYPE_RETURN'), 0);
-        $this->setConfig('TYPE_SLIP', Tools::getValue('TYPE_SLIP'), 0);
-        $this->setConfig('PAYMENT_SELECTED', Tools::getValue('PAYMENT_SELECTED'), []);
-        $this->setConfig('EXPORT_FILE_NAME', Tools::getValue('EXPORT_FILE_NAME'), 'export');
-    }
 
-    public function getConfig($key, $default = null)
-    {
-        $value = Configuration::get($key);
-
-        try {
-            $return = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
-        } catch (\Throwable $th) {
-            $return = $value;
-        }
-
-        if (!$return && $default !== null) {
-            return $default;
-        }
-
-        return $return;
-    }
-
-    private function setConfig($key, $value, $default = null)
-    {
-        if (is_array($value)) {
-            $value = json_encode($value);
-        }
-
-        if (!$value && $default !== null) {
-            $value = $default;
-        }
-
-        return Configuration::updateValue($key, $value);
-    }
-
-    /**
-     * Hook per aggiungere i campi personali al form di registrazione
-     */
+    /***********************************************
+     *  HOOKS
+     ***********************************************/
     public function hookAdditionalCustomerFormFields($params)
     {
         return $this->hookManager->hookAdditionalCustomerFormFields($params);
     }
 
-    public function hookActionAdminControllerSetMedia($params)
+    public function hookActionCustomerAccountAdd($params)
     {
-        $controller = Tools::strtolower(Tools::getValue('controller'));
-        $baseJs = $this->getLocalPath() . 'views/assets/js/';
+        return $this->hookManager->hookActionCustomerAccountAdd($params);
+    }
 
-        if ($controller == 'admincustomers' && Tools::getValue('id_customer')) {
-            $this->context->controller->addJS("{$baseJs}admin/jobLinkManager.js");
+    public function hookActionGenerateDocumentReference(array $params)
+    {
+        if (($params['type'] ?? '') !== 'order') {
+            return '';
+        }
+
+        $pattern = (string) Configuration::get('REFERENCE_RENUMBER');
+        if ($pattern === '') {
+            return '';
+        }
+
+        $tableStatus = Db::getInstance()->executeS(
+            "SHOW TABLE STATUS LIKE '" . pSQL(_DB_PREFIX_ . "orders") . "'"
+        );
+        $idOrder = (int) ($tableStatus[0]['Auto_increment'] ?? 0);
+        if ($idOrder <= 0) {
+            return '';
+        }
+
+        return $this->formatOrderReference($pattern, $idOrder);
+    }
+
+
+    public function hookActionDispatcherAfter($params)
+    {
+        $controller = Tools::getValue('controller');
+        if ($controller !== 'order') {
+            return;
+        }
+    }
+
+    public function hookActionDispatcherBefore($params)
+    {
+        $requestUri = $_SERVER['REQUEST_URI'] ?? '';
+        if (preg_match('#orders/(\d+)/generate-(invoice|delivery-slip|order)-pdf#', $requestUri, $matches)) {
+            $idOrder = (int) $matches[1];
+            $documentType = $matches[2];
+
+            $url = $this->context->link->getAdminLink(
+                'AdminMpCustomerInvoice',
+                true,
+                [],
+                [
+                    'action' => 'showCustomPdfPage',
+                    'id_order' => $idOrder,
+                    'document_type' => $documentType,
+                ]
+            );
+            Tools::redirectAdmin($url);
+        }
+
+        // Verifica che siamo nel front-office
+        if (!isset($params['controller_type']) || $params['controller_type'] != 1) {
+            return;
+        }
+
+        $controller = Tools::getValue('controller');
+        $useSameAddress = Tools::getValue('use_same_address');
+        $newAddress = Tools::getValue('newAddress');
+
+        if (
+            $this->context->customer->isLogged()
+            && Validate::isLoadedObject($this->context->cart)
+            && $this->enforceCartInvoiceAddress($this->context->cart)
+        ) {
+            $this->context->cart->update();
+        }
+
+        // Intercetta il controller "address" originale (sezione account)
+        if ($controller == 'address' || $controller == 'addresses') {
+            if (Tools::getValue('module') == 'mpcustomerinvoice') {
+                return;
+            }
+            $this->redirectToCustomAddressPage('account');
+            return;
+        }
+
+        // Intercetta il checkout
+        if ($controller == 'order' || $controller == 'ordine') {
+            if (!$this->context->customer->isLogged() && !Tools::isSubmit('ajax') && !Tools::getValue('ajax')) {
+                $this->redirectCheckoutToRegistration();
+                return;
+            }
+
+            if ($newAddress === 'invoice') {
+                $this->saveCheckoutContext();
+                $this->redirectToCustomAddressPage('checkout', ['add' => 1]);
+                return;
+            }
+
+            // Se esiste almeno un indirizzo non fa il redirect
+            $customer = $this->context->customer;
+            $addresses = $customer->getAddresses($this->context->language->id);
+            if (count($addresses) > 0) {
+                return;
+            }
+
+            // NUOVO CONTROLLO: Intercetta use_same_address=0
+            if ($useSameAddress !== null && $useSameAddress == 0) {
+                if (Tools::getValue('module') == 'mpcustomerinvoice') {
+                    return;
+                }
+
+                // Salva il contesto del checkout
+                $this->saveCheckoutContext();
+
+                // Reindirizza alla pagina personalizzata con il parametro
+                $this->redirectToCustomAddressPage('checkout', ['use_same_address' => 0, 'add' => 1]);
+                return;
+            }
+
+            // Verifica se siamo nella sezione indirizzi
+            if ($this->isCheckoutAddressStep()) {
+                if (Tools::getValue('module') == 'mpcustomerinvoice') {
+                    return;
+                }
+
+                // Salva il carrello corrente per il redirect
+                $this->saveCheckoutContext();
+
+                // Reindirizza alla pagina personalizzata
+                $this->redirectToCustomAddressPage('checkout');
+                return;
+            }
+        }
+
+        // Gestione indirizzi dal cookie
+        $this->handleAddressFromCookie();
+
+        // Controllo login
+        //$this->redirectToRegistrationIfNotLogged();
+    }
+
+    /**
+     * Verifica se siamo nel passo degli indirizzi del checkout
+     */
+    private function redirectCheckoutToRegistration()
+    {
+        $back = $this->context->link->getPageLink('order', true);
+        Tools::redirect($this->context->link->getPageLink('registration', true, null, ['back' => $back]));
+    }
+
+    private function isCheckoutAddressStep()
+    {
+        // 1. Ottieni il carrello manualmente se è null
+        $cart = $this->getCartFromContext();
+
+        if (!$cart || !Validate::isLoadedObject($cart)) {
+            // Se non c'è carrello, potrebbe essere la prima volta
+            // Verifica se siamo nel checkout
+            $controller = Tools::getValue('controller');
+            if ($controller == 'order') {
+                // Se siamo nel checkout e non c'è carrello, probabilmente
+                // siamo nella sezione indirizzi (primo passo)
+                return true;
+            }
+            return false;
+        }
+
+        // 2. Se il carrello non ha indirizzo, siamo nella sezione indirizzi
+        if ($cart->id_address_delivery == 0 || $cart->id_address_invoice == 0) {
+            return true;
+        }
+
+        // 3. Verifica tramite l'URL
+        $requestUri = $_SERVER['REQUEST_URI'];
+
+        // Cerca pattern specifici del checkout indirizzi
+        $patterns = [
+            'controller=order',
+            'address=1',
+            'delivery=0',
+            'step=address'
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (strpos($requestUri, $pattern) !== false) {
+                return true;
+            }
+        }
+
+        // 4. Verifica tramite il controller
+        if ($this->context->controller instanceof \OrderController) {
+            $orderController = $this->context->controller;
+            // Verifica il carrello dal controller
+            $cartCheck = $orderController->getCart();
+            if ($cartCheck && Validate::isLoadedObject($cartCheck)) {
+                if ($cartCheck->id_address_delivery == 0) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Ottiene il carrello dal contesto o dal cookie
+     */
+    private function getCartFromContext()
+    {
+        // Prova a ottenere il carrello dal contesto
+        $cart = $this->context->cart;
+
+        if ($cart && Validate::isLoadedObject($cart)) {
+            return $cart;
+        }
+
+        // Se il carrello è null, prova a caricarlo dal cookie
+        $cartId = (int) $this->context->cookie->id_cart;
+        if ($cartId > 0) {
+            $cart = new Cart($cartId);
+            if (Validate::isLoadedObject($cart)) {
+                // Aggiorna il contesto
+                $this->context->cart = $cart;
+                return $cart;
+            }
+        }
+
+        // Se ancora null, prova a creare un nuovo carrello
+        if ($this->context->customer->isLogged()) {
+            $cart = new Cart();
+            $cart->id_customer = $this->context->customer->id;
+            $cart->id_currency = $this->context->currency->id;
+            $cart->id_lang = $this->context->language->id;
+            $cart->id_shop = $this->context->shop->id;
+            $cart->add();
+
+            $this->context->cart = $cart;
+            $this->context->cookie->id_cart = $cart->id;
+            $this->context->cookie->write();
+
+            return $cart;
+        }
+
+        return null;
+    }
+
+    /**
+     * Salva il contesto del checkout per il redirect
+     */
+    private function saveCheckoutContext()
+    {
+        $cart = $this->getCartFromContext();
+        if ($cart && Validate::isLoadedObject($cart)) {
+            $this->context->cookie->__set('mpcustomerinvoice_checkout_cart', $cart->id);
+            $this->context->cookie->__set('mpcustomerinvoice_checkout_mode', true);
+            $this->context->cookie->write();
         }
     }
 
     /**
-     * Hook per impostare CSS e JS nel frontend
+     * Gestisce gli indirizzi dal cookie
      */
+    private function handleAddressFromCookie()
+    {
+        $deliveryAddressId = (int) $this->context->cookie->__get('mpcustomerinvoice_id_address_delivery');
+        $invoiceAddressId = (int) $this->context->cookie->__get('mpcustomerinvoice_id_address_invoice');
+
+        if (!$deliveryAddressId && !$invoiceAddressId) {
+            return;
+        }
+
+        $cart = $this->getCartFromContext();
+        if (!$cart || !Validate::isLoadedObject($cart)) {
+            return;
+        }
+
+        $customerInvoiceAddressId = $this->getCustomerInvoiceAddressId((int) $cart->id_customer);
+        if ($customerInvoiceAddressId > 0) {
+            $invoiceAddressId = $customerInvoiceAddressId;
+        }
+
+        $updated = false;
+
+        if ($deliveryAddressId > 0 && $cart->id_address_delivery != $deliveryAddressId) {
+            $cart->id_address_delivery = $deliveryAddressId;
+            $updated = true;
+        }
+
+        if ($invoiceAddressId > 0 && $cart->id_address_invoice != $invoiceAddressId) {
+            $cart->id_address_invoice = $invoiceAddressId;
+            $updated = true;
+        }
+
+        if ($updated) {
+            $cart->update();
+            $this->context->cart = $cart;
+
+            $this->context->cookie->__unset('mpcustomerinvoice_id_address_delivery');
+            $this->context->cookie->__unset('mpcustomerinvoice_id_address_invoice');
+            $this->context->cookie->write();
+        }
+    }
+
+    public function hookActionObjectCartUpdateBefore(array $params)
+    {
+        $cart = $params['object'] ?? null;
+        if ($cart instanceof Cart) {
+            $this->enforceCartInvoiceAddress($cart);
+        }
+    }
+
+    private function enforceCartInvoiceAddress($cart)
+    {
+        if (!$cart instanceof Cart || !(int) $cart->id_customer) {
+            return false;
+        }
+
+        $invoiceAddressId = $this->getCustomerInvoiceAddressId((int) $cart->id_customer);
+        if ($invoiceAddressId > 0 && (int) $cart->id_address_invoice !== $invoiceAddressId) {
+            $cart->id_address_invoice = $invoiceAddressId;
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private function getCustomerInvoiceAddressId($idCustomer)
+    {
+        return (int) Db::getInstance()->getValue(
+            'SELECT ci.`id_address_invoice`'
+            . ' FROM `' . _DB_PREFIX_ . 'customer_invoice` ci'
+            . ' INNER JOIN `' . _DB_PREFIX_ . 'address` a ON a.`id_address` = ci.`id_address_invoice`'
+            . ' WHERE ci.`id_customer` = ' . (int) $idCustomer
+            . ' AND a.`id_customer` = ci.`id_customer`'
+            . ' AND a.`deleted` = 0'
+        );
+    }
+
+    /**
+     * Reindirizza alla pagina personalizzata degli indirizzi
+     */
+    private function redirectToCustomAddressPage($source = 'account', $extraParams = [])
+    {
+        $params = [];
+        $params['source'] = $source;
+
+        if ($source == 'checkout') {
+            $params['from_checkout'] = 1;
+            $params['back_to_checkout'] = 1;
+        }
+
+        // Aggiungi parametri extra (es. use_same_address)
+        if (!empty($extraParams)) {
+            $params = array_merge($params, $extraParams);
+        }
+
+        // Mantieni i parametri originali
+        $id_address = (int) Tools::getValue('id_address');
+        if ($id_address) {
+            $params['id_address'] = $id_address;
+        }
+
+        if (Tools::getValue('delete')) {
+            $params['delete'] = 1;
+        }
+        if (Tools::getValue('add')) {
+            $params['add'] = 1;
+        }
+        if (Tools::getValue('edit')) {
+            $params['edit'] = 1;
+        }
+
+        $redirectUrl = $this->context->link->getModuleLink(
+            'mpcustomerinvoice',
+            'address',
+            $params,
+            true
+        );
+
+        Tools::redirect($redirectUrl);
+    }
+
+    /**
+     * Controllo login con redirect
+     */
+    private function redirectToRegistrationIfNotLogged()
+    {
+        $controller = Tools::getValue('controller');
+
+        $authControllers = ['authentication', 'registration', 'login', 'password'];
+        if (in_array($controller, $authControllers)) {
+            return;
+        }
+
+        if (Tools::isSubmit('ajax') || Tools::getValue('ajax')) {
+            return;
+        }
+
+        if (!$this->context->customer->isLogged()) {
+            $back = urlencode($this->context->link->getPageLink($controller));
+            Tools::redirect($this->context->link->getPageLink('registration', true, null, ['back' => $back]));
+        }
+    }
+
+    /**
+     * Aggiunge un link personalizzato nella pagina dell'account cliente
+     */
+    public function hookDisplayCustomerAccount($params)
+    {
+        // Puoi aggiungere un link personalizzato o modificare il link esistente
+        return $this->display(__FILE__, 'customer-account-link.tpl');
+    }
+
+    /**
+     * Gestisce il recupero e l'impostazione degli indirizzi dal cookie
+     */
+    private function _handleAddressFromCookie()
+    {
+        $deliveryAddressId = (int) $this->context->cookie->__get('mpcustomerinvoice_id_address_delivery');
+        $invoiceAddressId = (int) $this->context->cookie->__get('mpcustomerinvoice_id_address_invoice');
+
+        // Se non ci sono indirizzi nel cookie, esci
+        if (!$deliveryAddressId && !$invoiceAddressId) {
+            return;
+        }
+
+        // Ottieni il carrello
+        $cart = $this->getCart();
+        if (!$cart) {
+            return;
+        }
+
+        // Aggiorna gli indirizzi del carrello
+        $updated = false;
+
+        if ($deliveryAddressId > 0) {
+            $cart->id_address_delivery = $deliveryAddressId;
+            $updated = true;
+        }
+
+        if ($invoiceAddressId > 0) {
+            $cart->id_address_invoice = $invoiceAddressId;
+            $updated = true;
+        }
+
+        if ($updated) {
+            $cart->update();
+            $this->context->cart = $cart;
+
+            // Pulisci il cookie DOPO aver aggiornato il carrello
+            $this->context->cookie->__unset('mpcustomerinvoice_id_address_delivery');
+            $this->context->cookie->__unset('mpcustomerinvoice_id_address_invoice');
+            $this->context->cookie->write();
+
+            // Log per debug
+            PrestaShopLogger::addLog(
+                sprintf(
+                    'Indirizzi aggiornati dal cookie: delivery=%d, invoice=%d',
+                    $deliveryAddressId,
+                    $invoiceAddressId
+                ),
+                1,
+                null,
+                'Cart',
+                $cart->id
+            );
+        }
+    }
+
+    /**
+     * Recupera il carrello corrente o dal cookie
+     */
+    private function getCart()
+    {
+        $cart = $this->context->cart;
+
+        if ($cart && Validate::isLoadedObject($cart)) {
+            return $cart;
+        }
+
+        // Prova a recuperare il carrello dal cookie
+        $cookieCartId = (int) ($this->context->cookie->id_cart ?? 0);
+        if ($cookieCartId > 0) {
+            $cart = new Cart($cookieCartId);
+            if (Validate::isLoadedObject($cart)) {
+                return $cart;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Reindirizza alla registrazione se il cliente non è loggato
+     */
+    private function _redirectToRegistrationIfNotLogged()
+    {
+        $controller = Tools::getValue('controller');
+
+        // Non reindirizzare su pagine di autenticazione
+        $authControllers = ['authentication', 'registration', 'login', 'password'];
+        if (in_array($controller, $authControllers)) {
+            return;
+        }
+
+        // Non reindirizzare su richieste AJAX
+        if (Tools::isSubmit('ajax') || Tools::getValue('ajax')) {
+            return;
+        }
+
+        if (!$this->context->customer->isLogged()) {
+            $back = urlencode($this->context->link->getPageLink($controller));
+            Tools::redirect($this->context->link->getPageLink('registration', true, null, ['back' => $back]));
+        }
+    }
+
+    /**
+     * Verifica se un indirizzo appartiene al cliente corrente
+     */
+    private function validateAddressOwnership($addressId)
+    {
+        if ($addressId <= 0) {
+            return false;
+        }
+
+        $address = new Address($addressId);
+        if (!Validate::isLoadedObject($address)) {
+            return false;
+        }
+
+        return $address->id_customer == $this->context->customer->id;
+    }
+
     public function hookActionFrontControllerSetMedia($params)
     {
         $controller = Tools::strtolower(Tools::getValue('controller'));
 
-        if ($controller == 'registration' || $controller == 'order') {
+        if (
+            $controller == 'registration'
+            || $controller == 'order'
+            || Tools::getValue('module') == $this->name
+        ) {
             // 1. Carica jQuery (necessario per Chosen)
             $this->context->controller->addJquery();
 
@@ -271,7 +727,7 @@ class MpCustomerInvoice extends Module implements WidgetInterface
 
             $this->context->controller->registerStylesheet(
                 'remote-chosen-css',
-                'js/jquery/plugins/pages/jquery.chosen.css',
+                'js/jquery/plugins/chosen/jquery.chosen.css',
                 ['media' => 'all', 'priority' => 100]
             );
 
@@ -294,94 +750,57 @@ class MpCustomerInvoice extends Module implements WidgetInterface
         }
     }
 
-    public function hookAdditionalCustomerAddressFields($params)
+    public function hookActionAdminControllerSetMedia($params)
     {
-        return $this->hookAdditionalCustomerFormFields($params);
+        $controller = Tools::strtolower(Tools::getValue('controller'));
+        $baseJs = $this->getLocalPath() . 'views/assets/js/';
+        $baseCss = $this->getLocalPath() . 'views/assets/css/';
+
+        $this->context->controller->addCSS("{$baseCss}/theme-override.css", 'all', 100);
+
+        if ($controller == 'admincustomers' && Tools::getValue('id_customer')) {
+            $this->context->controller->addJS("{$baseJs}admin/jobLinkManager.js");
+        }
     }
 
-    /**
-     * Hook per modificare il form di registrazione
-     */
-    public function hookActionAdminCustomersControllerFormModifier($params)
+    private function formatOrderReference(string $pattern, int $idOrder): string
     {
-        return $this->hookManager->hookActionAdminCustomersControllerFormModifier($params);
+        $reference = str_replace('{$year}', date('Y'), $pattern);
+        $reference = preg_replace_callback(
+            '/\\[\\{\\$id_order\\}\\|(\\d+)\\]/',
+            static function (array $matches) use ($idOrder): string {
+                return str_pad((string) $idOrder, (int) $matches[1], '0', STR_PAD_LEFT);
+            },
+            $reference
+        );
+
+        return str_replace('{$id_order}', (string) $idOrder, $reference);
     }
 
-    /**
-     * Hook che scatta quando si salva il cliente dal form di registrazione
-     */
-    public function hookActionCustomerAccountAdd($params)
+    public function hookDisplayAdminOrderMain($params)
     {
-        return $this->hookManager->hookActionCustomerAccountAdd($params);
-    }
+        $id_order = (int) ($params['id_order'] ?? 0);
+        if ($id_order) {
+            $order = new Order($id_order);
+            if (!Validate::isLoadedObject($order)) {
+                return;
+            }
+            $id_customer = (int) $order->id_customer;
 
-    /**
-     * Hook che scatta quando si aggiorna il cliente dal form di registrazione
-     */
-    public function hookActionCustomerAccountUpdate($params)
-    {
-        return $this->hookManager->hookActionCustomerAccountUpdate($params);
-    }
+            $customerInvoice = new ModelCustomerInvoice($id_customer);
+            if (!Validate::isLoadedObject($customerInvoice)) {
+                return;
+            }
+            $path = $this->getLocalPath() . 'views/twig/admin/id_eurosolution.html.twig';
+            $data = [
+                'admin_endpoint' => $this->context->link->getAdminLink('AdminMPCustomerInvoice'),
+                'id_eurosolution' => $customerInvoice->id_eurosolution,
+                'id_customer' => $id_customer,
+            ];
 
-    /**
-     * Hook che inserisce i campi custom nel form di registrazione
-     */
-    public function hookActionCustomerFormBuilderModifier($params)
-    {
-        return $this->hookManager->hookActionCustomerFormBuilderModifier($params);
-    }
+            return $this->renderTwig($path, $data);
+        }
 
-    /**
-     * Hook che scatta quando si salva il cliente dal form di registrazione
-     */
-    public function hookActionAfterCreateCustomerFormHandler($params)
-    {
-        return $this->hookManager->hookActionAfterCreateCustomerFormHandler($params);
-    }
-
-    /**
-     * Hook che scatta quando si aggiorna il cliente dal form di registrazione
-     */
-    public function hookActionAfterUpdateCustomerFormHandler($params)
-    {
-        return $this->hookManager->hookActionAfterUpdateCustomerFormHandler($params);
-    }
-
-    /**
-     * Hook che scatta quando si salva il cliente dal form di registrazione
-     */
-    public function hookActionCustomerFormDataProviderData($params)
-    {
-        return $this->hookManager->hookActionCustomerFormDataProviderData($params);
-    }
-
-    public function hookActionObjectCustomerDeleteAfter($params)
-    {
-        return $this->hookManager->hookActionObjectCustomerDeleteAfter($params);
-    }
-
-    public function hookActionCustomerGridDefinitionModifier($params)
-    {
-        return $this->hookManager->hookActionCustomerGridDefinitionModifier($params);
-    }
-
-    public function hookActionCustomerGridQueryBuilderModifier($params)
-    {
-        return $this->hookManager->hookActionCustomerGridQueryBuilderModifier($params);
-    }
-
-    public function hookActionOrderGridDefinitionModifier($params)
-    {
-        return $this->hookManager->hookActionOrderGridDefinitionModifier($params);
-    }
-
-    public function hookActionOrderGridQueryBuilderModifier($params)
-    {
-        return $this->hookManager->hookActionOrderGridQueryBuilderModifier($params);
-    }
-
-    public function hookActionOrderGridDataModifier($params)
-    {
-        return $this->hookManager->hookActionOrderGridDataModifier($params);
+        return;
     }
 }

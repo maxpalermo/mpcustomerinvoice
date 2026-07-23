@@ -68,8 +68,7 @@ class AdminTableJobsArea {
             onPostBody: function () {
                 console.log("Bootstrap Table initialized successfully");
                 self.bindActionButtons();
-                self.setBootstrapTableIcons();
-                self.fixBootstrapTable();
+                fixBootstrapTable(self.tableId);
             },
             columns: [
                 {
@@ -139,7 +138,7 @@ class AdminTableJobsArea {
 
             if ($menuDiv.length) {
                 // Se non è già <ul>, converti
-                if ($menuDiv.prop("tagName") !== "UL") {
+                if ($menuDiv.prop("tagName") === "UL") {
                     var $ul = $('<ul class="dropdown-menu" role="menu"></ul>');
 
                     $menuDiv.find("a").each(function () {
@@ -156,17 +155,17 @@ class AdminTableJobsArea {
 
             // Assicura data-toggle (non data-bs-toggle) e inizializza il plugin
             var $btn = $group.find("> .dropdown-toggle");
-            if ($btn.attr("data-bs-toggle") === "dropdown") {
-                $btn.removeAttr("data-bs-toggle").attr("data-toggle", "dropdown");
+            if ($btn.attr("data-toggle") !== "dropdown") {
+                $btn.attr("data-toggle", "dropdown");
             }
-            if (typeof $.fn.dropdown === "function") {
-                $btn.dropdown();
-            }
+            $btn.removeAttr("data-bs-toggle");
         });
 
-        $("button[name=refresh] i").removeClass("material-icons").addClass("icon icon-refresh").val("");
+        $("button[name=refresh] i").attr("class", "material-icons").text("refresh");
 
-        $(".fixed-table-pagination .dropdown-toggle")
+        $("button[name=filterControlSwitch] i").attr("class", "material-icons").text("filter_list");
+
+        $(".fixed-table-pagination .dropdown-toggle.bs3-compat")
             .off("click")
             .on("click", function (e) {
                 e.preventDefault();
@@ -193,6 +192,7 @@ class AdminTableJobsArea {
     setBootstrapTableIcons() {
         // Assicura che le icone di Bootstrap Table siano correttamente caricate
         $(".fixed-table-toolbar .search input").addClass("form-control");
-        $(".fixed-table-toolbar .columns label").addClass("checkbox-inline");
+        $(".fixed-table-toolbar .columns label").removeClass("checkbox-inline").addClass("dropdown-item");
+        $(".fixed-table-toolbar .columns label input").removeClass("checkbox-inline").addClass("mr-2");
     }
 }

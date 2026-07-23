@@ -1,0 +1,402 @@
+<section class="bootstrap">
+
+    {# ── PANNELLO CONNETTORE ── #}
+    <div class="panel">
+        <div class="panel-heading">
+            <i class="icon icon-cloud"></i>
+            <span>Connessione database remoto</span>
+        </div>
+        <div class="panel-body">
+            <form id="form-connector-config" method="post">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="connector_url">URL endpoint</label>
+                            <input type="url" id="connector_url" name="connector_url"
+                                   class="form-control"
+                                   placeholder="https://esempio.com/it/module/mpconnector/Query"
+                                   value="{{ connectorUrl|default('') }}">
+                        </div>
+                        <div class="form-group">
+                            <label for="connector_token">Token</label>
+                            <input type="text" id="connector_token" name="connector_token"
+                                   class="form-control"
+                                   placeholder="Bearer token"
+                                   value="{{ connectorToken|default('') }}">
+                        </div>
+                    </div>
+                </div>
+                <div class="panel-footer">
+                    <button type="submit" id="btn-save-connector" class="btn btn-primary">
+                        <i class="icon icon-save"></i> Salva
+                    </button>
+                    <button type="button" id="btn-test-connector" class="btn btn-default" style="margin-left:8px;">
+                        <i class="icon icon-refresh"></i> Testa connessione
+                    </button>
+                    <button type="button" class="btn btn-default btn-describe" data-table="ps_customer" style="margin-left:8px;">
+                        <i class="icon icon-list"></i> Colonne ps_customer
+                    </button>
+                    <button type="button" class="btn btn-default btn-describe" data-table="ps_address" style="margin-left:4px;">
+                        <i class="icon icon-list"></i> Colonne ps_address
+                    </button>
+                    <button type="button" class="btn btn-default btn-describe" data-table="ps_job_area" style="margin-left:4px;">
+                        <i class="icon icon-list"></i> Colonne ps_job_area
+                    </button>
+                    <button type="button" class="btn btn-default btn-describe" data-table="ps_job_name" style="margin-left:4px;">
+                        <i class="icon icon-list"></i> Colonne ps_job_name
+                    </button>
+                    <button type="button" class="btn btn-default btn-describe" data-table="ps_job_link" style="margin-left:4px;">
+                        <i class="icon icon-list"></i> Colonne ps_job_link
+                    </button>
+                    <span id="connector-test-result" style="margin-left:12px;"></span>
+                </div>
+                <div id="describe-result" style="display:none; margin:8px 15px 0;"></div>
+            </form>
+        </div>
+    </div>
+
+    {# ── PANNELLO IMPORTAZIONE ── #}
+    <div class="panel">
+        <div class="panel-heading">
+            <i class="icon icon-download"></i>
+            <span>Importazione dati</span>
+        </div>
+        <div class="panel-body">
+
+            {# ── BLOCCO: DATI CLIENTE ── #}
+            <div class="panel panel-default" id="block-customer-data">
+                <div class="panel-heading">
+                    <i class="icon icon-user"></i>
+                    <strong>Dati cliente</strong>
+                    <small class="text-muted" style="margin-left:8px;">
+                        ps_customer + ps_address → ps_customer_invoice
+                    </small>
+                </div>
+                <div class="panel-body">
+                    <p class="text-muted" style="margin-bottom:12px;">
+                        Importa i dati anagrafici e fiscali dei clienti dal database remoto.
+                        I record esistenti verranno aggiornati (INSERT … ON DUPLICATE KEY UPDATE).
+                    </p>
+                    <button type="button" id="btn-import-customers" class="btn btn-warning">
+                        <i class="icon icon-download"></i> Importa dati cliente
+                    </button>
+
+                    <div id="import-customers-progress" style="display:none; margin-top:16px;">
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:6px;">
+                            <div class="progress" style="flex:1; margin:0;">
+                                <div id="import-customers-bar"
+                                     class="progress-bar progress-bar-striped active"
+                                     role="progressbar"
+                                     style="width:0%; min-width:2em;">0%</div>
+                            </div>
+                            <span id="import-customers-count" class="text-muted" style="white-space:nowrap;">0 / 0</span>
+                        </div>
+                        <div id="import-customers-status" class="text-muted" style="font-size:0.9em;"></div>
+                    </div>
+
+                    <div id="import-customers-errors" style="display:none; margin-top:10px;"></div>
+                </div>
+            </div>
+
+            {# ── BLOCCO: DATI PROFESSIONI ── #}
+            <div class="panel panel-default" id="block-professions-data" style="margin-top:16px;">
+                <div class="panel-heading">
+                    <i class="icon icon-briefcase"></i>
+                    <strong>Dati professioni</strong>
+                    <small class="text-muted" style="margin-left:8px;">
+                        ps_job_area + ps_job_name + ps_job_link → tabelle customer_invoice_job_*
+                    </small>
+                </div>
+                <div class="panel-body">
+                    <p class="text-muted" style="margin-bottom:12px;">
+                        Importa aree professionali, posizioni e link dal database remoto.
+                        Le tabelle multilang vengono separate automaticamente.
+                    </p>
+                    <button type="button" id="btn-import-professions" class="btn btn-warning">
+                        <i class="icon icon-download"></i> Importa dati professioni
+                    </button>
+
+                    <div id="import-professions-progress" style="display:none; margin-top:16px;">
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:6px;">
+                            <div class="progress" style="flex:1; margin:0;">
+                                <div id="import-professions-bar"
+                                     class="progress-bar progress-bar-striped active"
+                                     role="progressbar"
+                                     style="width:0%; min-width:2em;">0%</div>
+                            </div>
+                            <span id="import-professions-count" class="text-muted" style="white-space:nowrap;">0 / 0</span>
+                        </div>
+                        <div id="import-professions-status" class="text-muted" style="font-size:0.9em;"></div>
+                    </div>
+
+                    <div id="import-professions-errors" style="display:none; margin-top:10px;"></div>
+                </div>
+            </div>
+
+            {# Qui verranno inseriti altri blocchi di importazione #}
+
+        </div>
+    </div>
+
+</section>
+
+<script type="text/javascript">
+(function () {
+    const adminUrl = "{{ adminControllerUrl | raw }}";
+
+    // ── Salva config connector ──
+    document.getElementById('form-connector-config').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const btn = document.getElementById('btn-save-connector');
+        btn.disabled = true;
+
+        const body = new URLSearchParams({
+            ajax: 1,
+            action: 'saveConnectorConfig',
+            connector_url:   document.getElementById('connector_url').value,
+            connector_token: document.getElementById('connector_token').value,
+        });
+
+        fetch(adminUrl, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body })
+            .then(r => r.json())
+            .then(data => {
+                const result = document.getElementById('connector-test-result');
+                if (data.success) {
+                    result.innerHTML = '<span class="label label-success">Salvato</span>';
+                } else {
+                    result.innerHTML = '<span class="label label-danger">' + (data.error || 'Errore') + '</span>';
+                }
+            })
+            .catch(e => {
+                document.getElementById('connector-test-result').innerHTML =
+                    '<span class="label label-danger">Errore di rete</span>';
+            })
+            .finally(() => { btn.disabled = false; });
+    });
+
+    // ── Testa connessione ──
+    document.getElementById('btn-test-connector').addEventListener('click', function () {
+        const btn = this;
+        const result = document.getElementById('connector-test-result');
+        btn.disabled = true;
+        result.innerHTML = '<span class="label label-default">Connessione in corso...</span>';
+
+        fetch(adminUrl + '&ajax=1&action=testConnector')
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    result.innerHTML = '<span class="label label-success">Connessione OK</span>';
+                } else {
+                    result.innerHTML = '<span class="label label-danger">' + (data.error || 'Errore') + '</span>';
+                }
+            })
+            .catch(() => {
+                result.innerHTML = '<span class="label label-danger">Errore di rete</span>';
+            })
+            .finally(() => { btn.disabled = false; });
+    });
+
+    // ── Describe remote table columns ──
+    document.querySelectorAll('.btn-describe').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const table     = this.dataset.table;
+            const resultBox = document.getElementById('describe-result');
+            resultBox.style.display = 'block';
+            resultBox.innerHTML     = '<span class="text-muted">Caricamento colonne di ' + table + '...</span>';
+
+            fetch(adminUrl + '&ajax=1&action=describeTable&table=' + encodeURIComponent(table))
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.success) {
+                        resultBox.innerHTML = '<div class="alert alert-danger">' + (data.error || 'Errore') + '</div>';
+                        return;
+                    }
+                    const cols = data.data.map(c => c.Field).join(', ');
+                    resultBox.innerHTML = '<div class="alert alert-info" style="word-break:break-all;">'
+                        + '<strong>' + table + ':</strong> ' + cols + '</div>';
+                })
+                .catch(() => {
+                    resultBox.innerHTML = '<div class="alert alert-danger">Errore di rete</div>';
+                });
+        });
+    });
+
+    // ── Importazione DATI CLIENTE ──
+    document.getElementById('btn-import-customers').addEventListener('click', function () {
+        if (!confirm('Vuoi avviare l\'importazione dei dati cliente?\nI record esistenti verranno aggiornati.')) {
+            return;
+        }
+        importCustomers();
+    });
+
+    async function importCustomers() {
+        const btn      = document.getElementById('btn-import-customers');
+        const progress = document.getElementById('import-customers-progress');
+        const bar      = document.getElementById('import-customers-bar');
+        const count    = document.getElementById('import-customers-count');
+        const status   = document.getElementById('import-customers-status');
+        const errBox   = document.getElementById('import-customers-errors');
+
+        btn.disabled   = true;
+        errBox.style.display = 'none';
+        errBox.innerHTML     = '';
+        progress.style.display = 'block';
+        bar.style.width   = '0%';
+        bar.textContent   = '0%';
+        count.textContent = '0 / ?';
+        status.textContent = 'Recupero dati dal database remoto...';
+
+        // Init
+        let initData;
+        try {
+            const r = await fetch(adminUrl + '&ajax=1&action=importCustomerDataInit');
+            initData = await r.json();
+        } catch (e) {
+            showImportError(errBox, 'Errore di rete durante l\'inizializzazione.');
+            btn.disabled = false;
+            return;
+        }
+
+        if (!initData.success) {
+            showImportError(errBox, initData.error || 'Errore init.');
+            btn.disabled = false;
+            return;
+        }
+
+        const total = initData.total;
+        const hash  = initData.hash;
+        status.textContent = total + ' record da importare...';
+        count.textContent  = '0 / ' + total;
+
+        // Chunks
+        let done = 0;
+        while (done < total) {
+            let chunkData;
+            try {
+                const r = await fetch(adminUrl + '&ajax=1&action=importCustomerDataChunk&hash=' + hash);
+                chunkData = await r.json();
+            } catch (e) {
+                showImportError(errBox, 'Errore di rete durante l\'importazione.');
+                btn.disabled = false;
+                return;
+            }
+
+            if (!chunkData.success && chunkData.errors && chunkData.errors.length > 0) {
+                chunkData.errors.forEach(e => showImportError(errBox, e));
+            }
+
+            done = chunkData.done;
+            const pct = total > 0 ? Math.round(done / total * 100) : 100;
+            bar.style.width   = pct + '%';
+            bar.textContent   = pct + '%';
+            count.textContent = done + ' / ' + total;
+            status.textContent = 'Importati ' + done + ' di ' + total + '...';
+
+            if (chunkData.finished) {
+                break;
+            }
+        }
+
+        bar.classList.remove('active');
+        bar.classList.add('progress-bar-success');
+        status.textContent = 'Importazione completata: ' + done + ' record elaborati.';
+        btn.disabled = false;
+    }
+
+    function showImportError(box, msg) {
+        box.style.display = 'block';
+        const div = document.createElement('div');
+        div.className = 'alert alert-danger';
+        div.style.marginBottom = '4px';
+        div.textContent = msg;
+        box.appendChild(div);
+    }
+
+    // ── Importazione DATI PROFESSIONI ──
+    document.getElementById('btn-import-professions').addEventListener('click', function () {
+        if (!confirm('Vuoi avviare l\'importazione dei dati professioni?\nLe tabelle esistenti verranno aggiornate.')) {
+            return;
+        }
+        importProfessions();
+    });
+
+    async function importProfessions() {
+        const btn      = document.getElementById('btn-import-professions');
+        const progress = document.getElementById('import-professions-progress');
+        const bar      = document.getElementById('import-professions-bar');
+        const count    = document.getElementById('import-professions-count');
+        const status   = document.getElementById('import-professions-status');
+        const errBox   = document.getElementById('import-professions-errors');
+
+        const phaseLabels = { area: 'Aree professionali', name: 'Posizioni', link: 'Link' };
+
+        btn.disabled             = true;
+        errBox.style.display     = 'none';
+        errBox.innerHTML         = '';
+        progress.style.display   = 'block';
+        bar.style.width          = '0%';
+        bar.textContent          = '0%';
+        bar.className            = 'progress-bar progress-bar-striped active';
+        count.textContent        = '0 / ?';
+        status.textContent       = 'Recupero dati dal database remoto...';
+
+        // Init
+        let initData;
+        try {
+            const r = await fetch(adminUrl + '&ajax=1&action=importProfessionsInit');
+            initData = await r.json();
+        } catch (e) {
+            showImportError(errBox, 'Errore di rete durante l\'inizializzazione.');
+            btn.disabled = false;
+            return;
+        }
+
+        if (!initData.success) {
+            showImportError(errBox, initData.error || 'Errore init.');
+            btn.disabled = false;
+            return;
+        }
+
+        const total = initData.total;
+        const hash  = initData.hash;
+        status.textContent = total + ' record da importare...';
+        count.textContent  = '0 / ' + total;
+
+        // Chunks
+        let done = 0;
+        while (done < total) {
+            let chunkData;
+            try {
+                const r = await fetch(adminUrl + '&ajax=1&action=importProfessionsChunk&hash=' + hash);
+                chunkData = await r.json();
+            } catch (e) {
+                showImportError(errBox, 'Errore di rete durante l\'importazione.');
+                btn.disabled = false;
+                return;
+            }
+
+            if (chunkData.errors && chunkData.errors.length > 0) {
+                chunkData.errors.forEach(e => showImportError(errBox, e));
+            }
+
+            done = chunkData.done;
+            const pct   = total > 0 ? Math.round(done / total * 100) : 100;
+            const phase = chunkData.phase || '';
+            bar.style.width   = pct + '%';
+            bar.textContent   = pct + '%';
+            count.textContent = done + ' / ' + total;
+            status.textContent = (phaseLabels[phase] || '') + ' — Importati ' + done + ' di ' + total + '...';
+
+            if (chunkData.finished) {
+                break;
+            }
+        }
+
+        bar.classList.remove('active');
+        bar.classList.add('progress-bar-success');
+        status.textContent = 'Importazione completata: ' + done + ' record elaborati.';
+        btn.disabled = false;
+    }
+
+})();
+</script>

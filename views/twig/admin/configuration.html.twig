@@ -1,0 +1,138 @@
+<section class="bootstrap">
+    {% if message %}
+        <div class="alert alert-{{ message.type }}">
+            {{ message.content }}
+        </div>
+    {% endif %}
+
+    <form method="post">
+        <div class="panel">
+            <div class="panel-heading">
+                <i class="icon icon-cogs"></i>
+                <span>Configurazione</span>
+            </div>
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-md-6 col-xs-9">
+                        <fieldset class="mb-4">
+                            <legend class="legend">Cliente</legend>
+                            <div class="form-group">
+                                <label for="CUSTOMER_PREFIX">Prefisso cliente</label>
+                                <div class="input-group">
+                                    <span class="input-group-addon"><i class="icon icon-chevron-right"></i></span>
+                                    <input type="text" id="CUSTOMER_PREFIX" name="CUSTOMER_PREFIX" class="form-control" value="{{ CUSTOMER_PREFIX }}">
+                                    <span class="input-group-addon">[A-Z]</span>
+                                </div>
+                            </div>
+                        </fieldset>
+                        <fieldset class="mb-4">
+                            <legend class="legend">Esportazione Documenti</legend>
+                            <div class="form-group">
+                                <label for="MPCUSTOMERINVOICE_VAT_RATE">Aliquota IVA Arrotondamento (%)</label>
+                                <div class="input-group">
+                                    <span class="input-group-addon"><i class="icon icon-chevron-right"></i></span>
+                                    <input type="number" step="0.01" min="0" max="100" id="MPCUSTOMERINVOICE_VAT_RATE" name="MPCUSTOMERINVOICE_VAT_RATE" class="form-control" value="{{ MPCUSTOMERINVOICE_VAT_RATE }}">
+                                    <span class="input-group-addon">%</span>
+                                </div>
+                            </div>
+                        </fieldset>
+                        <fieldset class="mb-4">
+                            <legend class="legend">Tipo di documento</legend>
+                            {% set documentTypes = {
+                                'TYPE_ORDER': 'Ordine',
+                                'TYPE_INVOICE': 'Fattura',
+                                'TYPE_RETURN': 'Reso da cliente',
+                                'TYPE_SLIP': 'Reso da fornitore',
+                                'TYPE_DELIVERY': 'Nota Ordine'
+                            } %}
+                            {% for field, label in documentTypes %}
+                                <div class="form-group">
+                                    <label for="{{ field }}">{{ label }}</label>
+                                    <div class="input-group">
+                                        <span class="input-group-addon"><i class="icon icon-chevron-right"></i></span>
+                                        <input type="text" id="{{ field }}" name="{{ field }}" class="form-control" value="{{ attribute(_context, field) }}">
+                                        <span class="input-group-addon">[0-9]</span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </fieldset>
+                    </div>
+                    <div class="col-md-6">
+                    <fieldset class="mb-4">
+                            <legend class="legend">Modulo di pagamento in contanti</legend>
+                            <div class="form-group">
+                                <label for="PAYMENT_SELECTED">Seleziona i moduli di pagamento in contanti</label>
+                                <div class="input-group">
+                                    <span class="input-group-addon"><i class="icon icon-chevron-right"></i></span>
+                                    <select id="PAYMENT_SELECTED" name="PAYMENT_SELECTED[]" class="form-control chosen" multiple>
+                                        {% for payment in PAYMENT_MODULES %}
+                                            <option value="{{ payment.id_module }}"{% if payment.id_module in PAYMENT_SELECTED %} selected{% endif %}>{{ payment.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </fieldset>
+                        <fieldset class="mb-4">
+                            <legend class="legend">Numerazione riferimento ordine</legend>
+                            <div class="form-group">
+                                <label for="REFERENCE_RENUMBER">Formato riferimento</label>
+                                <div class="input-group">
+                                    <span class="input-group-addon"><i class="icon icon-chevron-right"></i></span>
+                                    <input type="text" id="REFERENCE_RENUMBER" name="REFERENCE_RENUMBER" class="form-control" value="{{ REFERENCE_RENUMBER }}">
+                                    <span class="input-group-addon">es. {% verbatim %}{$year}[{$id_order}|6]{% endverbatim %}</span>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Lunghezza campi riferimento</label>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label for="orders-reference-length">orders.reference</label>
+                                        <input type="text" id="orders-reference-length" class="form-control" value="{{ orderReferenceLengths.orders|default('--') }}" readonly>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="order-payment-reference-length">order_payment.order_reference</label>
+                                        <input type="text" id="order-payment-reference-length" class="form-control" value="{{ orderReferenceLengths.order_payment|default('--') }}" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" id="update-order-reference-lengths" class="btn btn-warning">Imposta entrambi i campi a 32 caratteri</button>
+                            <span id="order-reference-lengths-result" class="m-l-1"></span>
+                        </fieldset>
+                    </div>
+                </div>
+            </div>
+            <div class="panel-footer">
+                <button type="submit" name="submitConfiguration" class="btn btn-primary pull-right">Salva</button>
+            </div>
+        </div>
+    </form>
+</section>
+
+<script>
+    document.getElementById('update-order-reference-lengths').addEventListener('click', async () => {
+        const button = document.getElementById('update-order-reference-lengths');
+        const result = document.getElementById('order-reference-lengths-result');
+        button.disabled = true;
+        result.textContent = 'Aggiornamento in corso...';
+
+        try {
+            const response = await fetch('{{ adminControllerUrl|raw }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+                body: new URLSearchParams({ ajax: '1', action: 'updateOrderReferenceLengths' }),
+            });
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'Aggiornamento non riuscito.');
+            }
+
+            document.getElementById('orders-reference-length').value = data.lengths.orders ?? '--';
+            document.getElementById('order-payment-reference-length').value = data.lengths.order_payment ?? '--';
+            result.textContent = 'Campi aggiornati.';
+        } catch (error) {
+            result.textContent = error.message;
+        } finally {
+            button.disabled = false;
+        }
+    });
+</script>

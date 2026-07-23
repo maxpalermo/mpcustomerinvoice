@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <module>
     <name>mpcustomerinvoice</name>
-    <displayName><![CDATA[MP Customer Invoice]]></displayName>
-    <version><![CDATA[1.2.0]]></version>
+    <displayName><![CDATA[MP Gestione Fattura Elettronica]]></displayName>
+    <version><![CDATA[1.3.61]]></version>
     <description><![CDATA[Gestisce i codici della fatturazione elettronica.]]></description>
     <author><![CDATA[Massimiliano Palermo]]></author>
     <tab><![CDATA[administration]]></tab>

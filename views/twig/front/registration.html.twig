@@ -5,20 +5,21 @@
 <script src="{{ asset('js/components/tinyAlert/tinyAlert.js') }}"></script>
 
 <script type="text/javascript">
-    const jobsB64 = "{{ jobs_b64 }}";
     const countriesJson = {{ countriesJson | raw }}
-    const jobs = JSON.parse(base64Decode(jobsB64));
     const endpoint = "{{ endpoint }}";
+    const MPCUSTOMERINVOICE_CONTROLLER = endpoint;
+    const currentIsoLang = "{{ currentIsoLang }}";
+    const langJson = {{ langJson | raw }};
 
     document.addEventListener("DOMContentLoaded", async (e) => {
         console.log("DOMContentLoaded: [registration.html.twig]");
 
         initFormControls();
-        fillJobArea();
-        
+        initJobFields();
+
         const submitButton = document.querySelector("button[data-link-action=save-customer]");
         if (submitButton) {
-            document.addEventListener("click", onBeforeSubmitButton);  
+            submitButton.addEventListener("click", onBeforeSubmitButton);
         }
     });
 </script>

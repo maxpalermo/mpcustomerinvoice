@@ -32,6 +32,7 @@ use PrestaShop\PrestaShop\Core\Grid\Data\GridData;
 use PrestaShop\PrestaShop\Core\Grid\Definition\GridDefinitionInterface;
 use PrestaShop\PrestaShop\Core\Grid\Filter\Filter;
 use PrestaShop\PrestaShop\Core\Grid\Record\RecordCollection;
+use PrestaShop\PrestaShop\Core\Search\Filters\AddressFilters;
 use PrestaShop\PrestaShop\Core\Search\Filters\CustomerFilters;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
@@ -75,17 +76,72 @@ class HookManager
     {
         $controller = Tools::getValue('controller');
         $idLang = (int) Context::getContext()->language->id;
+        $isoCode = $this->context->language->iso_code;
 
         if ($controller == 'registration') {
             $params = [
-                'endpoint' => $this->context->link->getModuleLink($this->module->name, 'Customer'),
+                'endpoint' => $this->context->link->getModuleLink($this->module->name, 'customer'),
                 'jobs_b64' => base64_encode(json_encode($this->getJobs())),
                 'countriesJson' => json_encode(\Country::getCountries($idLang)),
+                'currentIsoLang' => $isoCode,
+                'langJson' => $this->getLangJson($isoCode),
             ];
             $html = $this->module->renderTwig('front/registration', $params);
 
             return $html;
         }
+
+        if ($controller == 'addresses') {
+            $params = [
+                'endpoint' => $this->context->link->getModuleLink($this->module->name, 'customer'),
+                'jobs_b64' => base64_encode(json_encode($this->getJobs())),
+                'countriesJson' => json_encode(\Country::getCountries($idLang)),
+                'currentIsoLang' => $isoCode,
+                'langJson' => $this->getLangJson($isoCode),
+            ];
+            $html = $this->module->renderTwig('front/addresses', $params);
+
+            return $html;
+        }
+
+        if ($controller == 'address') {
+            $params = [
+                'endpoint' => $this->context->link->getModuleLink($this->module->name, 'customer'),
+                'jobs_b64' => base64_encode(json_encode($this->getJobs())),
+                'countriesJson' => json_encode(\Country::getCountries($idLang)),
+                'currentIsoLang' => $isoCode,
+                'langJson' => $this->getLangJson($isoCode),
+            ];
+            $html = $this->module->renderTwig('front/address', $params);
+
+            return $html;
+        }
+
+        if ($controller == 'order') {
+            $params = [
+                'endpoint' => $this->context->link->getModuleLink($this->module->name, 'customer'),
+                'jobs_b64' => base64_encode(json_encode($this->getJobs())),
+                'countriesJson' => json_encode(\Country::getCountries($idLang)),
+                'currentIsoLang' => $isoCode,
+                'langJson' => $this->getLangJson($isoCode),
+                'useSameAddress' => Tools::isSubmit('use_same_address') ? Tools::getValue('use_same_address') : 1,
+            ];
+            $html = $this->module->renderTwig('front/order', $params);
+
+            return $html;
+        }
+    }
+
+    protected function getLangJson($isoCode)
+    {
+        $path = $this->module->getLocalPath() . 'views/assets/lang/registration_' . $isoCode . '.json';
+        if (file_exists($path)) {
+            $content = file_get_contents($path);
+        } else {
+            $content = '[]';
+        }
+
+        return $content;
     }
 
     protected function getJobs()
@@ -256,23 +312,64 @@ class HookManager
     {
         /** @var \Customer */
         $customer = $params['newCustomer'];
-        $want_invoice = Tools::getValue('want_invoice', 0);
-        $fields = $this->getFrontCustomerFields();
+        if (!Validate::isLoadedObject($customer)) {
+            PrestaShopLogger::addLog("Oggetto cliente non valido");
+            return false;
+        }
+        $idJobArea = (int) Tools::getValue('id_customer_invoice_job_area', 0);
+        $idJobPosition = (int) Tools::getValue('id_customer_invoice_job_position', 0);
 
-        if ($want_invoice == 0) {
-            return;
+        $customerInvoice = new ModelCustomerInvoice($customer->id);
+        if (!Validate::isLoadedObject($customerInvoice)) {
+            $customerInvoice->force_id = true;
+            $customerInvoice->id = (int) $customer->id;
+            $customerInvoice->date_add = $customer->date_add;
         }
 
-        $model = new ModelCustomerInvoice($customer->id);
-        if (!Validate::isLoadedObject($model)) {
-            $model->force_id = true;
-            $model->id = (int) $customer->id;
-            $model->date_add = date('Y-m-d H:i:s');
-        }
-        $model->hydrate($fields);
-        $model->date_upd = date('Y-m-d H:i:s');
+        $customerInvoice->id_customer_invoice_job_area = $idJobArea;
+        $customerInvoice->id_customer_invoice_job_position = $idJobPosition;
+        $customerInvoice->date_upd = $customer->date_upd;
 
-        return $model->save(true);
+        $save = $customerInvoice->save(true);
+        if (!$save) {
+            $err = Db::getInstance()->getMsgError();
+            $errCode = Db::getInstance()->getNumberError();
+            if ($err) {
+                PrestaShopLogger::addLog("Errore salvataggio customer invoice: {$err}", 2, $errCode, 'Customer', $customer->id);
+            }
+            return false;
+        }
+
+        return true;
+    }
+
+    private function getValidJobAreaId($jobAreaId)
+    {
+        if ($jobAreaId <= 0) {
+            return 0;
+        }
+
+        return (int) Db::getInstance()->getValue(
+            'SELECT `id_customer_invoice_job_area`'
+            . ' FROM `' . _DB_PREFIX_ . 'customer_invoice_job_area`'
+            . ' WHERE `id_customer_invoice_job_area` = ' . (int) $jobAreaId
+        );
+    }
+
+    private function getValidJobPositionId($jobAreaId, $jobPositionId)
+    {
+        if ($jobAreaId <= 0 || $jobPositionId <= 0) {
+            return 0;
+        }
+
+        $query = new DbQuery();
+        $query
+            ->select('`id_customer_invoice_job_position`')
+            ->from('customer_invoice_job_link')
+            ->where('`id_customer_invoice_job_area` = ' . (int) $jobAreaId)
+            ->where('`id_customer_invoice_job_position` = ' . (int) $jobPositionId);
+
+        return (int) Db::getInstance()->getValue($query);
     }
 
     public function hookActionCustomerAccountUpdate($params)
@@ -308,16 +405,15 @@ class HookManager
      */
     public function hookAdditionalCustomerFormFields($params)
     {
+        $controller = Tools::getValue('controller');
+        if ($controller == 'address' || $controller == 'order') {
+            return true;
+        }
+
         $fields = ModelCustomerInvoice::$definition['fields'];
-        $frontAjaxController = $this->context->link->getModuleLink($this->module->name, 'Customer');
+        $frontAjaxController = $this->context->link->getModuleLink($this->module->name, 'customer');
 
         $formFields = [
-            (new FormField)
-                ->setName('want_invoice')
-                ->setType('select')
-                ->setAvailableValues(['0' => 'NO', '1' => 'SI'])
-                ->setLabel($this->module->l('Desidero ricevere la fattura'))
-                ->setRequired(false),
             (new FormField)
                 ->setName('id_customer_invoice_job_area')
                 ->setType('select')
@@ -332,26 +428,11 @@ class HookManager
                 ->setLabel($this->module->l('Professione'))
                 ->addConstraint('isInt')
                 ->setRequired(false)
-                ->setAvailableValues(ModelCustomerInvoiceJobPosition::getList())
+                ->setAvailableValues([])
                 ->setValue(Tools::getValue('id_customer_invoice_job_position', ''))
         ];
 
-        $paramsFormFields = $params['fields'];
-        // divido paramsFormFields in due array: optin e formfields
-        // così inserisco i nuovi campi in mezzo
-        $optinFields = [];
-        $customerFields = [];
-        foreach ($paramsFormFields as $key => $field) {
-            if ($key === 'optin') {
-                $optinFields[$key] = $field;
-            } else {
-                $customerFields[$key] = $field;
-            }
-        }
-        $outFields = array_merge($customerFields, $formFields, $optinFields);
-        $params['fields'] = $outFields;
-
-        return true;
+        return $formFields;
     }
 
     public function hookValidateCustomerFormFields($params)
@@ -378,7 +459,7 @@ class HookManager
         return true;
     }
 
-    public function hookActionAdminCustomersControllerFormModifier($params)
+    public function hookActionAdminCustomersControllerFormModifier(array &$params)
     {
         $fieldsForm = &$params['fields'];
         $MPCUSTOMERINVOICE_customerId = (int) $params['id_customer'];
@@ -465,6 +546,7 @@ class HookManager
 
         $params['data']['id_eurosolution'] = $fields['id_eurosolution'] ?? '';
         $params['data']['type'] = $fields['type'] ?? '';
+        $params['data']['company'] = $fields['company'] ?? '';
         $params['data']['vat_number'] = $fields['vat_number'] ?? '';
         $params['data']['dni'] = $fields['dni'] ?? '';
         $params['data']['cuu'] = $fields['cuu'] ?? '';
@@ -484,7 +566,7 @@ class HookManager
      * @param mixed $params
      * @return void
      */
-    public function hookActionCustomerFormBuilderModifier($params)
+    public function hookActionCustomerFormBuilderModifier(array &$params)
     {
         $id_customer = (int) $params['id'];
         $model = new ModelCustomerInvoice($id_customer);
@@ -529,6 +611,19 @@ class HookManager
                     'help' => $this->module->l('Inserisci qui il tipo di soggetto (opzionale).'),
                     'data' => $model->type,
                 ],
+            )
+            ->add(
+                'company',
+                TextType::class,
+                [
+                    'label' => $this->module->l('Intestazione fattura'),
+                    'required' => false,
+                    'attr' => [
+                        'maxlength' => 255,
+                    ],
+                    'mapped' => true,
+                    'data' => $model->company,
+                ]
             )
             ->add(
                 'vat_number',
@@ -628,7 +723,8 @@ class HookManager
                     'data' => $model->cup,
                 ]
             )
-            ->add('id_customer_invoice_job_area',
+            ->add(
+                'id_customer_invoice_job_area',
                 ChoiceType::class,
                 [
                     'label' => $this->module->l('Settore'),
@@ -637,7 +733,8 @@ class HookManager
                     'attr' => [
                         'class' => 'mp-job-area-select',
                     ],
-                ])
+                ]
+            )
             ->add('id_customer_invoice_job_position', ChoiceType::class, [
                 'label' => $this->module->l('Professione'),
                 'required' => false,
@@ -650,15 +747,106 @@ class HookManager
         $params['form_builder'] = $builder;
     }
 
-    public function hookActionCustomerGridDataModifier(array $params)
+    public function hookActionCustomerGridDataModifier(array &$params)
     {
-        $data = $params['data'];
-        foreach ($data as $key => $value) {
-            $data[$key]['id_eurosolution'] = $value['id_eurosolution'];
-        }
-        $params['data'] = $data;
+    }
 
-        return $params;
+    public function hookActionAddressGridDefinitionModifier(array &$params)
+    {
+        /** @var GridDefinitionInterface $definition */
+        $definition = $params['definition'];
+
+        $definition
+            ->getColumns()
+            ->addAfter(
+                'country_name',
+                (new DataColumn('phone'))
+                    ->setName($this->module->l('Telefono'))
+                    ->setOptions([
+                        'field' => 'phone',
+                        'sortable' => true,
+                        'clickable' => false,
+                        'alignment' => 'left',
+                    ])
+            )
+            ->addAfter(
+                'phone',
+                (new DataColumn('phone_mobile'))
+                    ->setName($this->module->l('Cellulare'))
+                    ->setOptions([
+                        'field' => 'phone_mobile',
+                        'sortable' => true,
+                        'clickable' => false,
+                        'alignment' => 'left',
+                    ])
+            );
+
+        $definition->getFilters()->add(
+            (new Filter('phone', TextType::class))
+                ->setTypeOptions([
+                    'required' => false,
+                    'attr' => [
+                        'placeholder' => $this->module->l('Telefono'),
+                    ],
+                ])
+                ->setAssociatedColumn('phone')
+        );
+
+        $definition->getFilters()->add(
+            (new Filter('phone_mobile', TextType::class))
+                ->setTypeOptions([
+                    'required' => false,
+                    'attr' => [
+                        'placeholder' => $this->module->l('Cellulare'),
+                    ],
+                ])
+                ->setAssociatedColumn('phone_mobile')
+        );
+    }
+
+    public function hookActionAddressGridQueryBuilderModifier(array &$params)
+    {
+        /** @var QueryBuilder $queryBuilder */
+        $queryBuilder = $params['search_query_builder'] ?? null;
+        /** @var QueryBuilder $countQueryBuilder */
+        $countQueryBuilder = $params['count_query_builder'] ?? null;
+        /** @var AddressFilters $searchCriteria */
+        $searchCriteria = $params['search_criteria'] ?? null;
+
+        if (!$queryBuilder || !$searchCriteria) {
+            return;
+        }
+
+        $queryBuilder
+            ->addSelect('a.`phone`')
+            ->addSelect('a.`phone_mobile`');
+
+        $filters = $searchCriteria->getFilters();
+        if (isset($filters['phone']) && $filters['phone'] !== '') {
+            $queryBuilder
+                ->andWhere('a.`phone` LIKE :mp_phone')
+                ->setParameter('mp_phone', '%' . $filters['phone'] . '%');
+            if ($countQueryBuilder) {
+                $countQueryBuilder
+                    ->andWhere('a.`phone` LIKE :mp_phone')
+                    ->setParameter('mp_phone', '%' . $filters['phone'] . '%');
+            }
+        }
+
+        if (isset($filters['phone_mobile']) && $filters['phone_mobile'] !== '') {
+            $queryBuilder
+                ->andWhere('a.`phone_mobile` LIKE :mp_phone_mobile')
+                ->setParameter('mp_phone_mobile', '%' . $filters['phone_mobile'] . '%');
+            if ($countQueryBuilder) {
+                $countQueryBuilder
+                    ->andWhere('a.`phone_mobile` LIKE :mp_phone_mobile')
+                    ->setParameter('mp_phone_mobile', '%' . $filters['phone_mobile'] . '%');
+            }
+        }
+    }
+
+    public function hookActionAddressGridDataModifier(array &$params)
+    {
     }
 
     /**
@@ -667,7 +855,7 @@ class HookManager
      * @param array $params
      * @return void
      */
-    public function hookActionCustomerGridDefinitionModifier(array $params)
+    public function hookActionCustomerGridDefinitionModifier(array &$params)
     {
         /** @var GridDefinitionInterface $definition */
         $definition = $params['definition'];
@@ -876,7 +1064,7 @@ class HookManager
      * @param mixed $params
      * @return void
      */
-    public function hookActionCustomerGridQueryBuilderModifier($params)
+    public function hookActionCustomerGridQueryBuilderModifier(array &$params)
     {
         /** @var QueryBuilder $queryBuilder */
         $queryBuilder = $params['search_query_builder'] ?? null;
@@ -994,18 +1182,61 @@ class HookManager
 
     protected function getFrontCustomerFields($customer = null)
     {
+        /*
+         * {
+         *     "type": "PARTITA_IVA",
+         *     "vat_number": "02325654124",
+         *     "dni": "PLRMXM79R02D182Y",
+         *     "sdi": "1351351",
+         *     "pec": "your.email+fakedata48371@gmail.com",
+         *     "cig": "3563738938",
+         *     "cup": "XCVGSOKS7896FRT",
+         *     "want_invoice": "1",
+         *     "company": "ARMANDO BARACCA SRL",
+         *     "country": "10",
+         *     "state": "150",
+         *     "postcode": "87010",
+         *     "city": "Ioggi",
+         *     "address1": "Via Sanseverino, 17",
+         *     "address2": "",
+         *     "phone": "09805062665",
+         *     "phone_mobile": "36946788376",
+         *     "id_customer_invoice_job_area": "1",
+         *     "id_customer_invoice_job_position": "87",
+         *     "id_gender": "1",
+         *     "firstname": "sandro",
+         *     "lastname": "bandro",
+         *     "email": "abbarto@foc.com",
+         *     "password": "CicciobelloBau",
+         *     "birthday": "06/08/54",
+         *     "psgdpr": "1",
+         *     "customer_privacy": "1",
+         *     "submitCreate": "1"
+         * }
+         */
         if ($customer) {
+            $customerInvoice = new ModelCustomerInvoice($customer->id);
+            $address = new \Address($customerInvoice->id_address_invoice);
             $fields = [
-                'type' => $customer->type,
-                'vat_number' => $customer->vat_number,
-                'dni' => $customer->dni,
-                'cuu' => $customer->cuu,
-                'sdi' => $customer->sdi,
-                'pec' => $customer->pec,
-                'cig' => $customer->cig,
-                'cup' => $customer->cup,
-                'id_customer_invoice_job_area' => $customer->id_customer_invoice_job_area,
-                'id_customer_invoice_job_position' => $customer->id_customer_invoice_job_position,
+                'type' => $customerInvoice->type,
+                'vat_number' => $customerInvoice->vat_number,
+                'dni' => $customerInvoice->dni,
+                'cuu' => $customerInvoice->cuu,
+                'sdi' => $customerInvoice->sdi,
+                'pec' => $customerInvoice->pec,
+                'cig' => $customerInvoice->cig,
+                'cup' => $customerInvoice->cup,
+                'company' => $customerInvoice->company ?: $address->company,
+                'country' => $address->id_country,
+                'state' => $address->id_state,
+                'postcode' => $address->postcode,
+                'city' => $address->city,
+                'address1' => $address->address1,
+                'address2' => $address->address2,
+                'phone' => $address->phone,
+                'phone_mobile' => $address->phone_mobile,
+                'id_customer_invoice_job_area' => $customerInvoice->id_customer_invoice_job_area,
+                'id_customer_invoice_job_position' => $customerInvoice->id_customer_invoice_job_position,
             ];
         } else {
             $fields = [
@@ -1017,6 +1248,15 @@ class HookManager
                 'pec' => Tools::getValue('pec', ''),
                 'cig' => Tools::getValue('cig', ''),
                 'cup' => Tools::getValue('cup', ''),
+                'company' => Tools::getValue('company', ''),
+                'id_country' => (int) Tools::getValue('country', ''),
+                'id_state' => (int) Tools::getValue('state', ''),
+                'postcode' => Tools::getValue('postcode', ''),
+                'city' => Tools::getValue('city', ''),
+                'address1' => Tools::getValue('address1', ''),
+                'address2' => Tools::getValue('address2', ''),
+                'phone' => Tools::getValue('phone', ''),
+                'phone_mobile' => Tools::getValue('phone_mobile', ''),
                 'id_customer_invoice_job_area' => Tools::getValue('id_customer_invoice_job_area', 0),
                 'id_customer_invoice_job_position' => Tools::getValue('id_customer_invoice_job_position', 0),
             ];
@@ -1074,7 +1314,7 @@ class HookManager
         return $this->saveOrUpdateCustomerInvoiceData($params['object']->id, $this->getFrontCustomerFields($params['object']));
     }
 
-    public function hookActionOrderGridDefinitionModifier($params)
+    public function hookActionOrderGridDefinitionModifier(array &$params)
     {
         /** @var GridDefinitionInterface $definition */
         $definition = $params['definition'];
@@ -1106,59 +1346,62 @@ class HookManager
         );
     }
 
-    public function hookActionOrderGridQueryBuilderModifier($params)
+    public function hookActionOrderGridQueryBuilderModifier(array &$params)
     {
         /** @var QueryBuilder $queryBuilder */
         $queryBuilder = $params['search_query_builder'];
-        /** @var CustomerFilters $searchCriteria */
+        /** @var \PrestaShop\PrestaShop\Core\Search\Filters $searchCriteria */
         $searchCriteria = $params['search_criteria'];
 
-        // Aggiungi id_eurosolution alla query
-        $queryBuilder->addSelect('ci.id_eurosolution');
-        $queryBuilder->leftJoin('c', _DB_PREFIX_ . 'customer_invoice', 'ci', 'a.id_customer = ci.id_customer');
-
         foreach ($searchCriteria->getFilters() as $filterName => $filterValue) {
-            if ($filterName == 'id_eurosolution') {
-                $queryBuilder->andWhere('ci.id_eurosolution = :id_eurosolution');
-                $queryBuilder->setParameter('id_eurosolution', $filterValue);
+            if ($filterName === 'id_eurosolution' && $filterValue !== '' && $filterValue !== null) {
+                $queryBuilder
+                    ->leftJoin('c', _DB_PREFIX_ . 'customer_invoice', 'ci', 'o.id_customer = ci.id_customer')
+                    ->addSelect('ci.id_eurosolution')
+                    ->andWhere('ci.id_eurosolution = :id_eurosolution')
+                    ->setParameter('id_eurosolution', $filterValue);
 
-                // Modifica anche la query di conteggio
                 $countQueryBuilder = $params['count_query_builder'] ?? null;
-                // Applica lo stesso filtro alla query di conteggio
                 if ($countQueryBuilder !== null) {
-                    $countQueryBuilder->leftJoin('c', _DB_PREFIX_ . 'customer_invoice', 'ci', 'a.id_customer = ci.id_customer');
-                    $countQueryBuilder->andWhere('ci.id_eurosolution = :id_eurosolution');
-                    $countQueryBuilder->setParameter('id_eurosolution', $filterValue);
+                    $countQueryBuilder
+                        ->leftJoin('c', _DB_PREFIX_ . 'customer_invoice', 'ci', 'o.id_customer = ci.id_customer')
+                        ->andWhere('ci.id_eurosolution = :id_eurosolution')
+                        ->setParameter('id_eurosolution', $filterValue);
                 }
-            }
-        }
-
-        // Filtro per id_eurosolution
-        if (isset($params['filter']['id_eurosolution'])) {
-            $queryBuilder
-                ->andWhere('ci.id_eurosolution = :id_eurosolution')
-                ->setParameter('id_eurosolution', $params['filter']['id_eurosolution']);
-
-            // Modifica anche la query di conteggio
-            $countQueryBuilder = $params['count_query_builder'] ?? null;
-            // Applica lo stesso filtro alla query di conteggio
-            if ($countQueryBuilder !== null) {
-                $countQueryBuilder->andWhere('eur.id_eurosolution = :id_eurosolution');
-                $countQueryBuilder->setParameter('id_eurosolution', $params['filter']['id_eurosolution']);
             }
         }
     }
 
-    public function hookActionOrderGridDataModifier($params)
+    public function hookActionOrderGridDataModifier(array &$params)
     {
         /** @var GridData $data */
         $data = $params['data'];
         $records = $data->getRecords()->all();
 
+        // Recupera id_eurosolution solo per gli ordini visibili in pagina
+        $orderIds = array_filter(array_map(function ($r) {
+            return (int) $r['id_order'];
+        }, $records));
+        $euroMap = [];
+        if (!empty($orderIds)) {
+            $db = \Db::getInstance();
+            $rows = $db->executeS(
+                'SELECT o.id_order, ci.id_eurosolution'
+                . ' FROM `' . _DB_PREFIX_ . 'orders` o'
+                . ' LEFT JOIN `' . _DB_PREFIX_ . 'customer_invoice` ci ON o.id_customer = ci.id_customer'
+                . ' WHERE o.id_order IN (' . implode(',', $orderIds) . ')'
+            );
+            if (is_array($rows)) {
+                foreach ($rows as $r) {
+                    $euroMap[(int) $r['id_order']] = $r['id_eurosolution'];
+                }
+            }
+        }
+
         $modifiedRecords = [];
         foreach ($records as $record) {
             /** @var array $record */
-            $id_eurosolution = $record['id_eurosolution'];
+            $id_eurosolution = $euroMap[(int) $record['id_order']] ?? null;
 
             $tpl = '@ModuleTwig/admin/columnIdEurosolution.html.twig';
             $twig = (new GetTwigEnvironment($this->module->name))->load($tpl);

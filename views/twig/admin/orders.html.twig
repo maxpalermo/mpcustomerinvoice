@@ -1,0 +1,157 @@
+{% extends 'admin/templateAdminPage.html.twig' %}
+
+{% block styles %}
+    {{ parent() }}
+    <style>
+        .orders-page { display: block; width: 100%; }
+        .orders-overview { display: grid; grid-template-columns: repeat(4, minmax(180px, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .orders-overview-card { position: relative; min-height: 120px; overflow: hidden; padding: 22px; border: 1px solid #e7ebf3; border-radius: 8px; background: #fff; box-shadow: 0 6px 18px rgba(28, 39, 60, .07); }
+        .orders-overview-card::after { position: absolute; right: -24px; bottom: -42px; width: 104px; height: 104px; border-radius: 50%; content: ""; opacity: .15; }
+        .orders-overview-card .metric-label { display: block; position: relative; z-index: 1; color: #6c757d; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+        .orders-overview-card .metric-value { display: block; position: relative; z-index: 1; margin-top: 8px; color: #273142; font-size: 25px; font-weight: 700; line-height: 1.2; }
+        .orders-overview-card .metric-icon { position: absolute; z-index: 1; right: 19px; bottom: 18px; font-size: 26px; }
+        .orders-overview-card.archive-total::after { background: #00a5a8; }
+        .orders-overview-card.archive-total .metric-icon { color: #00a5a8; }
+        .orders-overview-card.archive-count::after { background: #5578eb; }
+        .orders-overview-card.archive-count .metric-icon { color: #5578eb; }
+        .orders-overview-card.filtered-total::after { background: #ff8a65; }
+        .orders-overview-card.filtered-total .metric-icon { color: #ff8a65; }
+        .orders-overview-card.filtered-count::after { background: #e85580; }
+        .orders-overview-card.filtered-count .metric-icon { color: #e85580; }
+        .orders-exclusions { margin-bottom: 20px; border: 1px solid #e7ebf3; border-radius: 8px; background: #fff; box-shadow: 0 6px 18px rgba(28, 39, 60, .05); }
+        .orders-exclusions-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid #edf0f5; }
+        .orders-exclusions-title { margin: 0; color: #273142; font-size: 15px; font-weight: 700; }
+        .orders-exclusions-body { padding: 14px 18px; }
+        .orders-exclusions .chosen-container { width: 100% !important; }
+        @media (max-width: 992px) { .orders-overview { grid-template-columns: repeat(2, minmax(180px, 1fr)); } }
+        @media (max-width: 576px) { .orders-overview { grid-template-columns: 1fr; } }
+
+        .order-action-dialog {
+            border: 1px solid #e7ebf3;
+            border-radius: 8px;
+            padding: 0;
+            width: 420px;
+            max-width: 90%;
+            box-shadow: 0 6px 18px rgba(28, 39, 60, .07);
+        }
+        .order-action-dialog::backdrop {
+            background: rgba(0, 0, 0, 0.45);
+        }
+        .order-action-dialog .dialog-header {
+            padding: 14px 18px;
+            border-bottom: 1px solid #edf0f5;
+        }
+        .order-action-dialog .dialog-header h4 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 700;
+        }
+        .order-action-dialog .dialog-body {
+            padding: 18px;
+        }
+        .order-action-dialog .dialog-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            padding: 14px 18px;
+            border-top: 1px solid #edf0f5;
+        }
+        .order-action-dialog .dialog-option {
+            margin-bottom: 12px;
+        }
+        .order-action-dialog .dialog-option:last-child {
+            margin-bottom: 0;
+        }
+        .order-action-dialog .dialog-option label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            margin: 0;
+        }
+        .order-action-dialog .dialog-suboption {
+            margin: 8px 0 0 24px;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="orders-page">
+        <div class="orders-overview">
+        <div class="orders-overview-card archive-total">
+            <span class="metric-label">Totale archivio IVA inclusa</span>
+            <strong class="metric-value" id="orders-archive-total">€ 0,00</strong>
+            <i class="material-icons metric-icon">account_balance_wallet</i>
+        </div>
+        <div class="orders-overview-card archive-count">
+            <span class="metric-label">Ordini in archivio</span>
+            <strong class="metric-value" id="orders-archive-count">0</strong>
+            <i class="material-icons metric-icon">shopping_bag</i>
+        </div>
+        <div class="orders-overview-card filtered-total">
+            <span class="metric-label">Totale filtrato IVA inclusa</span>
+            <strong class="metric-value" id="orders-filtered-total">€ 0,00</strong>
+            <i class="material-icons metric-icon">payments</i>
+        </div>
+        <div class="orders-overview-card filtered-count">
+            <span class="metric-label">Ordini trovati</span>
+            <strong class="metric-value" id="orders-filtered-count">0</strong>
+            <i class="material-icons metric-icon">filter_alt</i>
+        </div>
+    </div>
+
+        <div class="orders-exclusions">
+            <div class="orders-exclusions-header">
+                <h2 class="orders-exclusions-title">Stati da escludere dalle statistiche</h2>
+                <span class="text-muted">Gli ordini restano visibili nella tabella.</span>
+            </div>
+            <div class="orders-exclusions-body">
+                <select id="order-excluded-states" class="chosen" multiple data-placeholder="Seleziona gli stati da escludere">
+                    {% for id, name in orderStates %}
+                        <option value="{{ id }}"{% if id in cancelledStateIds %} selected{% endif %}>{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+    <div class="panel">
+        <div class="panel-heading">
+            <span class="icon icon-shopping-cart"></span>
+            <span>Elenco ordini</span>
+        </div>
+        <div class="panel-body">
+            <table class="table table-bordered table-condensed table-striped" id="table-orders"></table>
+        </div>
+        </div>
+    </div>
+
+    <dialog id="order-action-dialog" class="order-action-dialog">
+        <form method="dialog" id="order-action-form">
+            <div class="dialog-header">
+                <h4 id="order-action-dialog-title">Azione</h4>
+            </div>
+            <div class="dialog-body" id="order-action-dialog-body"></div>
+            <div class="dialog-footer">
+                <button type="button" class="btn btn-secondary" id="order-action-dialog-cancel">Annulla</button>
+                <button type="submit" class="btn btn-primary" value="confirm" id="order-action-dialog-confirm">Conferma</button>
+            </div>
+        </form>
+    </dialog>
+{% endblock %}
+
+{% block scripts %}
+    {{ parent() }}
+    <script src="{{ asset('js/admin/adminTableOrders.js') }}"></script>
+    <script id="order-states" type="application/json">{{ orderStates|json_encode|raw }}</script>
+    <script id="order-countries" type="application/json">{{ orderCountries|json_encode|raw }}</script>
+    <script id="order-flag-items" type="application/json">{{ orderFlagItems|json_encode|raw }}</script>
+    <script id="order-table-links" type="application/json">{{ {'orderPageLink': orderPageLink, 'invoicePdfLink': invoicePdfLink, 'deliveryPdfLink': deliveryPdfLink, 'labelPrintEndpoint': labelPrintEndpoint}|json_encode|raw }}</script>
+    <script type="text/javascript">
+        const orderStates = JSON.parse(document.getElementById("order-states").textContent);
+        const orderCountries = JSON.parse(document.getElementById("order-countries").textContent);
+        const orderFlagItems = JSON.parse(document.getElementById("order-flag-items").textContent);
+        const orderTableLinks = JSON.parse(document.getElementById("order-table-links").textContent);
+        const adminTableOrders = new AdminTableOrders('table-orders', adminControllerUrl, orderTableLinks.orderPageLink, orderStates, orderFlagItems, orderCountries, orderTableLinks.invoicePdfLink, orderTableLinks.deliveryPdfLink, orderTableLinks.labelPrintEndpoint);
+    </script>
+{% endblock %}

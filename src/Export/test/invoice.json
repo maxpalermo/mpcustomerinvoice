@@ -1,0 +1,265 @@
+{
+    "invoices": {
+        "invoice": {
+            "document_type": "71",
+            "order_id": "152963",
+            "order_date": "2026-07-22 19:01:06",
+            "order_reference": "1000152963",
+            "current_status": "Ordine Spedito Brt",
+            "invoice_id": "144427",
+            "invoice_number": "2122",
+            "invoice_date": "2026-07-23 09:41:09",
+            "products_tax_excl": "37.21",
+            "discounts_tax_excl": "0",
+            "shipping_tax_excl": "6.48",
+            "wrapping_tax_excl": "0",
+            "products_tax_incl": "45.400000",
+            "discounts_tax_incl": "0.000000",
+            "shipping_tax_incl": "7.900000",
+            "wrapping_tax_incl": "0.000000",
+            "total_tax_excl": "43.700000",
+            "total_taxes": "9.6",
+            "total_tax_incl": "53.300000",
+            "total_paid": "53.300000",
+            "vat_code": "",
+            "rounds": "0",
+            "nc": "0",
+            "payment": "CARTA DI CREDITO",
+            "carrier": "BRT Corriere Espresso",
+            "shop_address": "www.dalavoro.com - site by: Soc. IMPRENDO s.r.l.s. - Via Mafalda di Savoia 28,30 - P.iva: IT03412990784 - 87013 Fagnano Castello (Cs) - Cosenza - Italia",
+            "foreign": "0",
+            "discount_note": "",
+            "customer": {
+                "id": "DL91915",
+                "id_customer": "91915",
+                "gender": "",
+                "firstname": "Alfredo",
+                "lastname": "Paduli",
+                "birthday": "0000-00-00",
+                "pec": "",
+                "uid": "JC7P1DW",
+                "email": "studio@stibbertclinicadentale.com",
+                "new": "",
+                "address_delivery": {
+                    "subject": "G",
+                    "company": "Stibbert Srl",
+                    "firstname": "Alfredo",
+                    "lastname": "Paduli",
+                    "address1": "Via V. Emanuele Ii, 71",
+                    "address2": "",
+                    "postcode": "50134",
+                    "city": "Firenze",
+                    "state_name": "FIRENZE",
+                    "country_name": "ITALIA",
+                    "phone": "0553841560",
+                    "phone_mobile": "3287812528",
+                    "vat_number": "",
+                    "dni": "",
+                    "state": "FI",
+                    "country": "IT"
+                },
+                "address_invoice": {
+                    "subject": "G",
+                    "company": "Stibbert Srl",
+                    "firstname": "Alfredo",
+                    "lastname": "Paduli",
+                    "address1": "Via V. Emanuele Ii, 71",
+                    "address2": "",
+                    "postcode": "50134",
+                    "city": "Firenze",
+                    "state_name": "FIRENZE",
+                    "country_name": "ITALIA",
+                    "phone": "0553841560",
+                    "phone_mobile": "3287812528",
+                    "vat_number": "06766480484",
+                    "dni": "",
+                    "state": "FI",
+                    "country": "IT"
+                }
+            },
+            "rows": {
+                "row": [
+                    {
+                        "ean13": "8050687032766",
+                        "reference": "ISA045022",
+                        "original_price_tax_excl": "21.311475",
+                        "product_price_tax_excl": "21.311475",
+                        "original_price_tax_incl": "26",
+                        "discount_percent": "30.00",
+                        "reduction_amount": "0",
+                        "price_tax_excl": "14.918033",
+                        "unit_price_tax_excl": "14.918033",
+                        "unit_price_tax_incl": "18.200000",
+                        "qty": "1",
+                        "total_tax_excl": "14.920000",
+                        "total_price_tax_excl": "14.920000",
+                        "total_price_tax_incl": "18.200000",
+                        "total_tax_incl": "18.200000",
+                        "tax_rate": "22",
+                        "product_id": "1575",
+                        "product_attribute_id": "19587",
+                        "product_check_qty": {
+                            "employee": "Marco Ser",
+                            "date_checked": "28/08/2025 15:18:36",
+                            "is_checked": "1"
+                        },
+                        "product_name": "CASACCA COLLO A V 125GR POL/COT BLU ISACCO 045022",
+                        "size": "M",
+                        "color": "BLU",
+                        "stock_service": "0",
+                        "product_in_stock": "4",
+                        "product_refunded": "0",
+                        "product_returned": "0",
+                        "product_reinjected": "0",
+                        "image_url": "/var/www/vhosts/dalavoro.com/httpdocs/img/p/3/0/0/4/9/30049-small_default.jpg",
+                        "customization": "",
+                        "attributes": {
+                            "lev_0": {
+                                "id_attribute_group": "13",
+                                "group": "Taglie Disponibili",
+                                "name": "M"
+                            },
+                            "lev_1": {
+                                "id_attribute_group": "14",
+                                "group": "Colore",
+                                "name": "Blu"
+                            },
+                            "lev_2": {
+                                "id_attribute_group": "15",
+                                "group": "Rifiniture",
+                                "name": "Monocolore"
+                            }
+                        },
+                        "product_position": {
+                            "warehouse": "Mg-1",
+                            "shelf": "Sc-E",
+                            "col": "CL-18",
+                            "level": "L-8"
+                        }
+                    },
+                    {
+                        "ean13": "8050687030229",
+                        "reference": "ISA044022",
+                        "original_price_tax_excl": "21.311475",
+                        "product_price_tax_excl": "21.311475",
+                        "original_price_tax_incl": "26",
+                        "discount_percent": "30.00",
+                        "reduction_amount": "0",
+                        "price_tax_excl": "14.918033",
+                        "unit_price_tax_excl": "14.918033",
+                        "unit_price_tax_incl": "18.200000",
+                        "qty": "1",
+                        "total_tax_excl": "14.920000",
+                        "total_price_tax_excl": "14.920000",
+                        "total_price_tax_incl": "18.200000",
+                        "total_tax_incl": "18.200000",
+                        "tax_rate": "22",
+                        "product_id": "4027",
+                        "product_attribute_id": "59208",
+                        "product_check_qty": {
+                            "employee": "Marco Ser",
+                            "date_checked": "11/04/2024 15:26:10",
+                            "is_checked": "1"
+                        },
+                        "product_name": "PANTALONE C/ELASTICO POL/COT. 125GR BLU ISACCO 044022",
+                        "size": "L",
+                        "color": "BLU",
+                        "stock_service": "1",
+                        "product_in_stock": "5",
+                        "product_refunded": "0",
+                        "product_returned": "0",
+                        "product_reinjected": "0",
+                        "image_url": "/var/www/vhosts/dalavoro.com/httpdocs/img/p/3/0/0/4/3/30043-small_default.jpg",
+                        "customization": "",
+                        "attributes": {
+                            "lev_0": {
+                                "id_attribute_group": "13",
+                                "group": "Taglie Disponibili",
+                                "name": "L"
+                            },
+                            "lev_1": {
+                                "id_attribute_group": "14",
+                                "group": "Colore",
+                                "name": "Blu"
+                            },
+                            "lev_2": {
+                                "id_attribute_group": "15",
+                                "group": "Rifiniture",
+                                "name": "Monocolore"
+                            }
+                        },
+                        "product_position": {
+                            "warehouse": "Mg-1",
+                            "shelf": "Sc-A",
+                            "col": "CL-14",
+                            "level": "L-3"
+                        }
+                    },
+                    {
+                        "ean13": "8050687221832",
+                        "reference": "ISA123902",
+                        "original_price_tax_excl": "7.377049",
+                        "product_price_tax_excl": "7.377049",
+                        "original_price_tax_incl": "9",
+                        "discount_percent": "0",
+                        "reduction_amount": "0",
+                        "price_tax_excl": "7.377049",
+                        "unit_price_tax_excl": "7.377049",
+                        "unit_price_tax_incl": "9.000000",
+                        "qty": "1",
+                        "total_tax_excl": "7.380000",
+                        "total_price_tax_excl": "7.380000",
+                        "total_price_tax_incl": "9.000000",
+                        "total_tax_incl": "9.000000",
+                        "tax_rate": "22",
+                        "product_id": "8011",
+                        "product_attribute_id": "107371",
+                        "product_check_qty": {
+                            "employee": "Marco Ser",
+                            "date_checked": "03/11/2025 17:33:54",
+                            "is_checked": "1"
+                        },
+                        "product_name": "BANDANA HAVANA BLU 100% COTONE ISACCO 123902",
+                        "size": "REGOLABILE",
+                        "color": "BLU",
+                        "stock_service": "0",
+                        "product_in_stock": "2",
+                        "product_refunded": "0",
+                        "product_returned": "0",
+                        "product_reinjected": "0",
+                        "image_url": "/var/www/vhosts/dalavoro.com/httpdocs/img/p/2/3/4/7/5/23475-small_default.jpg",
+                        "customization": "",
+                        "attributes": {
+                            "lev_0": {
+                                "id_attribute_group": "13",
+                                "group": "Taglie Disponibili",
+                                "name": "Regolabile"
+                            },
+                            "lev_1": {
+                                "id_attribute_group": "14",
+                                "group": "Colore",
+                                "name": "Blu"
+                            },
+                            "lev_2": {
+                                "id_attribute_group": "15",
+                                "group": "Rifiniture",
+                                "name": "Monocolore"
+                            }
+                        },
+                        "product_position": {
+                            "warehouse": "Mg-1",
+                            "shelf": "Sc-L",
+                            "col": "CL-3",
+                            "level": "L-10"
+                        }
+                    }
+                ]
+            },
+            "fees": {
+                "fee_tax_excl": "0",
+                "fee_tax_rate": "0",
+                "fee_tax_incl": "0"
+            }
+        }
+    }
+}

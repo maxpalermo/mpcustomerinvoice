@@ -1,0 +1,27 @@
+<link rel="stylesheet" href="{{ asset('css/style.css') }}">
+<link rel="stylesheet" href="{{ asset('js/components/tinyAlert/tinyAlert.css') }}">
+
+<script src="{{ asset('js/front/jobs.js') }}"></script>
+<script src="{{ asset('js/front/address.js') }}"></script>
+<script src="{{ asset('js/components/tinyAlert/tinyAlert.js') }}"></script>
+
+<script type="text/javascript">
+    const jobsB64 = "{{ jobs_b64 }}";
+    const countriesJson = {{ countriesJson | raw }}
+    const jobs = JSON.parse(base64Decode(jobsB64));
+    const endpoint = "{{ endpoint }}";
+    const currentIsoLang = "{{ currentIsoLang }}";
+    const langJson = {{ langJson | raw }};
+
+    document.addEventListener("DOMContentLoaded", async (e) => {
+        console.log("DOMContentLoaded: [registration.html.twig]");
+
+        initFormControls();
+        fillJobArea();
+        
+        const submitButton = document.querySelector("button[data-link-action=save-customer]");
+        if (submitButton) {
+            submitButton.addEventListener("click", onBeforeSubmitButton);
+        }
+    });
+</script>

@@ -1,0 +1,457 @@
+{
+    "invoices": {
+        "invoice": {
+            "document_type": "78",
+            "order_id": "152867",
+            "order_date": "2026-07-19 18:41:53",
+            "order_reference": "1000152867",
+            "current_status": "Ordine in Transito BRT",
+            "invoice_id": "152867",
+            "invoice_number": "4779",
+            "invoice_date": "2026-07-22 10:22:45",
+            "products_tax_excl": "25.79",
+            "discounts_tax_excl": "0",
+            "shipping_tax_excl": "6.48",
+            "wrapping_tax_excl": "0",
+            "products_tax_incl": "31.460000",
+            "discounts_tax_incl": "0.000000",
+            "shipping_tax_incl": "7.900000",
+            "wrapping_tax_incl": "0.000000",
+            "total_tax_excl": "32.260000",
+            "total_taxes": "7.1",
+            "total_tax_incl": "39.360000",
+            "total_paid": "39.360000",
+            "vat_code": "",
+            "rounds": "-0.01",
+            "nc": "0",
+            "payment": "PAYPAL",
+            "carrier": "BRT Corriere Espresso",
+            "shop_address": "www.dalavoro.com - site by: Soc. IMPRENDO s.r.l.s. - Via Mafalda di Savoia 28,30 - P.iva: IT03412990784 - 87013 Fagnano Castello (Cs) - Cosenza - Italia",
+            "foreign": "0",
+            "discount_note": "",
+            "customer": {
+                "id": "DL118360",
+                "id_customer": "118360",
+                "gender": "",
+                "firstname": "Benedetta",
+                "lastname": "Verde",
+                "birthday": "0000-00-00",
+                "pec": "",
+                "uid": "",
+                "email": "nicolapincella@gmail.com",
+                "new": "1",
+                "address_delivery": {
+                    "subject": "F",
+                    "company": "Benedetta Verde",
+                    "firstname": "Benedetta",
+                    "lastname": "Verde",
+                    "address1": "Via Rosselli, 14",
+                    "address2": "",
+                    "postcode": "46034",
+                    "city": "Borgo Virgilio",
+                    "state_name": "MANTOVA",
+                    "country_name": "ITALIA",
+                    "phone": "3703479289",
+                    "phone_mobile": "3703479289",
+                    "vat_number": "",
+                    "dni": "",
+                    "state": "MN",
+                    "country": "IT"
+                },
+                "address_invoice": {
+                    "subject": "F",
+                    "company": "Benedetta Verde",
+                    "firstname": "Benedetta",
+                    "lastname": "Verde",
+                    "address1": "Via Rosselli, 14",
+                    "address2": "",
+                    "postcode": "46034",
+                    "city": "Borgo Virgilio",
+                    "state_name": "MANTOVA",
+                    "country_name": "ITALIA",
+                    "phone": "3703479289",
+                    "phone_mobile": "3703479289",
+                    "vat_number": "",
+                    "dni": "",
+                    "state": "MN",
+                    "country": "IT"
+                }
+            },
+            "rows": {
+                "row": [
+                    {
+                        "ean13": "8050687067027",
+                        "reference": "ISA075000",
+                        "original_price_tax_excl": "5.327869",
+                        "product_price_tax_excl": "5.327869",
+                        "original_price_tax_incl": "6.5",
+                        "discount_percent": "25.00",
+                        "reduction_amount": "0",
+                        "price_tax_excl": "3.995902",
+                        "unit_price_tax_excl": "3.995902",
+                        "unit_price_tax_incl": "4.875000",
+                        "qty": "4",
+                        "total_tax_excl": "15.980000",
+                        "total_price_tax_excl": "15.980000",
+                        "total_price_tax_incl": "19.500000",
+                        "total_tax_incl": "19.500000",
+                        "tax_rate": "22",
+                        "product_id": "93",
+                        "product_attribute_id": "756",
+                        "product_check_qty": {
+                            "employee": "Marco Ser",
+                            "date_checked": "27/03/2023 10:00:45",
+                            "is_checked": "1"
+                        },
+                        "product_name": "CAPPELLO CLASSICO BIANCO ISACCO 075000",
+                        "size": "REGOLABILE",
+                        "color": "BIANCO",
+                        "stock_service": "0",
+                        "product_in_stock": "35",
+                        "product_refunded": "0",
+                        "product_returned": "0",
+                        "product_reinjected": "0",
+                        "image_url": "/var/www/vhosts/dalavoro.com/httpdocs/img/p/1/7/7/2/6/17726-small_default.jpg",
+                        "customization": "",
+                        "attributes": {
+                            "lev_0": {
+                                "id_attribute_group": "13",
+                                "group": "Taglie Disponibili",
+                                "name": "Regolabile"
+                            },
+                            "lev_1": {
+                                "id_attribute_group": "14",
+                                "group": "Colore",
+                                "name": "Bianco"
+                            },
+                            "lev_2": {
+                                "id_attribute_group": "15",
+                                "group": "Rifiniture",
+                                "name": "Monocolore"
+                            }
+                        },
+                        "product_position": {
+                            "warehouse": "Mg-1",
+                            "shelf": "Sc-I",
+                            "col": "CL-9",
+                            "level": "L-1"
+                        }
+                    },
+                    {
+                        "ean13": "8000000089731",
+                        "reference": "RICAMO-NOME",
+                        "original_price_tax_excl": "2.450820",
+                        "product_price_tax_excl": "2.450820",
+                        "original_price_tax_incl": "2.99",
+                        "discount_percent": "0",
+                        "reduction_amount": "0",
+                        "price_tax_excl": "2.450820",
+                        "unit_price_tax_excl": "2.450820",
+                        "unit_price_tax_incl": "2.990000",
+                        "qty": "1",
+                        "total_tax_excl": "2.450000",
+                        "total_price_tax_excl": "2.450000",
+                        "total_price_tax_incl": "2.990000",
+                        "total_tax_incl": "2.990000",
+                        "tax_rate": "22",
+                        "product_id": "429",
+                        "product_attribute_id": "98680",
+                        "product_check_qty": {
+                            "employee": " ",
+                            "date_checked": "",
+                            "is_checked": "0"
+                        },
+                        "product_name": "RICAMO NOME 10X10CM",
+                        "size": "",
+                        "color": "",
+                        "stock_service": "-1",
+                        "product_in_stock": "10000000",
+                        "product_refunded": "0",
+                        "product_returned": "0",
+                        "product_reinjected": "0",
+                        "image_url": "/var/www/vhosts/dalavoro.com/httpdocs/img/p/2/9/0/5/1/29051-small_default.jpg",
+                        "customization": {
+                            "lev_0": {
+                                "lev_0": {
+                                    "id_customization": "46705",
+                                    "type": "1",
+                                    "index": "1",
+                                    "title": "Primo Rigo (Max 15 Caratteri):",
+                                    "value": "Roby"
+                                },
+                                "lev_1": {
+                                    "id_customization": "46705",
+                                    "type": "1",
+                                    "index": "6",
+                                    "title": "Secondo Rigo (Max 15 Caratteri)",
+                                    "value": "V.d.B. 2026"
+                                },
+                                "lev_2": {
+                                    "id_customization": "46705",
+                                    "type": "1",
+                                    "index": "10",
+                                    "title": "Inserisci il codice o il nome del prodotto su cui effettuare questo ricamo",
+                                    "value": "075000"
+                                }
+                            }
+                        },
+                        "attributes": {
+                            "lev_0": {
+                                "id_attribute_group": "15",
+                                "group": "Rifiniture",
+                                "name": "Monocolore"
+                            },
+                            "lev_1": {
+                                "id_attribute_group": "25",
+                                "group": "Posizioni PERSONALIZZAZIONI",
+                                "name": "Copricapo 6x4 cm"
+                            },
+                            "lev_2": {
+                                "id_attribute_group": "28",
+                                "group": "Colore ricamo",
+                                "name": "Azzurro"
+                            }
+                        },
+                        "product_position": ""
+                    },
+                    {
+                        "ean13": "8000000089731",
+                        "reference": "RICAMO-NOME",
+                        "original_price_tax_excl": "2.450820",
+                        "product_price_tax_excl": "2.450820",
+                        "original_price_tax_incl": "2.99",
+                        "discount_percent": "0",
+                        "reduction_amount": "0",
+                        "price_tax_excl": "2.450820",
+                        "unit_price_tax_excl": "2.450820",
+                        "unit_price_tax_incl": "2.990000",
+                        "qty": "1",
+                        "total_tax_excl": "2.450000",
+                        "total_price_tax_excl": "2.450000",
+                        "total_price_tax_incl": "2.990000",
+                        "total_tax_incl": "2.990000",
+                        "tax_rate": "22",
+                        "product_id": "429",
+                        "product_attribute_id": "98673",
+                        "product_check_qty": {
+                            "employee": " ",
+                            "date_checked": "",
+                            "is_checked": "0"
+                        },
+                        "product_name": "RICAMO NOME 10X10CM",
+                        "size": "",
+                        "color": "",
+                        "stock_service": "-1",
+                        "product_in_stock": "9999991",
+                        "product_refunded": "0",
+                        "product_returned": "0",
+                        "product_reinjected": "0",
+                        "image_url": "/var/www/vhosts/dalavoro.com/httpdocs/img/p/2/9/0/5/1/29051-small_default.jpg",
+                        "customization": {
+                            "lev_0": {
+                                "lev_0": {
+                                    "id_customization": "46706",
+                                    "type": "1",
+                                    "index": "1",
+                                    "title": "Primo Rigo (Max 15 Caratteri):",
+                                    "value": "Ale"
+                                },
+                                "lev_1": {
+                                    "id_customization": "46706",
+                                    "type": "1",
+                                    "index": "6",
+                                    "title": "Secondo Rigo (Max 15 Caratteri)",
+                                    "value": "V.d.B. 2026"
+                                },
+                                "lev_2": {
+                                    "id_customization": "46706",
+                                    "type": "1",
+                                    "index": "10",
+                                    "title": "Inserisci il codice o il nome del prodotto su cui effettuare questo ricamo",
+                                    "value": "075000"
+                                }
+                            }
+                        },
+                        "attributes": {
+                            "lev_0": {
+                                "id_attribute_group": "15",
+                                "group": "Rifiniture",
+                                "name": "Monocolore"
+                            },
+                            "lev_1": {
+                                "id_attribute_group": "25",
+                                "group": "Posizioni PERSONALIZZAZIONI",
+                                "name": "Copricapo 6x4 cm"
+                            },
+                            "lev_2": {
+                                "id_attribute_group": "28",
+                                "group": "Colore ricamo",
+                                "name": "Rosso"
+                            }
+                        },
+                        "product_position": ""
+                    },
+                    {
+                        "ean13": "8000000089731",
+                        "reference": "RICAMO-NOME",
+                        "original_price_tax_excl": "2.450820",
+                        "product_price_tax_excl": "2.450820",
+                        "original_price_tax_incl": "2.99",
+                        "discount_percent": "0",
+                        "reduction_amount": "0",
+                        "price_tax_excl": "2.450820",
+                        "unit_price_tax_excl": "2.450820",
+                        "unit_price_tax_incl": "2.990000",
+                        "qty": "1",
+                        "total_tax_excl": "2.450000",
+                        "total_price_tax_excl": "2.450000",
+                        "total_price_tax_incl": "2.990000",
+                        "total_tax_incl": "2.990000",
+                        "tax_rate": "22",
+                        "product_id": "429",
+                        "product_attribute_id": "98692",
+                        "product_check_qty": {
+                            "employee": " ",
+                            "date_checked": "",
+                            "is_checked": "0"
+                        },
+                        "product_name": "RICAMO NOME 10X10CM",
+                        "size": "",
+                        "color": "",
+                        "stock_service": "-1",
+                        "product_in_stock": "9999999",
+                        "product_refunded": "0",
+                        "product_returned": "0",
+                        "product_reinjected": "0",
+                        "image_url": "/var/www/vhosts/dalavoro.com/httpdocs/img/p/2/9/0/5/1/29051-small_default.jpg",
+                        "customization": {
+                            "lev_0": {
+                                "lev_0": {
+                                    "id_customization": "46707",
+                                    "type": "1",
+                                    "index": "1",
+                                    "title": "Primo Rigo (Max 15 Caratteri):",
+                                    "value": "Marta"
+                                },
+                                "lev_1": {
+                                    "id_customization": "46707",
+                                    "type": "1",
+                                    "index": "6",
+                                    "title": "Secondo Rigo (Max 15 Caratteri)",
+                                    "value": "V.d.B. 2026"
+                                },
+                                "lev_2": {
+                                    "id_customization": "46707",
+                                    "type": "1",
+                                    "index": "10",
+                                    "title": "Inserisci il codice o il nome del prodotto su cui effettuare questo ricamo",
+                                    "value": "075000"
+                                }
+                            }
+                        },
+                        "attributes": {
+                            "lev_0": {
+                                "id_attribute_group": "15",
+                                "group": "Rifiniture",
+                                "name": "Monocolore"
+                            },
+                            "lev_1": {
+                                "id_attribute_group": "25",
+                                "group": "Posizioni PERSONALIZZAZIONI",
+                                "name": "Copricapo 6x4 cm"
+                            },
+                            "lev_2": {
+                                "id_attribute_group": "28",
+                                "group": "Colore ricamo",
+                                "name": "Verde"
+                            }
+                        },
+                        "product_position": ""
+                    },
+                    {
+                        "ean13": "8000000089731",
+                        "reference": "RICAMO-NOME",
+                        "original_price_tax_excl": "2.450820",
+                        "product_price_tax_excl": "2.450820",
+                        "original_price_tax_incl": "2.99",
+                        "discount_percent": "0",
+                        "reduction_amount": "0",
+                        "price_tax_excl": "2.450820",
+                        "unit_price_tax_excl": "2.450820",
+                        "unit_price_tax_incl": "2.990000",
+                        "qty": "1",
+                        "total_tax_excl": "2.450000",
+                        "total_price_tax_excl": "2.450000",
+                        "total_price_tax_incl": "2.990000",
+                        "total_tax_incl": "2.990000",
+                        "tax_rate": "22",
+                        "product_id": "429",
+                        "product_attribute_id": "98681",
+                        "product_check_qty": {
+                            "employee": " ",
+                            "date_checked": "",
+                            "is_checked": "0"
+                        },
+                        "product_name": "RICAMO NOME 10X10CM",
+                        "size": "",
+                        "color": "",
+                        "stock_service": "-1",
+                        "product_in_stock": "9999999",
+                        "product_refunded": "0",
+                        "product_returned": "0",
+                        "product_reinjected": "0",
+                        "image_url": "/var/www/vhosts/dalavoro.com/httpdocs/img/p/2/9/0/5/1/29051-small_default.jpg",
+                        "customization": {
+                            "lev_0": {
+                                "lev_0": {
+                                    "id_customization": "46708",
+                                    "type": "1",
+                                    "index": "1",
+                                    "title": "Primo Rigo (Max 15 Caratteri):",
+                                    "value": "Fede"
+                                },
+                                "lev_1": {
+                                    "id_customization": "46708",
+                                    "type": "1",
+                                    "index": "6",
+                                    "title": "Secondo Rigo (Max 15 Caratteri)",
+                                    "value": "V.d.B. 2026"
+                                },
+                                "lev_2": {
+                                    "id_customization": "46708",
+                                    "type": "1",
+                                    "index": "10",
+                                    "title": "Inserisci il codice o il nome del prodotto su cui effettuare questo ricamo",
+                                    "value": "075000"
+                                }
+                            }
+                        },
+                        "attributes": {
+                            "lev_0": {
+                                "id_attribute_group": "15",
+                                "group": "Rifiniture",
+                                "name": "Monocolore"
+                            },
+                            "lev_1": {
+                                "id_attribute_group": "25",
+                                "group": "Posizioni PERSONALIZZAZIONI",
+                                "name": "Copricapo 6x4 cm"
+                            },
+                            "lev_2": {
+                                "id_attribute_group": "28",
+                                "group": "Colore ricamo",
+                                "name": "Fucsia"
+                            }
+                        },
+                        "product_position": ""
+                    }
+                ]
+            },
+            "fees": {
+                "fee_tax_excl": "0",
+                "fee_tax_rate": "0",
+                "fee_tax_incl": "0"
+            }
+        }
+    }
+}

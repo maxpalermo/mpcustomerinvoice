@@ -1,0 +1,10 @@
+<?php
+
+if (!defined('_PS_VERSION_')) {
+    exit;
+}
+
+function upgrade_module_1_3_19($module)
+{
+    return $module->uninstallOverrides() && $module->installOverrides();
+}

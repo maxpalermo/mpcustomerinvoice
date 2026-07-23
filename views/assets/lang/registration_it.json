@@ -1,0 +1,58 @@
+{
+    "Type": "Tipo",
+    "Choose, please": "Scegli, per favore",
+    "Choose...": "Scegli...",
+    "Choose please": "Scegli per favore",
+    "Required": "Richiesto",
+    "Optional": "Opzionale",
+
+    "Tax code": "Codice Fiscale",
+    "VAT number": "Partita IVA",
+    "Contract Identification Code (CIG)": "Codice Identificativo Gara (CIG)",
+    "Unique Project Code (CUP)": "Codice Unico di Progetto (CUP)",
+    "Interchange System (SDI)": "Sistema di Interscambio (SDI)",
+    "Certified email (PEC)": "Posta Elettronica Certificata (PEC)",
+
+    "Country": "Nazione",
+    "Province": "Provincia",
+
+    "Billing address": "Indirizzo di fatturazione",
+    "Company": "Intestazione",
+    "City": "Città",
+    "Postal code": "CAP",
+    "Address": "Indirizzo",
+    "Address 2": "Indirizzo 2",
+    "Phone": "Telefono",
+    "Mobile phone": "Cellulare",
+    "(max {n} characters)": "(max {n} caratteri)",
+
+    "Enter the postal code in this format: {fmt}": "Inserisci il CAP in questo formato: {fmt}",
+
+    "Error while calling API {action}: {msg}": "Errore durante la chiamata API {action}: {msg}",
+    "Error": "Errore",
+    "Info": "Info",
+    "Success": "Successo",
+    "Warning": "Attenzione",
+
+    "✓ Valid pattern": "✓ Pattern valido",
+    "✓ Valid": "✓ Valido",
+    "✗ Invalid": "✗ Non valido",
+    "✗ Wrong length: required {n} characters": "✗ Lunghezza errata: richiesti {n} caratteri",
+    "✗ Invalid format. Use: {pattern} (N=number, L=letter)": "✗ Formato non valido. Usa: {pattern} (N=numero, L=lettera)",
+
+    "Strength: {n}/5": "Robustezza: {n}/5",
+
+    "Insert (format: {pattern})": "Inserisci (formato: {pattern})",
+    "Code ({pattern}):": "Codice ({pattern}):",
+    "Required format: {pattern} (N=number, L=letter)": "Formato richiesto: {pattern} (N=numero, L=lettera)",
+    "Pattern": "Pattern",
+
+    "Insert ({pattern}):": "Inserisci ({pattern}):",
+    "Format: {pattern}": "Formato: {pattern}",
+    "Please insert a telephone number": "Inserisci un numero di telefono",
+    "Please insert a mobile number": "Inserisci un cellulare",
+    "At Least one number": "Almeno un recapito",
+    "Please insert a strength password": "Inserisci una password forte",
+    "Please insert your birthday date": "Inserire correttamente la data di nascita",
+    "Please insert at least one telephone number": "Inserire correttamente almeno un recapito telefonico"
+}

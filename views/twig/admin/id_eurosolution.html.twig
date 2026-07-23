@@ -1,0 +1,83 @@
+<div class="card" id="id_eurosolution_card">
+    <div class="card-body">
+        <div class="form-group">
+            <label>ID Eurosolution</label>
+            <div class="input-group">
+                <input type="text" class="form-control" value="{{ id_eurosolution }}">
+                <span class="input-group-addon">
+                    <button type="button" class="btn btn-default" onclick="copyIdEurToClipboard('{{ id_eurosolution }}')" title="Copia ID">
+                        <i class="material-icons">content_copy</i>
+                    </button>
+                </span>
+                <span class="input-group-addon">
+                    <button type="button" class="btn btn-warning" onclick="saveIdEurosolution()" title="Aggiorna">
+                        <i class="material-icons">save</i>
+                    </button>
+                </span>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('ID Eurosolution widget loaded');
+            
+            const customerCard = document.getElementById('customerCard');
+            const idEurosolutionCard = document.getElementById('id_eurosolution_card');
+            
+            if (customerCard && idEurosolutionCard) {
+                // Cerca il card-body all'interno di customerCard
+                let customerCardBody = customerCard.querySelector('.card-body');
+                
+                // Se non trova .card-body, usa il card stesso come contenitore
+                if (!customerCardBody) {
+                    customerCardBody = customerCard;
+                }
+                
+                // Sposta la card
+                customerCardBody.insertBefore(idEurosolutionCard, customerCardBody.firstChild);
+                console.log('ID Eurosolution card inserita all\'inizio di card-body');
+            } else {
+                console.warn('Elementi non trovati:', {
+                    customerCard: !!customerCard,
+                    idEurosolutionCard: !!idEurosolutionCard
+                });
+            }
+        });
+
+        function copyIdEurToClipboard(text) {
+            var $temp = $("<input>");
+            $("body").append($temp);
+            $temp.val(text).select();
+            document.execCommand("copy");
+            $temp.remove();
+        }
+        
+        function saveIdEurosolution() {
+            const adminEndpoint = '{{ admin_endpoint | escape('html') }}';
+            const idEurosolution = document.querySelector('#id_eurosolution_card input').value;
+            const idCustomer = "{{ id_customer | escape('html') }}";
+            
+            fetch(adminEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    ajax: 1,
+                    action: "updateIdEurosolution",
+                    id_customer: idCustomer,
+                    id_eurosolution: idEurosolution,
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert('ID Eurosolution salvato con successo');
+                console.log('ID Eurosolution salvato con successo', data);
+            })
+            .catch(error => {
+                alert('Errore nel salvataggio dell\'ID Eurosolution');
+                console.error('Errore nel salvataggio dell\'ID Eurosolution', error);
+            });
+        }
+    </script>
+</div>

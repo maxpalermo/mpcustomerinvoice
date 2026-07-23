@@ -7,19 +7,153 @@ function ElementFromHtml(html) {
     return element;
 }
 
+function t(original) {
+    console.log("Cerco ", original);
+
+    const token = langJson[original];
+
+    console.log("Token: ", token);
+
+    if (token) {
+        return token;
+    }
+
+    return original;
+}
+
+function evaluatePasswordStrength(value, options) {
+    const password = String(value ?? "");
+    const minLength = Number(options?.minLength ?? 0);
+    const maxLength = Number(options?.maxLength ?? 0);
+    const minScore = Number(options?.minScore ?? 0);
+    const pattern = options?.pattern;
+
+    const issues = [];
+
+    if (minLength > 0 && password.length < minLength) {
+        issues.push("minLength");
+    }
+    if (maxLength > 0 && password.length > maxLength) {
+        issues.push("maxLength");
+    }
+
+    let patternOk = true;
+    if (pattern) {
+        try {
+            const re = new RegExp(pattern);
+            patternOk = re.test(password);
+        } catch (e) {
+            patternOk = true;
+        }
+        if (!patternOk) {
+            issues.push("pattern");
+        }
+    }
+
+    const hasLower = /[a-z]/.test(password);
+    const hasUpper = /[A-Z]/.test(password);
+    const hasDigit = /\d/.test(password);
+    const hasSymbol = /[^A-Za-z0-9]/.test(password);
+
+    let score = 0;
+
+    if (password.length >= Math.max(1, minLength)) score += 1;
+    if (password.length >= Math.max(8, minLength)) score += 1;
+    if (password.length >= Math.max(12, minLength)) score += 1;
+
+    const varietyCount = [hasLower, hasUpper, hasDigit, hasSymbol].filter(Boolean).length;
+    if (varietyCount >= 2) score += 1;
+    if (varietyCount >= 3) score += 1;
+    if (varietyCount >= 4) score += 1;
+
+    if (pattern) {
+        if (patternOk) score += 1;
+    }
+
+    score = Math.max(0, Math.min(5, Math.round(score)));
+
+    const ok = issues.length === 0 && (Number.isFinite(minScore) ? score >= minScore : true);
+    if (!ok && Number.isFinite(minScore) && score < minScore) {
+        issues.push("minScore");
+    }
+
+    return {
+        ok,
+        score,
+        issues,
+        details: {
+            length: password.length,
+            hasLower,
+            hasUpper,
+            hasDigit,
+            hasSymbol,
+            patternOk,
+            minLength,
+            maxLength,
+            minScore,
+        },
+    };
+}
+
+function bindPasswordStrengthChecker() {
+    const form = document.querySelector("#customer-form");
+    const scope = form || document;
+    const pwd = scope.querySelector('input[type="password"], input[name="password"]');
+    if (!pwd) return;
+
+    const getConstraints = () => {
+        const minLength = pwd.dataset.minlength;
+        const maxLength = pwd.dataset.maxlength;
+        const minScore = pwd.dataset.minscore;
+        const pattern = pwd.pattern;
+
+        return {
+            minLength,
+            maxLength,
+            minScore,
+            pattern,
+        };
+    };
+
+    let feedback = scope.querySelector("#mp-password-strength");
+    if (!feedback) {
+        feedback = document.createElement("div");
+        feedback.id = "mp-password-strength";
+        feedback.style.marginTop = "6px";
+        feedback.style.fontSize = "12px";
+        feedback.style.opacity = "0.9";
+        pwd.closest(".input-group").insertAdjacentElement("afterend", feedback);
+    }
+
+    const render = () => {
+        const res = evaluatePasswordStrength(pwd.value, getConstraints());
+
+        const scoreLabel = t("Strength: {n}/5").replace("{n}", String(res.score));
+        const okLabel = res.ok ? "✓" : "✗";
+        feedback.textContent = `${okLabel} ${scoreLabel}`;
+        feedback.style.color = res.ok ? "#198754" : "#b02a37";
+    };
+
+    pwd.removeEventListener("input", render);
+    pwd.addEventListener("input", render);
+    pwd.removeEventListener("blur", render);
+    pwd.addEventListener("blur", render);
+    render();
+}
+
 function getFieldType() {
     const html = `
             <div class="form-group row ">
-                <label class="col-md-3 form-control-label" for="field-type">Tipo</label>
+                <label class="col-md-3 form-control-label" for="field-type">${t("Type")}</label>
                 <div class="col-md-6 js-input-column">
                 <select id="field-type" class="form-control form-control-select" name="type">
-                    <option value="" selected>Scegli, per favore</option>
+                    <option value="" selected>${t("Choose, please")}</option>
                     <option value="ENTE">ENTE</option>
                     <option value="PARTITA_IVA">PARTITA IVA</option>
                     <option value="PRIVATO">PRIVATO</option>
                 </select>
             </div>
-            <div class="col-md-3 form-control-comment">Seleziona</div>
+            <div class="col-md-3 form-control-comment">${t("Choose...")}</div>
             </div>
         `;
 
@@ -34,10 +168,13 @@ function getFormContainer() {
     return el;
 }
 
-function getHtmlElement(label, id, name, type, comment, maxlength = 255, required = false) {
+function getHtmlElement(label, id, name, type, comment, maxlength = 255, required = false, requiredString = null) {
     const requiredAttr = required ? "required" : "";
     const requiredLabelClass = required ? "required" : "";
-    const requiredText = required ? `<span class="text-danger">Richiesto</span>` : "Opzionale";
+    if (!requiredString) {
+        requiredString = required ? `<span class="text-danger">${t("Required")}</span>` : t("Optional");
+    }
+    const requiredText = requiredString;
 
     const html = `
             <div class="form-group row ">
@@ -55,27 +192,27 @@ function getHtmlElement(label, id, name, type, comment, maxlength = 255, require
 }
 
 function getDni() {
-    return getHtmlElement("Codice Fiscale", "dni", "dni", "text", "(max 16 caratteri)", 16, true);
+    return getHtmlElement(t("Tax code"), "dni", "dni", "text", t("(max {n} characters)").replace("{n}", "16"), 16, true);
 }
 
 function getVatNumber() {
-    return getHtmlElement("Partita IVA", "vat_number", "vat_number", "text", "(max 16 caratteri)", 16, true);
+    return getHtmlElement(t("VAT number"), "vat_number", "vat_number", "text", t("(max {n} characters)").replace("{n}", "16"), 16, true);
 }
 
 function getCIG() {
-    return getHtmlElement("Codice Identificativo Gara (CIG)", "cig", "cig", "text", "(max 10 caratteri)", 10, true);
+    return getHtmlElement(t("Contract Identification Code (CIG)"), "cig", "cig", "text", t("(max {n} characters)").replace("{n}", "10"), 10, true);
 }
 
 function getCUP() {
-    return getHtmlElement("Codice Unico di Progetto (CUP)", "cup", "cup", "text", "(max 15 caratteri)", 15, true);
+    return getHtmlElement(t("Unique Project Code (CUP)"), "cup", "cup", "text", t("(max {n} characters)").replace("{n}", "15"), 15, true);
 }
 
 function getSDI() {
-    return getHtmlElement("Sistema di Interscambio (SDI)", "sdi", "sdi", "text", "(max 7 caratteri)", 7, true);
+    return getHtmlElement(t("Interchange System (SDI)"), "sdi", "sdi", "text", t("(max {n} characters)").replace("{n}", "7"), 7, true);
 }
 
 function getPEC() {
-    return getHtmlElement("Posta Elettronica Certificata (PEC)", "pec", "pec", "email", "", 255, false);
+    return getHtmlElement(t("Certified email (PEC)"), "pec", "pec", "email", "", 255, false);
 }
 
 function setTitle(title) {
@@ -93,7 +230,7 @@ function getCountries() {
     const l = document.createElement("label");
     l.setAttribute("for", "country");
     l.classList = "col-md-3 form-control-label required";
-    l.innerText = "Nazione";
+    l.innerText = t("Country");
 
     const div = document.createElement("div");
     div.classList = "col-md-6 js-input-column";
@@ -101,7 +238,7 @@ function getCountries() {
 
     const req = document.createElement("div");
     req.classList = "col-md-3 form-control-comment";
-    req.innerHTML = `<span class="text-danger">Richiesto</span>`;
+    req.innerHTML = `<span class="text-danger">${t("Required")}</span>`;
 
     const el = document.createElement("select");
     el.dataset.group = "customerInvoice";
@@ -112,7 +249,7 @@ function getCountries() {
     const optionsHtml = Object.values(countriesJson)
         .map((c) => `<option value="${c.id_country}">${c.name}</option>`)
         .join("");
-    el.innerHTML = `<option value="">Scegli...</option>${optionsHtml}`;
+    el.innerHTML = `<option value="">${t("Choose...")}</option>${optionsHtml}`;
 
     div.appendChild(el);
 
@@ -133,16 +270,16 @@ function getAddress() {
     container.style.paddingTop = "1rem";
     container.style.paddingBottom = "1rem";
 
-    const company = getHtmlElement("Intestazione", "company", "company", "text", "(max 64 caratteri)", 64, true);
+    const company = getHtmlElement(t("Company"), "company", "company", "text", t("(max {n} characters)").replace("{n}", "64"), 64, true);
     const country = getCountries();
-    const city = getHtmlElement("Città", "city", "city", "text", "(max 128 caratteri)", 128, true);
-    const postcode = getHtmlElement("CAP", "postcode", "postcode", "text", "(max 10 caratteri)", 10, true);
-    const address1 = getHtmlElement("Indirizzo", "address1", "address1", "text", "(max 128 caratteri)", 128, true);
-    const address2 = getHtmlElement("Indirizzo 2", "address2", "address2", "text", "(max 128 caratteri)", 128, false);
-    const phone = getHtmlElement("Telefono", "phone", "phone", "text", "(max 24 caratteri)", 24, true);
-    const phoneMobile = getHtmlElement("Cellulare", "phone_mobile", "phone_mobile", "text", "(max 24 caratteri)", 24, true);
+    const city = getHtmlElement(t("City"), "city", "city", "text", t("(max {n} characters)").replace("{n}", "128"), 128, true);
+    const postcode = getHtmlElement(t("Postal code"), "postcode", "postcode", "text", t("(max {n} characters)").replace("{n}", "10"), 10, true);
+    const address1 = getHtmlElement(t("Address"), "address1", "address1", "text", t("(max {n} characters)").replace("{n}", "128"), 128, true);
+    const address2 = getHtmlElement(t("Address 2"), "address2", "address2", "text", t("(max {n} characters)").replace("{n}", "128"), 128, false);
+    const phone = getHtmlElement(t("Phone"), "phone", "phone", "text", t("(max {n} characters)").replace("{n}", "24"), 24, false, t("At Least one number"));
+    const phoneMobile = getHtmlElement(t("Mobile phone"), "phone_mobile", "phone_mobile", "text", t("(max {n} characters)").replace("{n}", "24"), 24, false, t("At Least one number"));
 
-    container.appendChild(setTitle("Indirizzo di fatturazione"));
+    container.appendChild(setTitle(t("Billing address")));
     container.appendChild(company);
     container.appendChild(country);
     container.appendChild(city);
@@ -268,76 +405,76 @@ function initFormControls() {
         wantInvoice.removeEventListener("change", bindOnChangeWantInvoice);
         wantInvoice.addEventListener("change", bindOnChangeWantInvoice);
     }
+
+    bindPasswordStrengthChecker();
 }
 
-function base64Decode(str) {
-    // Decodifica Base64 → stringa binaria
-    const binaryString = atob(str);
-    // Converte la stringa binaria in un array di byte
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-    }
-    // Decodifica UTF-8
-    return new TextDecoder().decode(bytes);
-}
-
-function fillJobArea() {
+function initJobFields() {
     const jobArea = document.getElementById("field-id_customer_invoice_job_area");
-    const jobAreaPos = document.getElementById("field-id_customer_invoice_job_position");
-    if (jobArea && jobAreaPos) {
-        jobAreaPos.innerHTML = `<option value="">Scegli per favore</option>`;
-        jobArea.innerHTML = `<option value="">Scegli per favore</option>`;
+    const jobPosition = document.getElementById("field-id_customer_invoice_job_position");
 
-        const jobAreas = Array.isArray(jobs) ? jobs : Object.values(jobs);
-        jobAreas.forEach((job) => {
-            const jobEl = document.createElement("option");
-            jobEl.value = job.id;
-            jobEl.textContent = job.name;
-            jobArea.append(jobEl);
-        });
-
-        jobArea.addEventListener("change", (e) => {
-            fillJobPositions(e.target.value);
-        });
+    if (!jobArea || !jobPosition) {
+        return;
     }
-}
 
-function fillJobPositions(idJobArea) {
-    const jobsEl = document.getElementById("field-id_customer_invoice_job_position");
-    if (jobsEl) {
-        jobsEl.innerHTML = `<option value="">Scegli per favore</option>`;
+    const resetPositions = () => {
+        jobPosition.replaceChildren(new Option(t("Choose please"), ""));
+    };
 
-        const source = Array.isArray(jobs) ? jobs.find((j) => String(j.id) === String(idJobArea)) : jobs?.[idJobArea];
-        const jobsChildren = source?.jobs || [];
-        jobsChildren.forEach((job) => {
-            const el = document.createElement("option");
-            el.value = job.id;
-            el.textContent = job.name;
+    jobArea.addEventListener("change", async () => {
+        resetPositions();
+        if (!jobArea.value) {
+            return;
+        }
 
-            jobsEl.append(el);
-        });
-    }
+        try {
+            const body = new URLSearchParams({
+                ajax: "1",
+                action: "getJobPositions",
+                idJobArea: jobArea.value,
+            });
+            const response = await fetch(MPCUSTOMERINVOICE_CONTROLLER, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+                body,
+            });
+            if (!response.ok) {
+                throw new Error("Unable to load job positions");
+            }
+
+            const data = await response.json();
+            (data.jobPositions || []).forEach((jobPositionData) => {
+                jobPosition.add(new Option(jobPositionData.name, jobPositionData.id));
+            });
+        } catch (_) {
+            resetPositions();
+        }
+    });
+
+    resetPositions();
 }
 
 function getFormState(options) {
     const html = `
         <div class="form-state-select form-group row">
-            <label for="state" class="col-md-3 form-control-label required">Provincia</label>
+            <label for="state" class="col-md-3 form-control-label required">${t("Province")}</label>
             <div class="col-md-6 js-input-column" data-group="customerInvoice">
                 <select data-group="customerInvoice" id="state" name="state" class="form-control chosen">
-                    <option value="">Scegli...</option>
+                    <option value="">${t("Choose...")}</option>
                 </select>
             </div>
             <div class="col-md-3 form-control-comment">
-                <span class="text-danger">Richiesto</span>
+                <span class="text-danger">${t("Required")}</span>
             </div>
         </div>
     `;
 
     const formGroup = ElementFromHtml(html);
     const select = formGroup.querySelector("select");
-    select.innerHTML = `<option value="">Scegli...</option>`;
+    select.innerHTML = `<option value="">${t("Choose...")}</option>`;
 
     Object.entries(options).forEach(([key, state]) => {
         const option = document.createElement("option");
@@ -380,7 +517,8 @@ async function onChangeCountry(event) {
         });
 
         if (data.need_zip_code) {
-            const formCap = getHtmlElement("CAP", "postcode", "postcode", "text", "Inserisci il CAP in questo formato:" + data.zip_code_format, data.zip_code_format.length, true);
+            const zipComment = t("Enter the postal code in this format: {fmt}").replace("{fmt}", data.zip_code_format);
+            const formCap = getHtmlElement(t("Postal code"), "postcode", "postcode", "text", zipComment, data.zip_code_format.length, true);
             const capEl = formCap.querySelector("#postcode");
             if (capEl) {
                 const zipFormat = data.zip_code_format;
@@ -449,35 +587,35 @@ async function fetchAdmin(action, params = {}) {
         return json;
     } catch (error) {
         console.error("fetchAdmin error:", error);
-        showErrorMessage("Errore durante la chiamata API " + action + ": " + error.message);
+        showErrorMessage(t("Error while calling API {action}: {msg}").replace("{action}", String(action)).replace("{msg}", String(error.message)));
         return false;
     }
 }
 
 function showErrorMessage(message) {
     $.growl.error({
-        title: "Errore",
+        title: t("Error"),
         message: message,
     });
 }
 
 function showNoticeMessage(message) {
     $.growl.notice({
-        title: "Info",
+        title: t("Info"),
         message: message,
     });
 }
 
 function showSuccessMessage(message) {
     $.growl.success({
-        title: "Successo",
+        title: t("Success"),
         message: message,
     });
 }
 
 function showWarningMessage(message) {
     $.growl.warning({
-        title: "Attenzione",
+        title: t("Warning"),
         message: message,
     });
 }
@@ -543,7 +681,7 @@ async function creaInputConPattern() {
         // Crea l'input element
         const input = document.createElement("input");
         input.type = "text";
-        input.placeholder = `Inserisci (formato: ${patternRicevuto})`;
+        input.placeholder = t("Insert (format: {pattern})").replace("{pattern}", String(patternRicevuto));
         input.className = "pattern-input";
 
         // Crea container per il feedback
@@ -552,7 +690,7 @@ async function creaInputConPattern() {
 
         // Crea label
         const label = document.createElement("label");
-        label.textContent = `Codice (${patternRicevuto}):`;
+        label.textContent = t("Code ({pattern}):").replace("{pattern}", String(patternRicevuto));
         label.htmlFor = `input-${Date.now()}`;
         input.id = label.htmlFor;
 
@@ -563,7 +701,7 @@ async function creaInputConPattern() {
         // Crea div per le istruzioni
         const instructions = document.createElement("div");
         instructions.className = "instructions";
-        instructions.textContent = `Formato richiesto: ${patternRicevuto} (N=numero, L=lettera)`;
+        instructions.textContent = t("Required format: {pattern} (N=number, L=letter)").replace("{pattern}", String(patternRicevuto));
 
         // Aggiungi event listener per la validazione
         input.addEventListener("input", function (e) {
@@ -613,7 +751,7 @@ function validaInput(inputElement, regexPattern, patternOriginale, messageDiv) {
 
     if (regexPattern.test(valore)) {
         inputElement.classList.add("valid");
-        messageDiv.textContent = "✓ Pattern valido";
+        messageDiv.textContent = t("✓ Valid pattern");
         messageDiv.classList.add("valid");
 
         // Opzionale: mostra la conversione N/L
@@ -626,9 +764,9 @@ function validaInput(inputElement, regexPattern, patternOriginale, messageDiv) {
 
         // Messaggio di errore dettagliato
         if (valore.length !== patternOriginale.length) {
-            messageDiv.textContent = `✗ Lunghezza errata: richiesti ${patternOriginale.length} caratteri`;
+            messageDiv.textContent = t("✗ Wrong length: required {n} characters").replace("{n}", String(patternOriginale.length));
         } else {
-            messageDiv.textContent = `✗ Formato non valido. Usa: ${patternOriginale} (N=numero, L=lettera)`;
+            messageDiv.textContent = t("✗ Invalid format. Use: {pattern} (N=number, L=letter)").replace("{pattern}", String(patternOriginale));
         }
 
         messageDiv.classList.add("invalid");
@@ -666,7 +804,7 @@ function creaInputFallback() {
 
     const input = document.createElement("input");
     input.type = "text";
-    input.placeholder = `Inserisci (formato: ${patternDefault})`;
+    input.placeholder = t("Insert (format: {pattern})").replace("{pattern}", String(patternDefault));
 
     const messageDiv = document.createElement("div");
     messageDiv.className = "validation-message";
@@ -674,10 +812,10 @@ function creaInputFallback() {
     input.addEventListener("input", function (e) {
         if (regexDefault.test(this.value)) {
             this.classList.add("valid");
-            messageDiv.textContent = "✓ Valido";
+            messageDiv.textContent = t("✓ Valid");
         } else {
             this.classList.add("invalid");
-            messageDiv.textContent = "✗ Non valido";
+            messageDiv.textContent = t("✗ Invalid");
         }
     });
 
@@ -709,7 +847,7 @@ async function creaInputConPatternMultipli() {
         patterns.forEach((pattern, index) => {
             const option = document.createElement("option");
             option.value = pattern;
-            option.textContent = `Pattern ${index + 1}: ${pattern}`;
+            option.textContent = `${t("Pattern")} ${index + 1}: ${pattern}`;
             if (index === defaultIndex) option.selected = true;
             select.appendChild(option);
         });
@@ -725,11 +863,11 @@ async function creaInputConPatternMultipli() {
             const regex = convertiPatternInRegex(pattern);
 
             const label = document.createElement("label");
-            label.textContent = `Inserisci (${pattern}):`;
+            label.textContent = t("Insert ({pattern}):").replace("{pattern}", String(pattern));
 
             const input = document.createElement("input");
             input.type = "text";
-            input.placeholder = `Formato: ${pattern}`;
+            input.placeholder = t("Format: {pattern}").replace("{pattern}", String(pattern));
             input.className = "pattern-input";
 
             const message = document.createElement("div");
@@ -777,8 +915,74 @@ function onBeforeSubmitButton(e) {
         jsonData[key] = value;
     }
 
-    console.log(jsonData);
+    const pwd = document.getElementById("field-password");
+    if (pwd) {
+        const minLength = pwd.dataset.minlength;
+        const maxLength = pwd.dataset.maxlength;
+        const minScore = pwd.dataset.minscore;
+        const pattern = pwd.pattern;
 
-    e.preventDefault();
-    return false;
+        const res = evaluatePasswordStrength(pwd.value, {
+            minLength,
+            maxLength,
+            minScore,
+            pattern,
+        });
+
+        if (!res.ok) {
+            pwd.closest("div.form-group").classList.add("has-error");
+            tinyAlert(t("Please insert a strength password"), "warning");
+            pwd.focus();
+            e.preventDefault();
+            return false;
+        }
+    }
+
+    const birthday = document.getElementById("field-birthday");
+    if (birthday && birthday.value.length > 0) {
+        console.log("Check birthday", birthday.value);
+
+        let validate = false;
+        const placeholder = birthday.placeholder;
+        switch (placeholder) {
+            case "GG/MM/AAAA":
+            case "DD/MM/YYYY":
+                validate = /^\d{2}\/\d{2}\/\d{4}$/.test(birthday.value);
+                break;
+            case "AAAA-MM-GG":
+            case "YYYY-MM-DD":
+                validate = /^\d{4}-\d{2}-\d{2}$/.test(birthday.value);
+                break;
+            case "MM-GG-AAAA":
+            case "MM-DD-YYYY":
+                validate = /^\d{2}-\d{2}-\d{4}$/.test(birthday.value);
+                break;
+            default:
+                validate = true;
+                break;
+        }
+        if (!validate) {
+            birthday.closest("div.form-group").classList.add("has-error");
+            tinyAlert(t("Please insert your birthday date"), "warning");
+            birthday.focus();
+            e.preventDefault();
+            return false;
+        }
+    }
+
+    const phone = document.getElementById("phone");
+    const mobile = document.getElementById("phone_mobile");
+
+    if (phone && mobile) {
+        if (!phone.value.length && !mobile.value.length) {
+            phone.closest("div.form-group").classList.add("has-error");
+            mobile.closest("div.form-group").classList.add("has-error");
+            phone.closest("div.form-group").querySelector(".form-control-comment").innerText = t("Please insert a telephone number");
+            mobile.closest("div.form-group").querySelector(".form-control-comment").innerText = t("Please insert a mobile number");
+            tinyAlert(t("Please insert at least one telephone number"), "warning");
+            mobile.focus();
+            e.preventDefault();
+            return false;
+        }
+    }
 }
