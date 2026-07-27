@@ -243,6 +243,20 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
         }
     }
 
+    public function ajaxProcessSaveCustomerInvoiceData()
+    {
+        $idCustomer = (int) Tools::getValue('id_customer', 0);
+        $result = \MpSoft\MpCustomerInvoice\Helpers\CustomerInvoiceFormHandler::saveFromPost($idCustomer, $_POST);
+        $this->response($result);
+    }
+
+    public function ajaxProcessGetCustomerInvoiceData()
+    {
+        $idCustomer = (int) Tools::getValue('id_customer', 0);
+        $data = \MpSoft\MpCustomerInvoice\Helpers\CustomerInvoiceCardRenderer::getCustomerInvoiceData($idCustomer);
+        $this->response(['success' => true, 'data' => $data]);
+    }
+
     public function ajaxProcessPrintOrder()
     {
         $id_order = (int) Tools::getValue('id_order', 0);

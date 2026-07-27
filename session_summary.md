@@ -55,15 +55,18 @@ This document summarizes the changes, logic, and configurations implemented for 
     - `ENTE` $\rightarrow$ `E`
     - Default/Empty fallback $\rightarrow$ `--` (or auto-resolved to `G` if vat/company fields are present).
 
-### F. Invoice & Delivery Export (`ExportInvoice.php` / `ExportDelivery.php`)
-- Updated `ExportInvoice` to query `order_invoice` for `number` (`invoice_number`) and `date_add` (`invoice_date`), matching `invoice.json`.
-- Implemented `ExportDelivery` to query `order_invoice` for `delivery_number` (`invoice_number`) and `delivery_date` (`invoice_date`), matching `delivery.json` (`document_type` = `78`).
-- Added document existence validation: if `number` (for invoice) or `delivery_number` (for delivery) is missing or `<= 0`, an explicit exception is thrown to inform the user that the document does not exist for that order.
+### G. Document Generation Restrictions (`GenerateDocumentRestrictions.php`)
+- Implemented `GenerateDocumentRestrictions` listening on `actionOrderStatusUpdate` and `actionOrderStatusPostUpdate`.
+- Checks `customer_invoice` table for `id_customer`:
+  - If `vat_number` or `dni` is non-empty $\rightarrow$ Creates/forces **Invoice ONLY** (`number > 0`, `delivery_number = 0`).
+  - Otherwise $\rightarrow$ Creates/forces **Delivery ONLY** (`delivery_number > 0`, `number = 0`).
+- Enforces strict mutual exclusion ("mai tutti e due assieme").
+- Created `upgrade/upgrade-1.3.63.php` to register `actionOrderStatusUpdate` and `actionOrderStatusPostUpdate` automatically during module update.
 
 ---
 
 ## 3. Module Version Tracking
-* **Latest Stable Version**: `1.3.61`
+* **Latest Stable Version**: `1.3.63`
 - Files updated with version bump:
     - `mpcustomerinvoice.php`
     - `config_it.xml`

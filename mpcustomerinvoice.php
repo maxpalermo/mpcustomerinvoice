@@ -43,7 +43,7 @@ class MpCustomerInvoice extends Module implements WidgetInterface
     {
         $this->name = 'mpcustomerinvoice';
         $this->tab = 'administration';
-        $this->version = '1.3.61';
+        $this->version = '1.3.71';
         $this->author = 'Massimiliano Palermo';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -76,11 +76,12 @@ class MpCustomerInvoice extends Module implements WidgetInterface
                     'displayBeforeBodyClosingTag',
                     'displayAdminOrderMain',
                     'displayCustomerAccount',
-                    //'actionAdminCustomersControllerFormModifier',
-                    //'actionAdminCustomersControllerSaveAfter',
-                    //'actionAdminCustomersFormSubmit',
-                    'additionalCustomerFormFields',
+                    'displayAdminCustomers',
                     'actionCustomerAccountAdd',
+                    'actionObjectCustomerAddAfter',
+                    'actionObjectCustomerUpdateAfter',
+                    'actionOrderStatusUpdate',
+                    'actionOrderStatusPostUpdate',
                     //'actionCustomerAccountUpdate',
                     //'actionBeforeSubmitAccount',
                     //'actionObjectCustomerDeleteAfter',
@@ -175,9 +176,24 @@ class MpCustomerInvoice extends Module implements WidgetInterface
         return $this->hookManager->hookAdditionalCustomerFormFields($params);
     }
 
+    public function hookDisplayAdminCustomers($params)
+    {
+        return $this->hookManager->hookDisplayAdminCustomers($params);
+    }
+
     public function hookActionCustomerAccountAdd($params)
     {
         return $this->hookManager->hookActionCustomerAccountAdd($params);
+    }
+
+    public function hookActionObjectCustomerAddAfter($params)
+    {
+        return $this->hookManager->hookActionObjectCustomerAddAfter($params);
+    }
+
+    public function hookActionObjectCustomerUpdateAfter($params)
+    {
+        return $this->hookManager->hookActionObjectCustomerUpdateAfter($params);
     }
 
     public function hookActionGenerateDocumentReference(array $params)
@@ -752,13 +768,28 @@ class MpCustomerInvoice extends Module implements WidgetInterface
 
     public function hookActionAdminControllerSetMedia($params)
     {
+        if (!$this->isRegisteredInHook('displayAdminCustomers')) {
+            $this->registerHook('displayAdminCustomers');
+        }
+        if (!$this->isRegisteredInHook('displayAdminEndContent')) {
+            $this->registerHook('displayAdminEndContent');
+        }
+
         $controller = Tools::strtolower(Tools::getValue('controller'));
+        $requestUri = $_SERVER['REQUEST_URI'] ?? '';
         $baseJs = $this->getLocalPath() . 'views/assets/js/';
         $baseCss = $this->getLocalPath() . 'views/assets/css/';
 
         $this->context->controller->addCSS("{$baseCss}/theme-override.css", 'all', 100);
 
-        if ($controller == 'admincustomers' && Tools::getValue('id_customer')) {
+        $isAdminCustomerPage = (
+            $controller === 'admincustomers'
+            || strpos($requestUri, '/customers/') !== false
+            || strpos($requestUri, 'admin_customers') !== false
+        );
+
+        if ($isAdminCustomerPage) {
+            $this->context->controller->addJS("{$baseJs}admin/adminCustomerInfo.js");
             $this->context->controller->addJS("{$baseJs}admin/jobLinkManager.js");
         }
     }
@@ -802,5 +833,17 @@ class MpCustomerInvoice extends Module implements WidgetInterface
         }
 
         return;
+    }
+
+    public function hookActionOrderStatusUpdate($params)
+    {
+        $restriction = new \MpSoft\MpCustomerInvoice\Helpers\GenerateDocumentRestrictions();
+        $restriction->hookActionOrderStatusUpdate($params);
+    }
+
+    public function hookActionOrderStatusPostUpdate($params)
+    {
+        $restriction = new \MpSoft\MpCustomerInvoice\Helpers\GenerateDocumentRestrictions();
+        $restriction->hookActionOrderStatusPostUpdate($params);
     }
 }

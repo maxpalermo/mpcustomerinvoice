@@ -49,6 +49,7 @@ class ModelCustomerInvoice extends ObjectModel
     public $id_customer_invoice_job_position; // Id posizione di lavoro
     public $date_add;
     public $date_upd;
+    public $force_id = true;
     protected static $model_name = 'ModelCustomerInvoice';
 
     public static $definition = [

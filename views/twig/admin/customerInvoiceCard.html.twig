@@ -1,0 +1,191 @@
+<script type="text/javascript" src="/modules/mpcustomerinvoice/views/assets/js/admin/adminCustomerInfo.js"></script>
+
+<div class="card mpcustomerinvoice-card mb-4" id="mpcustomerinvoice-customer-card-wrapper">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="card-header-title mb-0 d-flex align-items-center">
+            <i class="material-icons text-primary mr-2" style="font-size: 22px;">receipt_long</i>
+            <span>Dati Fatturazione Elettronica (MP)</span>
+        </h3>
+        <div class="card-actions">
+            <button type="button" class="btn btn-outline-primary btn-sm btn-edit-customer-invoice" id="mpcustomerinvoice-btn-edit">
+                <i class="material-icons" style="font-size: 16px;">edit</i> Modifica
+            </button>
+            <button type="button" class="btn btn-success btn-sm btn-save-customer-invoice d-none" id="mpcustomerinvoice-btn-save">
+                <i class="material-icons" style="font-size: 16px;">save</i> Salva
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm btn-cancel-customer-invoice d-none" id="mpcustomerinvoice-btn-cancel">
+                <i class="material-icons" style="font-size: 16px;">close</i> Annulla
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <div id="mpcustomerinvoice-alert-container" class="mb-3" style="display: none;"></div>
+
+        <form id="mpcustomerinvoice-card-form" method="post" action="{{ admin_controller_url }}">
+            <input type="hidden" name="id_customer" value="{{ id_customer }}">
+            <input type="hidden" name="ajax" value="1">
+
+            {# VIEW MODE #}
+            <div id="mpcustomerinvoice-view-mode">
+                <div class="row">
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="text-muted small font-weight-bold">SOGGETTO</div>
+                        <div id="view-type-container">
+                            {% if model.type == 'PARTITA_IVA' %}
+                                <span class="badge badge-info"><i class="material-icons" style="font-size: 12px;">business</i> Partita IVA</span>
+                            {% elseif model.type == 'ENTE' %}
+                                <span class="badge badge-warning"><i class="material-icons" style="font-size: 12px;">account_balance</i> Ente Pubblico / P.A.</span>
+                            {% else %}
+                                <span class="badge badge-secondary"><i class="material-icons" style="font-size: 12px;">person</i> Privato</span>
+                            {% endif %}
+                            {% if model.is_foreign %}
+                                <span class="badge badge-dark ml-1"><i class="material-icons" style="font-size: 12px;">public</i> Estero</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-8 mb-3">
+                        <div class="text-muted small font-weight-bold">INTESTAZIONE FATTURA / RAGIONE SOCIALE</div>
+                        <div class="font-weight-bold text-dark" id="view-company">{{ model.company ?: '--' }}</div>
+                    </div>
+                    <div class="col-md-6 col-lg-3 mb-3">
+                        <div class="text-muted small font-weight-bold">PARTITA IVA</div>
+                        <div class="font-weight-bold" id="view-vat_number">{{ model.vat_number ?: '--' }}</div>
+                    </div>
+                    <div class="col-md-6 col-lg-3 mb-3">
+                        <div class="text-muted small font-weight-bold">CODICE FISCALE</div>
+                        <div class="font-weight-bold" id="view-dni">{{ model.dni ?: '--' }}</div>
+                    </div>
+                    <div class="col-md-6 col-lg-3 mb-3">
+                        <div class="text-muted small font-weight-bold">CODICE SDI</div>
+                        <div class="font-weight-bold text-primary" id="view-sdi"><code>{{ model.sdi ?: '--' }}</code></div>
+                    </div>
+                    <div class="col-md-6 col-lg-3 mb-3">
+                        <div class="text-muted small font-weight-bold">PEC</div>
+                        <div class="font-weight-bold" id="view-pec">{{ model.pec ?: '--' }}</div>
+                    </div>
+                    <div class="col-md-4 col-lg-3 mb-3">
+                        <div class="text-muted small font-weight-bold">CIG</div>
+                        <div id="view-cig">{{ model.cig ?: '--' }}</div>
+                    </div>
+                    <div class="col-md-4 col-lg-3 mb-3">
+                        <div class="text-muted small font-weight-bold">CUP</div>
+                        <div id="view-cup">{{ model.cup ?: '--' }}</div>
+                    </div>
+                    <div class="col-md-4 col-lg-3 mb-3">
+                        <div class="text-muted small font-weight-bold">CUU (IPA)</div>
+                        <div id="view-cuu">{{ model.cuu ?: '--' }}</div>
+                    </div>
+                    <div class="col-md-4 col-lg-3 mb-3">
+                        <div class="text-muted small font-weight-bold">ID EUROSOLUTION</div>
+                        <div id="view-id_eurosolution"><code>{{ model.id_eurosolution ?: '--' }}</code></div>
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <div class="text-muted small font-weight-bold">SETTORE LAVORATIVO</div>
+                        <div id="view-job_area">{{ job_area_name }}</div>
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <div class="text-muted small font-weight-bold">PROFESSIONE / RUOLO</div>
+                        <div id="view-job_position">{{ job_position_name }}</div>
+                    </div>
+                    <div class="col-12 mt-2 mb-2">
+                        <div class="text-muted small font-weight-bold">INDIRIZZO DI FATTURAZIONE</div>
+                        <div id="view-id_address_invoice">
+                            {% if model.id_address_invoice > 0 and invoice_address_text %}
+                                <span class="badge px-2 py-1" style="background-color: #28a745 !important; color: #ffffff !important; font-weight: 600; font-size: 12px; border-radius: 4px; display: inline-flex; align-items: center;">
+                                    <i class="material-icons" style="font-size: 14px; margin-right: 4px; color: #ffffff;">receipt</i> {{ invoice_address_text }}
+                                </span>
+                            {% else %}
+                                <span class="badge px-2 py-1" style="background-color: #ffc107 !important; color: #212529 !important; font-weight: 600; font-size: 12px; border-radius: 4px; display: inline-flex; align-items: center;">
+                                    <i class="material-icons" style="font-size: 14px; margin-right: 4px; color: #212529;">warning</i> Nessun indirizzo di fatturazione selezionato
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# EDIT MODE #}
+            <div id="mpcustomerinvoice-edit-mode" class="d-none">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-control-label small font-weight-bold">Tipo Soggetto</label>
+                        <select name="type" id="field-type" class="form-control form-control-sm">
+                            {% for key, label in types %}
+                                <option value="{{ key }}" {% if model.type == key %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-control-label small font-weight-bold">Intestazione / Ragione Sociale</label>
+                        <input type="text" name="company" id="field-company" class="form-control form-control-sm" value="{{ model.company }}" placeholder="Ragione Sociale o Nome Intestatario">
+                    </div>
+                    <div class="col-md-2 mb-3 d-flex align-items-end">
+                        <div class="custom-control custom-checkbox mb-1">
+                            <input type="checkbox" name="is_foreign" value="1" id="field-is_foreign" class="custom-control-input" {% if model.is_foreign %}checked{% endif %}>
+                            <label class="custom-control-label small font-weight-bold" for="field-is_foreign">Estero</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-control-label small font-weight-bold">Partita IVA</label>
+                        <input type="text" name="vat_number" id="field-vat_number" class="form-control form-control-sm text-uppercase" value="{{ model.vat_number }}" maxlength="16" placeholder="IT01234567890">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-control-label small font-weight-bold">Codice Fiscale</label>
+                        <input type="text" name="dni" id="field-dni" class="form-control form-control-sm text-uppercase" value="{{ model.dni }}" maxlength="16" placeholder="RSSMRA80A01H501U">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-control-label small font-weight-bold">Codice SDI (Destinatario)</label>
+                        <input type="text" name="sdi" id="field-sdi" class="form-control form-control-sm text-uppercase" value="{{ model.sdi }}" maxlength="7" placeholder="0000000 / Codice">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-control-label small font-weight-bold">PEC</label>
+                        <input type="email" name="pec" id="field-pec" class="form-control form-control-sm" value="{{ model.pec }}" placeholder="azienda@pec.it">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-control-label small font-weight-bold">CIG</label>
+                        <input type="text" name="cig" id="field-cig" class="form-control form-control-sm text-uppercase" value="{{ model.cig }}" maxlength="10" placeholder="Codice CIG">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-control-label small font-weight-bold">CUP</label>
+                        <input type="text" name="cup" id="field-cup" class="form-control form-control-sm text-uppercase" value="{{ model.cup }}" maxlength="15" placeholder="Codice CUP">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-control-label small font-weight-bold">CUU (IPA)</label>
+                        <input type="text" name="cuu" id="field-cuu" class="form-control form-control-sm text-uppercase" value="{{ model.cuu }}" maxlength="6" placeholder="Codice CUU">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-control-label small font-weight-bold">ID Eurosolution</label>
+                        <input type="number" name="id_eurosolution" id="field-id_eurosolution" class="form-control form-control-sm" value="{{ model.id_eurosolution }}" placeholder="Es. 108849">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-control-label small font-weight-bold">Settore Lavorativo</label>
+                        <select name="id_customer_invoice_job_area" id="field-id_customer_invoice_job_area" class="form-control form-control-sm">
+                            <option value="0">-- Seleziona Settore --</option>
+                            {% for areaId, areaName in job_areas %}
+                                <option value="{{ areaId }}" {% if model.id_customer_invoice_job_area == areaId %}selected{% endif %}>{{ areaName }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-control-label small font-weight-bold">Professione / Ruolo</label>
+                        <select name="id_customer_invoice_job_position" id="field-id_customer_invoice_job_position" class="form-control form-control-sm">
+                            <option value="0">-- Seleziona Professione --</option>
+                            {% for posId, posName in job_positions %}
+                                <option value="{{ posId }}" {% if model.id_customer_invoice_job_position == posId %}selected{% endif %}>{{ posName }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-control-label small font-weight-bold">Indirizzo di Fatturazione</label>
+                        <select name="id_address_invoice" id="field-id_address_invoice" class="form-control form-control-sm">
+                            <option value="0">-- Nessun indirizzo di fatturazione --</option>
+                            {% for addrId, addrText in customer_addresses %}
+                                <option value="{{ addrId }}" {% if model.id_address_invoice == addrId %}selected{% endif %}>{{ addrText }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>

@@ -218,94 +218,117 @@ class HookManager
      */
     public function hookDisplayAdminCustomers($params)
     {
-        $controller_name = Tools::strtolower($this->context->controller->controller_name);
-        if ($controller_name != 'admincustomers') {
-            return '';
-        }
+        $id_customer = (int) (
+            $params['id_customer']
+            ?? $params['idCustomer']
+            ?? $params['customerId']
+            ?? Tools::getValue('id_customer', Tools::getValue('idCustomer', Tools::getValue('customerId', 0)))
+        );
 
-        $this->context->controller->confirmations[] = 'HOOK displayAdminCustomers';
-        $controller = $this->context->link->getModuleLink($this->module->name, 'Export');
-        $id_customer = (int) Tools::getValue('id_customer');
-        $model = new ModelCustomerInvoice($id_customer);
-        if (!Validate::isLoadedObject($model)) {
-            return '';
-        }
-
-        $badgeColor = 'info';
-        $fontSize = '1.0rem';
-        $subject = $model->type ?: '--';
-        $vat_number = $model->vat_number ?: '--';
-        $dni = $model->dni ?: '--';
-        $sdi = $model->sdi ?: '--';
-        $pec = $model->pec ?: '--';
-        $cig = $model->cig ?: '--';
-        $cup = $model->cup ?: '--';
-        $id_eurosolution = $model->id_eurosolution ?: 0;
-        $id_customer_invoice_job_area = $model->id_customer_invoice_job_area ?: 0;
-        $id_customer_invoice_job_position = $model->id_customer_invoice_job_position ?: 0;
-        $job_area = '--';
-        $job_position = '--';
-
-        if ($id_customer_invoice_job_area) {
-            $modelJobArea = new ModelCustomerInvoiceJobArea($id_customer_invoice_job_area, $this->id_lang);
-            if (Validate::isLoadedObject($modelJobArea)) {
-                $job_area = $modelJobArea->name;
+        if (!$id_customer && isset($_SERVER['REQUEST_URI'])) {
+            if (preg_match('#customers/(\d+)#', $_SERVER['REQUEST_URI'], $m)) {
+                $id_customer = (int) $m[1];
             }
         }
 
-        if ($id_customer_invoice_job_position) {
-            $modelJobPosition = new ModelCustomerInvoiceJobPosition($id_customer_invoice_job_position, $this->id_lang);
-            if (Validate::isLoadedObject($modelJobPosition)) {
-                $job_position = $modelJobPosition->name;
-            }
+        if (!$id_customer) {
+            return '';
         }
 
-        $twig = new GetTwigEnvironment($this->module->name);
-        $template = $twig->load('@ModuleTwig/admin/customerInfo.html.twig');
-        $html = $template->render([
-            'badgeColor' => $badgeColor,
-            'fontSize' => $fontSize,
-            'subject' => $subject,
-            'vat_number' => $vat_number,
-            'dni' => $dni,
-            'sdi' => $sdi,
-            'pec' => $pec,
-            'cig' => $cig,
-            'cup' => $cup,
-            'id_eurosolution' => $id_eurosolution,
-            'id_customer_invoice_job_area' => $id_customer_invoice_job_area,
-            'id_customer_invoice_job_position' => $id_customer_invoice_job_position,
-            'job_area' => $job_area,
-            'job_position' => $job_position,
-            'id_employee' => $this->context->employee->id,
-            'id_customer' => $id_customer,
-            'controller' => $this->context->link->getAdminLink('AdminCustomers'),
-        ]);
+        if (!$this->module->isRegisteredInHook('displayAdminCustomers')) {
+            $this->module->registerHook('displayAdminCustomers');
+        }
 
-        return $html;
+        return CustomerInvoiceCardRenderer::renderCustomerCard($id_customer);
     }
 
     public function hookDisplayAdminEndContent($params)
     {
         $ajaxAdminControllerUrl = $this->context->link->getAdminLink('AdminMpCustomerInvoice');
         $controller = Tools::strtolower(Tools::getValue('controller'));
+        $requestUri = $_SERVER['REQUEST_URI'] ?? '';
 
-        switch ($controller) {
-            case 'admincustomers':
-                if (Tools::getValue('id_customer')) {
-                    $html = "
-                        <script type='text/javascript'>
-                            const MPCUSTOMERINVOICE_ADMIN_CONTROLLER = '{$ajaxAdminControllerUrl}';
-                        </script>
-                    ";
-                    return $html;
-                }
-                break;
-            default:
-                break;
+        $isAdminCustomerPage = (
+            $controller === 'admincustomers'
+            || strpos($requestUri, '/customers/') !== false
+            || strpos($requestUri, 'admin_customers') !== false
+        );
+
+        if (!$isAdminCustomerPage) {
+            return '';
         }
 
-        return '';
+        $idCustomer = (int) (
+            $params['id_customer']
+            ?? $params['idCustomer']
+            ?? $params['customerId']
+            ?? Tools::getValue('id_customer', Tools::getValue('idCustomer', Tools::getValue('customerId', 0)))
+        );
+
+        if (!$idCustomer && preg_match('#customers/(\d+)#', $requestUri, $m)) {
+            $idCustomer = (int) $m[1];
+        }
+
+        $html = "
+            <script type='text/javascript'>
+                window.MPCUSTOMERINVOICE_ADMIN_CONTROLLER = '{$ajaxAdminControllerUrl}';
+            </script>
+        ";
+
+        if ($idCustomer > 0) {
+            $html .= CustomerInvoiceCardRenderer::renderCustomerCard($idCustomer);
+        }
+
+        return $html;
+    }
+
+    public function hookActionObjectCustomerAddAfter($params)
+    {
+        /** @var \Customer|null $customer */
+        $customer = $params['object'] ?? null;
+        if ($customer && Validate::isLoadedObject($customer)) {
+            $this->ensureCustomerInvoiceExists((int) $customer->id);
+        }
+    }
+
+    public function hookActionObjectCustomerUpdateAfter($params)
+    {
+        /** @var \Customer|null $customer */
+        $customer = $params['object'] ?? null;
+        if ($customer && Validate::isLoadedObject($customer)) {
+            $this->ensureCustomerInvoiceExists((int) $customer->id);
+        }
+    }
+
+    public function ensureCustomerInvoiceExists(int $idCustomer): ModelCustomerInvoice
+    {
+        $model = new ModelCustomerInvoice($idCustomer);
+        if (!Validate::isLoadedObject($model)) {
+            $model->force_id = true;
+            $model->id = $idCustomer;
+            $model->type = ModelCustomerInvoice::TYPE_CUSTOMER_PRIVATO;
+            $model->date_add = date('Y-m-d H:i:s');
+            $model->date_upd = date('Y-m-d H:i:s');
+
+            $rows = \Db::getInstance()->executeS(
+                'SELECT company, vat_number, dni FROM `' . _DB_PREFIX_ . 'address`
+                 WHERE `id_customer` = ' . (int) $idCustomer . ' AND `deleted` = 0 ORDER BY `id_address` ASC'
+            );
+
+            if (!empty($rows[0])) {
+                if (!empty($rows[0]['company'])) $model->company = mb_substr($rows[0]['company'], 0, 255);
+                if (!empty($rows[0]['vat_number'])) $model->vat_number = mb_substr(mb_strtoupper($rows[0]['vat_number']), 0, 16);
+                if (!empty($rows[0]['dni'])) $model->dni = mb_substr(mb_strtoupper($rows[0]['dni']), 0, 16);
+            }
+
+            try {
+                $model->add(true, true);
+            } catch (\Exception $e) {
+                // Ignore if created concurrently
+            }
+        }
+
+        return $model;
     }
 
     public function hookActionCustomerAccountAdd($params)

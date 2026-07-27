@@ -4,6 +4,71 @@ Modulo per gestire i codici della fatturazione elettronica.
 
 ## Changelog
 
+### 1.3.71
+
+- **Integrazione Gestione e Selezione Indirizzo di Fatturazione**:
+  - Aggiornata la preparazione dati in [CustomerInvoiceCardRenderer.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/src/Helpers/CustomerInvoiceCardRenderer.php): recupera l'elenco completo degli indirizzi del cliente e la stringa formattata dell'indirizzo selezionato come fatturazione.
+  - Aggiornato il form [customerInvoiceCard.html.twig](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/twig/admin/customerInvoiceCard.html.twig):
+    - **Modalità Lettura**: mostra il badge verde **Fatturazione** con l'indirizzo formattato se presente, oppure l'avviso di avvertimento giallo **Nessun indirizzo di fatturazione selezionato**.
+    - **Modalità Modifica**: aggiunta la select `<select name="id_address_invoice">` per scegliere l'indirizzo di fatturazione tra tutti quelli registrati per il cliente.
+  - Gestito il salvataggio di `id_address_invoice` in [CustomerInvoiceFormHandler.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/src/Helpers/CustomerInvoiceFormHandler.php) con sincronizzazione immediata dei campi fiscali sull'indirizzo scelto.
+  - Aggiornato [adminCustomerInfo.js](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/adminCustomerInfo.js): al salvataggio AJAX, aggiorna dinamicamente la vista e ricarica i badge **Fatturazione/Spedizione** nella tabella indirizzi del cliente.
+
+### 1.3.70
+
+- **Creazione ed Inizializzazione Automatica Record `customer_invoice`**:
+  - Dichiarata esplicitamente la proprietà `public $force_id = true;` nella classe [ModelCustomerInvoice.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/src/Models/ModelCustomerInvoice.php).
+  - Aggiornato [CustomerInvoiceFormHandler.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/src/Helpers/CustomerInvoiceFormHandler.php): se un cliente non possiede ancora il record in `customer_invoice`, viene istanziato l'oggetto con `id = $idCustomer`, popolato dai dati inviati ed inserito via `$model->add(true, true)`.
+  - Registrati gli hook `actionObjectCustomerAddAfter` ed `actionObjectCustomerUpdateAfter` in [HookManager.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/src/Helpers/HookManager.php): al salvataggio o creazione nativa di qualsiasi cliente in PrestaShop, viene verificata l'esistenza del record in `customer_invoice` creando automaticamente la riga corrispondente e recuperando pre-compilati eventuali campi fiscali (`company`, `vat_number`, `dni`) dagli indirizzi.
+
+### 1.3.69
+
+- **Fix Duplicazione Colonna ed Uniformazione Colori Badge Tipo Indirizzo**:
+  - Aggiunto il blocco di concorrenza sincrono `table.dataset.enhancedTypeAddress` in [adminCustomerInfo.js](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/adminCustomerInfo.js) prima dell'esecuzione delle chiamate `fetch`, per eliminare qualsiasi rischio di raddoppio della colonna `Tipo Indirizzo`.
+  - Distinti nettamente i colori dei badge: **Fatturazione** (Verde smeraldo `#28a745` con icona `receipt`) e **Spedizione** (Azzurro `#17a2b8` con icona `local_shipping`), per una distinzione visiva immediata.
+
+### 1.3.68
+
+- **Integrazione Colonna "Tipo Indirizzo" (Fatturazione / Spedizione) nella Tabella Indirizzi Admin**:
+  - Implementata in [adminCustomerInfo.js](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/adminCustomerInfo.js) la funzione `enhanceAddressGridTable()` che intercetta la tabella `.customer-addresses-card table` (`customer_address_grid_table`).
+  - Effettua una chiamata AJAX a `getCustomerInvoiceData` per leggere `id_address_invoice` dalla tabella `customer_invoice`.
+  - Inserisce la nuova colonna `Tipo Indirizzo` subito dopo `Id`, identificando e contrassegnando con badge visivo **Fatturazione** (se corrisponde a `id_address_invoice`) oppure **Spedizione** negli altri casi.
+
+### 1.3.67
+
+- **Fix `UndefinedMethodError` in `syncCustomerAddresses`**:
+  - Sostituito il metodo inesistente `Address::getAddressesByCustomer` con l'esecuzione diretta di una query SQL sulla tabella `address` per recuperare tutti gli `id_address` attivi del cliente ed aggiornarne i campi fiscali (`vat_number`, `dni`, `company`).
+
+### 1.3.66
+
+- **Fix URL invio AJAX e Sincronizzazione Indirizzo Fatturazione Cliente**:
+  - Risolto il problema di sovrascrittura di `form.action` causato dal campo `<input name="action">`: aggiornata la risoluzione in `adminCustomerInfo.js` tramite `form.getAttribute('action')` e rimosso l'input nascosto duplicato nel template Twig.
+  - Implementata la sincronizzazione automatica dei campi condivisi (`vat_number`, `dni`, `company`) su tutti gli oggetti `Address` del cliente in [CustomerInvoiceFormHandler.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/src/Helpers/CustomerInvoiceFormHandler.php).
+
+### 1.3.65
+
+- **Garantia Rendering Scheda Cliente in Admin (Multi-Hook Fallback & Auto-Registration)**:
+  - Aggiornato `hookDisplayAdminCustomers` ed `hookDisplayAdminEndContent` in `HookManager.php`: l'estrazione dell'ID cliente legge da `params`, query string ed espressione regolare dall'URL (`/customers/(\d+)`), rendendo infallibile l'identificazione del cliente sia sotto rotte Symfony che legacy.
+  - Implementata l'auto-registrazione dinamica degli hook `displayAdminCustomers` e `displayAdminEndContent` nel database PrestaShop (`ps_hook_module`) ad ogni caricamento delle pagine admin.
+  - Perfezionato lo script [adminCustomerInfo.js](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/adminCustomerInfo.js) con ciclo di setup guidato da timer e rimozione automatica di eventuali container duplicati.
+
+### 1.3.64
+
+- **Scheda Dati Fatturazione Elettronica Cliente in Admin**:
+  - Implementata la nuova scheda responsive per il form CRUD dei dati di fatturazione elettronica del cliente, posizionata dinamicamente sopra la card `.customer-private-note-card` nella pagina di dettaglio cliente Admin (`AdminCustomers`).
+  - Creata la classe Helper [CustomerInvoiceCardRenderer.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/src/Helpers/CustomerInvoiceCardRenderer.php) per la preparazione dati ed il rendering disaccoppiato della card.
+  - Creata la classe Helper [CustomerInvoiceFormHandler.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/src/Helpers/CustomerInvoiceFormHandler.php) per la validazione ed il salvataggio dei dati inviati via form.
+  - Implementate le operazioni CRUD via **AJAX fetch** (`POST application/x-www-form-urlencoded`) e l'aggiornamento dinamico a cascata delle professioni in base al settore selezionato tramite la classe ES6 [adminCustomerInfo.js](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/adminCustomerInfo.js).
+
+### 1.3.63
+
+- Corretto un fatal error in `GenerateDocumentRestrictions.php`: sostituita la chiamata al metodo inesistente `Order::hasDeliverySlip()` con il metodo nativo `Order::hasDelivery()`.
+- Creato lo script di upgrade `upgrade-1.3.63.php` per registrare automaticamente i nuovi hook `actionOrderStatusUpdate` e `actionOrderStatusPostUpdate` durante l'aggiornamento del modulo.
+
+### 1.3.62
+
+- Implementata la classe `GenerateDocumentRestrictions` registrando gli hook `actionOrderStatusUpdate` e `actionOrderStatusPostUpdate`: controlla la tabella `customer_invoice` per il cliente dell'ordine e, se `vat_number` o `dni` sono valorizzati, genera **esclusivamente la fattura**, altrimenti genera **esclusivamente la nota di consegna (DDT)**, garantendo la mutua esclusione tra i due documenti.
+
 ### 1.3.61
 
 - Implementata l'estrazione dati per l'esportazione **Nota di Consegna (DDT)** (`ExportDelivery`): legge `delivery_number` e `delivery_date` dalla tabella `order_invoice` di PrestaShop.
