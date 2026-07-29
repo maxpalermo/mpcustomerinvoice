@@ -1,8 +1,9 @@
 class AdminTableOrders {
-    constructor(tableId, adminControllerUrl, orderPageLink, orderStates, orderFlagItems, orderCountries, invoicePdfLink, deliveryPdfLink, labelPrintEndpoint) {
+    constructor(tableId, adminControllerUrl, orderPageLink, customerPageLink, orderStates, orderFlagItems, orderCountries, invoicePdfLink, deliveryPdfLink, labelPrintEndpoint) {
         this.table = document.getElementById(tableId);
         this.adminControllerUrl = adminControllerUrl;
         this.orderPageLink = orderPageLink;
+        this.customerPageLink = customerPageLink;
         this.orderStates = orderStates || {};
         this.orderFlags = (orderFlagItems || []).reduce((items, item) => {
             items[item.id_order_flag_item] = item;
@@ -35,6 +36,7 @@ class AdminTableOrders {
         this.initTable();
         this.bindExcludedStates();
         this.load();
+        window.adminTableOrdersInstance = this;
     }
 
     initTable() {
@@ -69,7 +71,7 @@ class AdminTableOrders {
                 { field: "delivery_country", title: "Consegna", align: "center", filterControl: "select", filterData: `json:${JSON.stringify(this.orderCountries)}`, formatter: (value) => this.orderCountries[value] || "--" },
                 { field: "reference", title: "Riferimento", sortable: true, filterControl: "input" },
                 { field: "email", title: "Email", sortable: true, filterControl: "input" },
-                { field: "customer", title: "Cliente", sortable: true, filterControl: "input" },
+                { field: "customer", title: "Cliente", sortable: true, filterControl: "input", formatter: (value, row) => this.formatCustomerColumn(value, row) },
                 {
                     field: "id_eurosolution",
                     title: "Eurosolution",
@@ -163,6 +165,28 @@ class AdminTableOrders {
 
         const color = /^#[0-9a-f]{3,8}$/i.test(flag.color || "") ? flag.color : "#6c757d";
         return `<span class="material-icons" title="${this.escape(flag.name || "")}" style="color:${color};font-size:20px;vertical-align:middle;">${this.escape(flag.icon || "flag")}</span>`;
+    }
+
+    formatCustomerColumn(value, row) {
+        const customerName = this.escape(value || '--');
+        let customerHtml = customerName;
+
+        if (row && row.id_customer && this.customerPageLink) {
+            const custUrl = this.customerPageLink.replace('999999999', row.id_customer);
+            customerHtml = `<a href="${custUrl}" target="_blank" style="font-weight:600;color:#007bff;text-decoration:none;" title="Vedi scheda cliente">${customerName}</a>`;
+        }
+
+        const isInvoiceRequested = row && (
+            parseInt(row.invoice_requested) === 1
+            || (row.vat_number && String(row.vat_number).trim() !== '')
+            || (row.dni && String(row.dni).trim() !== '')
+        );
+
+        if (isInvoiceRequested) {
+            customerHtml += `<br><span class="badge badge-warning" style="margin-top:3px;display:inline-block;">Richiede Fattura</span>`;
+        }
+
+        return customerHtml;
     }
 
     formatTotalColumn(value, row) {
@@ -354,8 +378,12 @@ class AdminTableOrders {
 
         if (action === "exportOrder") {
             const documentType = formData.get("document") || "order";
-            const url = `${this.adminControllerUrl}&action=showCustomExportPage&id_order=${orderId}&document_type=${documentType}`;
-            window.open(url, "_blank");
+            if (window.AdminOrderExportHelper) {
+                window.AdminOrderExportHelper.exportDocument(orderId, documentType);
+            } else {
+                const url = `${this.adminControllerUrl}&action=showCustomExportPage&id_order=${orderId}&document_type=${documentType}`;
+                window.open(url, "_blank");
+            }
             return;
         }
 

@@ -102,6 +102,7 @@ class CustomerInvoiceCardRenderer
                 'cup' => $model->cup ?: '',
                 'id_address_invoice' => (int) $model->id_address_invoice,
                 'is_foreign' => (bool) $model->is_foreign,
+                'invoice_requested' => (int) $model->invoice_requested,
                 'id_customer_invoice_job_area' => (int) $model->id_customer_invoice_job_area,
                 'id_customer_invoice_job_position' => (int) $model->id_customer_invoice_job_position,
                 'date_add' => $model->date_add ?: '',

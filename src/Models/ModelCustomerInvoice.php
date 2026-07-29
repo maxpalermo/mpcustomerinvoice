@@ -45,6 +45,7 @@ class ModelCustomerInvoice extends ObjectModel
     public $cup;  // Codice univoco di pagamento
     public $id_address_invoice; // Id indirizzo di fatturazione
     public $is_foreign;  // Indica se il cliente è un cliente straniero
+    public $invoice_requested; // Indica se il cliente ha richiesto la fattura (1 = Sì, 0 = No)
     public $id_customer_invoice_job_area; // Id area di lavoro
     public $id_customer_invoice_job_position; // Id posizione di lavoro
     public $date_add;
@@ -126,6 +127,11 @@ class ModelCustomerInvoice extends ObjectModel
                 'validate' => 'isBool',
                 'required' => false,
             ],
+            'invoice_requested' => [
+                'type' => self::TYPE_BOOL,
+                'validate' => 'isBool',
+                'required' => false,
+            ],
             'id_customer_invoice_job_area' => [
                 'type' => self::TYPE_INT,
                 'validate' => 'isUnsignedId',
@@ -168,6 +174,7 @@ class ModelCustomerInvoice extends ObjectModel
                 `cup` varchar(15) DEFAULT NULL,
                 `id_address_invoice` int(11) DEFAULT NULL,
                 `is_foreign` tinyint(1) DEFAULT NULL,
+                `invoice_requested` tinyint(1) UNSIGNED DEFAULT 0,
                 `id_customer_invoice_job_area` int(11) DEFAULT NULL,
                 `id_customer_invoice_job_position` int(11) DEFAULT NULL,
                 `date_add` datetime NOT NULL,
@@ -176,6 +183,14 @@ class ModelCustomerInvoice extends ObjectModel
             ) ENGINE={$engine}
         ";
 
-        return \Db::getInstance()->execute($QUERY);
+        $res = \Db::getInstance()->execute($QUERY);
+
+        // Dynamic column check & migration
+        $columns = \Db::getInstance()->executeS("SHOW COLUMNS FROM {$pfx}customer_invoice LIKE 'invoice_requested'");
+        if (empty($columns)) {
+            \Db::getInstance()->execute("ALTER TABLE {$pfx}customer_invoice ADD COLUMN `invoice_requested` tinyint(1) UNSIGNED DEFAULT 0 AFTER `is_foreign`");
+        }
+
+        return $res;
     }
 }

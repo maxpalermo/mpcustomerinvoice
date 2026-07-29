@@ -43,7 +43,7 @@ class MpCustomerInvoice extends Module implements WidgetInterface
     {
         $this->name = 'mpcustomerinvoice';
         $this->tab = 'administration';
-        $this->version = '1.3.71';
+        $this->version = '1.4.91';
         $this->author = 'Massimiliano Palermo';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -82,6 +82,7 @@ class MpCustomerInvoice extends Module implements WidgetInterface
                     'actionObjectCustomerUpdateAfter',
                     'actionOrderStatusUpdate',
                     'actionOrderStatusPostUpdate',
+                    'actionGetAdminToolbarButtons',
                     //'actionCustomerAccountUpdate',
                     //'actionBeforeSubmitAccount',
                     //'actionObjectCustomerDeleteAfter',
@@ -230,6 +231,51 @@ class MpCustomerInvoice extends Module implements WidgetInterface
     public function hookActionDispatcherBefore($params)
     {
         $requestUri = $_SERVER['REQUEST_URI'] ?? '';
+        $controller = Tools::getValue('controller');
+
+        // Intercettazione Menu Ordini e Clienti in Backoffice
+        if ($controller !== 'AdminMpCustomerInvoice' && strpos((string) $controller, 'AdminMpCustomerInvoice') === false) {
+            $path = parse_url($requestUri, PHP_URL_PATH) ?? '';
+
+            // Check Ordini override
+            if ((int) Configuration::get('MPCUSTOMERINVOICE_OVERRIDE_ORDERS') === 1) {
+                $isOrdersListRoute = (bool) preg_match('#/sell/orders/?$#i', $path);
+                $isOrdersLegacyController = ($controller === 'AdminOrders' || $controller === 'adminorders')
+                    && !Tools::getValue('id_order')
+                    && !Tools::getValue('vieworder')
+                    && !Tools::getValue('addorder');
+
+                if ($isOrdersListRoute || $isOrdersLegacyController) {
+                    $url = $this->context->link->getAdminLink(
+                        'AdminMpCustomerInvoice',
+                        true,
+                        [],
+                        ['action' => 'showOrdersPage']
+                    );
+                    Tools::redirectAdmin($url);
+                }
+            }
+
+            // Check Clienti override
+            if ((int) Configuration::get('MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS') === 1) {
+                $isCustomersListRoute = (bool) preg_match('#/sell/customers/?$#i', $path);
+                $isCustomersLegacyController = ($controller === 'AdminCustomers' || $controller === 'admincustomers')
+                    && !Tools::getValue('id_customer')
+                    && !Tools::getValue('viewcustomer')
+                    && !Tools::getValue('addcustomer');
+
+                if ($isCustomersListRoute || $isCustomersLegacyController) {
+                    $url = $this->context->link->getAdminLink(
+                        'AdminMpCustomerInvoice',
+                        true,
+                        [],
+                        ['action' => 'showCustomersPage']
+                    );
+                    Tools::redirectAdmin($url);
+                }
+            }
+        }
+
         if (preg_match('#orders/(\d+)/generate-(invoice|delivery-slip|order)-pdf#', $requestUri, $matches)) {
             $idOrder = (int) $matches[1];
             $documentType = $matches[2];
@@ -768,19 +814,15 @@ class MpCustomerInvoice extends Module implements WidgetInterface
 
     public function hookActionAdminControllerSetMedia($params)
     {
-        if (!$this->isRegisteredInHook('displayAdminCustomers')) {
-            $this->registerHook('displayAdminCustomers');
-        }
-        if (!$this->isRegisteredInHook('displayAdminEndContent')) {
-            $this->registerHook('displayAdminEndContent');
-        }
-
         $controller = Tools::strtolower(Tools::getValue('controller'));
         $requestUri = $_SERVER['REQUEST_URI'] ?? '';
         $baseJs = $this->getLocalPath() . 'views/assets/js/';
         $baseCss = $this->getLocalPath() . 'views/assets/css/';
 
-        $this->context->controller->addCSS("{$baseCss}/theme-override.css", 'all', 100);
+        $adminControllerUrl = $this->context->link->getAdminLink('AdminMpCustomerInvoice');
+        Media::addJsDef([
+            'mpCustomerInvoiceAdminUrl' => $adminControllerUrl,
+        ]);
 
         $isAdminCustomerPage = (
             $controller === 'admincustomers'
@@ -791,6 +833,129 @@ class MpCustomerInvoice extends Module implements WidgetInterface
         if ($isAdminCustomerPage) {
             $this->context->controller->addJS("{$baseJs}admin/adminCustomerInfo.js");
             $this->context->controller->addJS("{$baseJs}admin/jobLinkManager.js");
+        }
+
+        $isAdminOrderPage = (
+            $controller === 'adminorders'
+            || strpos($requestUri, '/orders/') !== false
+            || strpos($requestUri, 'admin_orders') !== false
+        );
+
+        if ($isAdminOrderPage) {
+            $this->context->controller->addJS("{$baseJs}admin/adminOrderExportHelper.js");
+            $this->context->controller->addCSS("{$baseCss}/theme-override.css");
+        }
+    }
+
+    public function hookActionGetAdminToolbarButtons(array $params)
+    {
+        $controller = $params['controller'] ?? null;
+        $buttons = $params['toolbar_extra_buttons_collection'] ?? null;
+        if (!$controller || !$buttons) {
+            return 0;
+        }
+
+        $controller_name = $controller->controller_name ?? '';
+        $id_order = (int) Tools::getValue('id_order');
+
+        if (Tools::strtolower($controller_name) === 'adminorders' && $id_order) {
+            $actionsBarButtonClass = class_exists('\PrestaShop\PrestaShop\Core\Action\ActionsBarButton')
+                ? '\PrestaShop\PrestaShop\Core\Action\ActionsBarButton'
+                : '\PrestaShopBundle\Controller\Admin\Sell\Order\ActionsBarButton';
+
+            if (class_exists($actionsBarButtonClass)) {
+                $buttonExport = new $actionsBarButtonClass(
+                    'btn-warning',
+                    [
+                        'href' => 'javascript:exportXML();',
+                        'icon' => 'upgrade',
+                        'id' => 'btnExportDocuments',
+                        'class' => 'btnExportDocuments',
+                        'data' => [
+                            'action' => 'export',
+                            'id_order' => $id_order,
+                        ],
+                    ],
+                    ' Esporta XML'
+                );
+
+                $buttonPrint = new $actionsBarButtonClass(
+                    'btn-info',
+                    [
+                        'href' => 'javascript:openPrintDialog(' . $id_order . ');',
+                        'icon' => 'print',
+                        'id' => 'btnPrintDocuments',
+                        'class' => 'btnPrintDocuments ml-2',
+                        'data' => [
+                            'action' => 'print',
+                            'id_order' => $id_order,
+                        ],
+                    ],
+                    ' Stampe'
+                );
+
+                $buttons->add($buttonExport);
+                $buttons->add($buttonPrint);
+            }
+        }
+
+        return 0;
+    }
+
+    protected function handleAutomaticDocumentGeneration(array $params)
+    {
+        $rawTriggers = Configuration::get('MPCUSTOMERINVOICE_ORDER_STATE_TRIGGER');
+        $triggers = [];
+        if ($rawTriggers) {
+            $decoded = json_decode($rawTriggers, true);
+            if (is_array($decoded)) {
+                $triggers = array_map('intval', $decoded);
+            } elseif (is_numeric($rawTriggers)) {
+                $triggers = [(int) $rawTriggers];
+            }
+        }
+
+        if (empty($triggers)) {
+            return;
+        }
+
+        $newOrderStatus = $params['newOrderStatus'] ?? null;
+        $idOrderState = (int) ($newOrderStatus->id ?? $params['id_order_state'] ?? 0);
+        $idOrder = (int) ($params['id_order'] ?? 0);
+
+        if (!in_array($idOrderState, $triggers, true) || $idOrder <= 0) {
+            return;
+        }
+
+        $order = new Order($idOrder);
+        if (!Validate::isLoadedObject($order)) {
+            return;
+        }
+
+        $createBoth = (int) Configuration::get('MPCUSTOMERINVOICE_CREATE_BOTH') === 1;
+
+        $customerInvoice = new ModelCustomerInvoice((int) $order->id_customer);
+        $isInvoiceRequested = (int) $customerInvoice->invoice_requested === 1
+            || !empty($customerInvoice->vat_number)
+            || !empty($customerInvoice->dni);
+
+        if ($createBoth) {
+            if (!$order->hasInvoice()) {
+                $order->setInvoice(true);
+            }
+            if (empty($order->delivery_number)) {
+                $order->setDeliverySlip();
+            }
+        } else {
+            if ($isInvoiceRequested) {
+                if (!$order->hasInvoice()) {
+                    $order->setInvoice(true);
+                }
+            } else {
+                if (empty($order->delivery_number)) {
+                    $order->setDeliverySlip();
+                }
+            }
         }
     }
 
@@ -839,11 +1004,13 @@ class MpCustomerInvoice extends Module implements WidgetInterface
     {
         $restriction = new \MpSoft\MpCustomerInvoice\Helpers\GenerateDocumentRestrictions();
         $restriction->hookActionOrderStatusUpdate($params);
+        $this->handleAutomaticDocumentGeneration($params);
     }
 
     public function hookActionOrderStatusPostUpdate($params)
     {
         $restriction = new \MpSoft\MpCustomerInvoice\Helpers\GenerateDocumentRestrictions();
         $restriction->hookActionOrderStatusPostUpdate($params);
+        $this->handleAutomaticDocumentGeneration($params);
     }
 }

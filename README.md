@@ -4,6 +4,148 @@ Modulo per gestire i codici della fatturazione elettronica.
 
 ## Changelog
 
+### 1.4.91
+
+- **Fix Blocco Popup del Browser nella Stampa PDF (`executePrint`)**:
+  - Risolto il blocco di `window.open` causato dal sistema di Popup Blocker dei browser moderni sulle chiamate `fetch` asincrone.
+  - Aggiornato `adminOrderExportHelper.js`: apre preventivamente la nuova scheda in risposta al gesto dell'utente e ne aggiorna la `location.href` col Blob PDF una volta completata la generazione asincrona.
+
+### 1.4.90
+
+- **Correzione Risposta AJAX per Stampa Documenti PDF (`renderPdfDocument`)**:
+  - Risolto errore `SyntaxError: Unexpected token '%', "%PDF-1.7..."` scatenato dall'output HTTP inline di TCPDF.
+  - `ajaxProcessRenderPdfDocument` in `AdminMpCustomerInvoice.php` genera ora il PDF in modalità stringa e restituisce la codifica `base64` dentro il JSON di risposta.
+  - `executePrint` in `adminOrderExportHelper.js` decodifica la stringa `base64` in `Blob` e apre automaticamente il PDF in una nuova scheda del browser (`window.open`).
+
+### 1.4.89
+
+- **Implementazione Sistema di Stampa PDF Documenti ed Etichette (PSR-4)**:
+  - Nuova architettura modulare in `src/PrintPdf/` basata su `PrintManager` (classe base astratta estendente TCPDF) e componenti dedicati (`PdfOrderHeader`, `PdfOrderBody`, `PdfOrderFooter`, `PdfHeaderRight`, `PdfOrderAddresses`, `PdfOrderInfo`).
+  - Classi di stampa concrete: `PrintPdfOrder`, `PrintPdfInvoice`, `PrintPdfDelivery`, `PrintPdfReturn` e `PrintPdfAddress`.
+  - **Stampa Etichetta Indirizzo (`PrintPdfAddress`)**:
+    - Generazione multi-copia con numerazione progressiva ordine per etichetta (`<id_order>-<N>`, es. 23638-1, 23638-2, ...).
+    - Dimensioni fisiche etichetta configurabili dall'admin in millimetri (Larghezza × Altezza).
+    - Layout ad alto contrasto con header scuro e box indirizzo con bordi arrotondati, inclusivo di nome/azienda, via, CAP/città/provincia, paese e recapito telefonico.
+    - Ridimensionamento dinamico del font size per l'adattamento perfetto allo spazio utile.
+  - **Pannello di Configurazione & AJAX**:
+    - Sezione "Dimensioni Etichetta (Stampa PDF)" nella pagina di setup del modulo.
+    - Salvataggio integrato tramite l'handler nativo `Tools::isSubmit('submitConfiguration')` in `renderSetupPage()`, adattato alla risposta JSON asincrona via AJAX senza codice ridondante.
+    - Modale overlay spinner a schermo intero con risposta dinamica dell'esito operazione.
+
+### 1.3.88
+
+- **Correzione persistenza salvataggio e ricaricamento configurazione via AJAX**:
+  - Risolto problema per cui il ternario `$value ?: $default` e `getSetupConfig()` scartavano i valori falsy (`0`, `"0"`, `""`, `false`, `[]`) ripristinando impropriamente i valori di default alla riapertura della pagina.
+  - Aggiornato `saveSetupConfiguration()` e `getSetupConfig()` per verificare con precisione se una chiave esiste o è impostata prima di restituire il default.
+  - Aggiornata la serializzazione FormData nel JavaScript per includere in `URLSearchParams` tutti i campi multiselect e radio button.
+
+### 1.3.87
+
+- **Implementazione stampa etichetta indirizzo di spedizione in `PrintPdfAddress`**:
+  - Ogni copia è una pagina PDF con numerazione progressiva `<id_order>-<N>` (es. 23638-1, 23638-2, …).
+  - Layout: header scuro con numero ordine e data, box indirizzo con bordi arrotondati e titolo "SPEDIRE A:".
+  - L'indirizzo mostra: azienda/nome, via, CAP/città/provincia, paese, telefono.
+  - Font size auto-adattivo allo spazio disponibile sull'etichetta.
+  - Dimensioni etichetta lette dalla configurazione del modulo (default 100×50mm).
+  - Testato con 4 copie dell'ordine 23638 → PDF 107KB generato correttamente.
+
+### 1.3.86
+
+- **Salvataggio configurazione via AJAX con modale di attesa**:
+  - Il pulsante "Salva" non ricarica più la pagina: invia i dati via `fetch` POST `x-www-form-urlencoded`.
+  - Modale overlay con spinner durante il salvataggio, poi mostra il risultato (✓ successo / ✗ errore) con messaggio dal server.
+  - Nuovo metodo `ajaxProcessSaveConfiguration()` in `AdminMpCustomerInvoice.php`.
+
+### 1.3.85
+
+- **Dimensioni Etichetta configurabili nella pagina Setup**:
+  - Aggiunta sezione "Dimensioni Etichetta (Stampa PDF)" in `views/twig/admin/configuration.html.twig` con due campi numerici: Larghezza (mm) e Altezza (mm).
+  - Salvataggio e lettura delle chiavi `MPCUSTOMERINVOICE_LABEL_WIDTH` e `MPCUSTOMERINVOICE_LABEL_HEIGHT` in `AdminMpCustomerInvoice.php`.
+  - `PrintPdfAddress` legge le dimensioni dalla configurazione e genera la pagina PDF con formato personalizzato (orientamento automatico L/P).
+  - Aggiornato il costruttore di `PrintManager` per supportare `$orientation` e `$pageFormat` personalizzabili.
+
+### 1.3.84
+
+- **Refactoring PSR-4 Architettura Stampa PDF in `src/PrintPdf/`**:
+  - Implementata la classe astratta `PrintManager` ([src/PrintPdf/PrintManager.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/src/PrintPdf/PrintManager.php)) estendendo TCPDF e integrando il caricamento ordini, margini e componenti.
+  - Creata la cartella `src/PrintPdf/Components/` (`MpSoft\MpCustomerInvoice\PrintPdf\Components`) per le componenti modulari: `PdfOrderHeader`, `PdfOrderBody`, `PdfOrderFooter`, `PdfHeaderRight`, `PdfOrderAddresses` e `PdfOrderInfo`.
+  - Aggiornate le classi concrete `PrintPdfOrder`, `PrintPdfInvoice`, `PrintPdfDelivery`, `PrintPdfReturn`, e `PrintPdfAddress`.
+  - Rimossa la cartella temporanea `src/v16` dopo la migrazione ed eseguito `composer dump-autoload`.
+
+### 1.3.83
+
+- **Integrazione della Stampa Ordine tramite OrderPage (PdfOrderPage.php)**:
+  - Collegata la classe `PrintPdfOrder` ([src/PrintPdf/PrintPdfOrder.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/src/PrintPdf/PrintPdfOrder.php)) all'architettura `PdfOrderPage` disponibile in `src/v16/pdf/OrderPage/PdfOrderPage.php`.
+  - Aggiunti controlli di sicurezza (`file_exists`, `class_exists` e fallback dei dati tramite `ExportOrder`) per garantire la corretta esecuzione senza dipendenze bloccanti.
+
+### 1.3.82
+
+- **Struttura Classi PrintPdf & Pulsante Stampe Toolbar Admin**:
+  - Creata la cartella `src/PrintPdf/` con la classe astratta `PrintManager.php` e le sottoclassi concrete: `PrintPdfOrder`, `PrintPdfInvoice`, `PrintPdfDelivery`, `PrintPdfReturn`, e `PrintPdfAddress`.
+  - Aggiunto il pulsante **"Stampe"** nella toolbar di amministrazione degli ordini (`AdminOrders`).
+  - Riutilizzato il modale `<dialog id="order-action-dialog">` per consentire la selezione tra Ordine, Fattura, Spedizione, Nota di Reso ed Etichetta Indirizzo (con selettore del numero di copie per l'etichetta).
+  - Implementato l'endpoint AJAX `ajaxProcessRenderPdfDocument` che richiama il metodo `renderPdf()` delle relative classi per la notifica e test di stampa.
+
+### 1.3.81
+
+- **Miglioramento Colonna Cliente nella Tabella Ordini**:
+  - Il nome del cliente nella tabella ordini (`adminTableOrders.js`) è ora un link cliccabile che apre la scheda cliente di PrestaShop in una nuova scheda.
+  - Aggiunta la visualizzazione del badge `<span class="badge badge-warning">Richiede Fattura</span>` sotto il nome del cliente se l'ordine richiede la fattura (`invoice_requested = 1` o dati fiscali presenti).
+
+### 1.3.80
+
+- **Stile Nativo Badge "Richiede Fattura"**:
+  - Applicata la classe nativa `<span class="badge badge-warning">Richiede Fattura</span>` (identica agli altri gruppi cliente del dettaglio ordine).
+
+### 1.3.79
+
+- **Risoluzione & Inserimento Robusto del Badge "Richiede Fattura"**:
+  - Implementata l'estrazione automatica del codice cliente direttamente dal testo dell'header (`#108802`) e la risoluzione automatica del token di sicurezza per la chiamata AJAX.
+  - Inserito il badge verde **"Richiede Fattura"** direttamente nel blocco gruppi del cliente (`.customer-groups`) in `#customerInfo`.
+
+### 1.3.78
+
+- **Badge "Richiede Fattura" nel Dettaglio Ordine**:
+  - Aggiunto l'inserimento dinamico del badge verde **"Richiede Fattura"** accanto al link `#viewFullDetails` ("Guarda tutti i dettagli") nel blocco cliente della pagina dettaglio ordine, attivo esclusivamente se `invoice_requested = 1`.
+
+### 1.3.77
+
+- **Notifiche PrestaShop per Salvataggio ID Eurosolution**:
+  - Sostituito il finestra pop-up/alert JS nativo del browser con la notifica standard PrestaShop `showNoticeMessage()` nel widget [id_eurosolution.html.twig](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/twig/admin/id_eurosolution.html.twig).
+
+### 1.3.76
+
+- **Scheda Predefinita AdminController**:
+  - Modificata l'azione predefinita in `AdminMpCustomerInvoice.php` (`initContent`) per aprire direttamente la scheda **Configurazione** (`renderSetupPage`) all'accesso al controller.
+
+### 1.3.75
+
+- **Selezione Multipla Stati Ordine Trigger**:
+  - Trasformata la select di selezione dello stato ordine `MPCUSTOMERINVOICE_ORDER_STATE_TRIGGER` in una select multipla Chosen (`multiple`).
+  - Aggiornati il controller `AdminMpCustomerInvoice.php` e la logica degli hook in `mpcustomerinvoice.php` per memorizzare ed interpretare un array di ID stati ordine.
+  - Aggiunto il controllo idoneità documento per garantire che se una Fattura (`hasInvoice()`) o una Nota di Consegna (`delivery_number > 0`) è già stata creata per l'ordine, non venga mai rigenerata duplicandola nei passaggi di stato successivi.
+
+### 1.3.74
+
+- **Generazione Automatica Documenti al Cambio Stato & Campo `invoice_requested`**:
+  - Aggiunto il campo `invoice_requested` (TINYINT) nella tabella `customer_invoice` ed integrato nel modello `ModelCustomerInvoice.php`.
+  - Valorizzazione automatica di `invoice_requested` durante il salvataggio degli indirizzi dal form (#want_invoice).
+  - Aggiunte nella pagina di configurazione del modulo la select `chosen` per la scelta dello stato ordine target (`MPCUSTOMERINVOICE_ORDER_STATE_TRIGGER`) e lo switch legacy per scegliere se creare sia Fattura che Nota di Consegna oppure uno solo dei due (`MPCUSTOMERINVOICE_CREATE_BOTH`).
+  - Implementata l'intercettazione degli hook `actionOrderStatusUpdate` e `actionOrderStatusPostUpdate` per generare automaticamente Fattura (`setInvoice`) o Nota di Consegna (`setDeliverySlip`) in base alle preferenze ed alla richiesta fattura del cliente.
+
+### 1.3.73
+
+- **Toolbar Button Ordine & JS Export Helper**:
+  - Implementato l'hook `actionGetAdminToolbarButtons` in `mpcustomerinvoice.php` per aggiungere il pulsante **Esporta XML** (`btnExportDocuments`) nella barra delle azioni in alto a destra della pagina dettaglio ordine nativa di PrestaShop (`AdminOrders`).
+  - Creata la classe helper JS riutilizzabile `AdminOrderExportHelper` (`views/assets/js/admin/adminOrderExportHelper.js`) per unificare la procedura di esportazione dei documenti XML (Ordine, Fattura, Nota di Consegna) sia dal pulsante toolbar che dalla tabella ordini.
+
+### 1.3.72
+
+- **Intercettazione Menu Ordini e Clienti (Backoffice Override Switches)**:
+  - Aggiunti due switch PrestaShop (`MPCUSTOMERINVOICE_OVERRIDE_ORDERS` e `MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS`) nella pagina di configurazione del modulo (`views/twig/admin/configuration.html.twig`).
+  - Implementata l'intercettazione in `hookActionDispatcherBefore` (`mpcustomerinvoice.php`): se attivi, le chiamate al menu ed alle pagine nativi dei clienti (`/sell/customers/` o `AdminCustomers`) e degli ordini (`/sell/orders/` o `AdminOrders`) vengono reindirizzate automaticamente alle rispettive viste di `AdminMpCustomerInvoice`.
+  - Salvataggio e lettura delle preferenze integrati nel controller `AdminMpCustomerInvoice.php`.
+
 ### 1.3.71
 
 - **Integrazione Gestione e Selezione Indirizzo di Fatturazione**:

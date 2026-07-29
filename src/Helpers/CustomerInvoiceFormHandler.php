@@ -103,6 +103,12 @@ class CustomerInvoiceFormHandler
             $model->id_address_invoice = (int) $data['id_address_invoice'];
         }
 
+        if (isset($data['invoice_requested'])) {
+            $model->invoice_requested = (int) $data['invoice_requested'];
+        } elseif (isset($data['want_invoice'])) {
+            $model->invoice_requested = (int) $data['want_invoice'];
+        }
+
         $model->date_upd = date('Y-m-d H:i:s');
 
         try {

@@ -528,6 +528,7 @@ class MpcustomerinvoiceAddressModuleFrontController extends ModuleFrontControlle
 
     private function saveInvoiceData(int $idAddress): bool
     {
+        $wantsInvoice = (int) Tools::getValue('want_invoice', 0) === 1 ? 1 : 0;
         $data = [
             'type' => pSQL((string) Tools::getValue('invoice_type')),
             'company' => pSQL((string) Tools::getValue('company')),
@@ -539,6 +540,7 @@ class MpcustomerinvoiceAddressModuleFrontController extends ModuleFrontControlle
             'cig' => pSQL((string) Tools::getValue('cig')),
             'cup' => pSQL((string) Tools::getValue('cup')),
             'id_address_invoice' => $idAddress,
+            'invoice_requested' => $wantsInvoice,
             'date_upd' => date('Y-m-d H:i:s'),
         ];
         $db = Db::getInstance();

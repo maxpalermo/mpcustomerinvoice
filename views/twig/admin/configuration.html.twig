@@ -5,7 +5,7 @@
         </div>
     {% endif %}
 
-    <form method="post">
+    <form id="configForm" method="post" onsubmit="return false;">
         <div class="panel">
             <div class="panel-heading">
                 <i class="icon icon-cogs"></i>
@@ -26,6 +26,50 @@
                             </div>
                         </fieldset>
                         <fieldset class="mb-4">
+                            <legend class="legend">Reindirizzamento Menu Backoffice</legend>
+                            <div class="form-group">
+                                <label>Reindirizza Pagina Ordini</label>
+                                <span class="prestashop-switch">
+                                    <input type="radio" name="MPCUSTOMERINVOICE_OVERRIDE_ORDERS" id="MPCUSTOMERINVOICE_OVERRIDE_ORDERS_on" value="1"{% if MPCUSTOMERINVOICE_OVERRIDE_ORDERS %} checked="checked"{% endif %}>
+                                    <label for="MPCUSTOMERINVOICE_OVERRIDE_ORDERS_on">Sì</label>
+                                    <input type="radio" name="MPCUSTOMERINVOICE_OVERRIDE_ORDERS" id="MPCUSTOMERINVOICE_OVERRIDE_ORDERS_off" value="0"{% if not MPCUSTOMERINVOICE_OVERRIDE_ORDERS %} checked="checked"{% endif %}>
+                                    <label for="MPCUSTOMERINVOICE_OVERRIDE_ORDERS_off">No</label>
+                                    <a class="slide-button btn"></a>
+                                </span>
+                            </div>
+                            <div class="form-group">
+                                <label>Reindirizza Pagina Clienti</label>
+                                <span class="prestashop-switch">
+                                    <input type="radio" name="MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS" id="MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS_on" value="1"{% if MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS %} checked="checked"{% endif %}>
+                                    <label for="MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS_on">Sì</label>
+                                    <input type="radio" name="MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS" id="MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS_off" value="0"{% if not MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS %} checked="checked"{% endif %}>
+                                    <label for="MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS_off">No</label>
+                                    <a class="slide-button btn"></a>
+                                </span>
+                            </div>
+                        </fieldset>
+                        <fieldset class="mb-4">
+                            <legend class="legend">Generazione Automatica Documenti</legend>
+                            <div class="form-group">
+                                <label for="MPCUSTOMERINVOICE_ORDER_STATE_TRIGGER">Stati ordine per la creazione di Fattura o Nota di Consegna</label>
+                                <select id="MPCUSTOMERINVOICE_ORDER_STATE_TRIGGER" name="MPCUSTOMERINVOICE_ORDER_STATE_TRIGGER[]" class="form-control chosen" multiple data-placeholder="Seleziona uno o più stati ordine">
+                                    {% for state in orderStates %}
+                                        <option value="{{ state.id_order_state }}"{% if state.id_order_state in MPCUSTOMERINVOICE_ORDER_STATE_TRIGGER %} selected="selected"{% endif %}>{{ state.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Crea sia Fattura che Nota di Consegna</label>
+                                <span class="prestashop-switch">
+                                    <input type="radio" name="MPCUSTOMERINVOICE_CREATE_BOTH" id="MPCUSTOMERINVOICE_CREATE_BOTH_on" value="1"{% if MPCUSTOMERINVOICE_CREATE_BOTH %} checked="checked"{% endif %}>
+                                    <label for="MPCUSTOMERINVOICE_CREATE_BOTH_on">Sì</label>
+                                    <input type="radio" name="MPCUSTOMERINVOICE_CREATE_BOTH" id="MPCUSTOMERINVOICE_CREATE_BOTH_off" value="0"{% if not MPCUSTOMERINVOICE_CREATE_BOTH %} checked="checked"{% endif %}>
+                                    <label for="MPCUSTOMERINVOICE_CREATE_BOTH_off">No</label>
+                                    <a class="slide-button btn"></a>
+                                </span>
+                            </div>
+                        </fieldset>
+                        <fieldset class="mb-4">
                             <legend class="legend">Esportazione Documenti</legend>
                             <div class="form-group">
                                 <label for="MPCUSTOMERINVOICE_VAT_RATE">Aliquota IVA Arrotondamento (%)</label>
@@ -33,6 +77,31 @@
                                     <span class="input-group-addon"><i class="icon icon-chevron-right"></i></span>
                                     <input type="number" step="0.01" min="0" max="100" id="MPCUSTOMERINVOICE_VAT_RATE" name="MPCUSTOMERINVOICE_VAT_RATE" class="form-control" value="{{ MPCUSTOMERINVOICE_VAT_RATE }}">
                                     <span class="input-group-addon">%</span>
+                                </div>
+                            </div>
+                        </fieldset>
+                        <fieldset class="mb-4">
+                            <legend class="legend">Dimensioni Etichetta (Stampa PDF)</legend>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="MPCUSTOMERINVOICE_LABEL_WIDTH">Larghezza etichetta (mm)</label>
+                                        <div class="input-group">
+                                            <span class="input-group-addon"><i class="icon icon-arrows-h"></i></span>
+                                            <input type="number" step="1" min="10" max="500" id="MPCUSTOMERINVOICE_LABEL_WIDTH" name="MPCUSTOMERINVOICE_LABEL_WIDTH" class="form-control" value="{{ MPCUSTOMERINVOICE_LABEL_WIDTH }}">
+                                            <span class="input-group-addon">mm</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="MPCUSTOMERINVOICE_LABEL_HEIGHT">Altezza etichetta (mm)</label>
+                                        <div class="input-group">
+                                            <span class="input-group-addon"><i class="icon icon-arrows-v"></i></span>
+                                            <input type="number" step="1" min="10" max="500" id="MPCUSTOMERINVOICE_LABEL_HEIGHT" name="MPCUSTOMERINVOICE_LABEL_HEIGHT" class="form-control" value="{{ MPCUSTOMERINVOICE_LABEL_HEIGHT }}">
+                                            <span class="input-group-addon">mm</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </fieldset>
@@ -102,11 +171,30 @@
                 </div>
             </div>
             <div class="panel-footer">
-                <button type="submit" name="submitConfiguration" class="btn btn-primary pull-right">Salva</button>
+                <button type="button" id="btnSaveConfig" class="btn btn-primary pull-right">Salva</button>
             </div>
         </div>
     </form>
 </section>
+
+{# ---- Modale di attesa / risultato salvataggio ---- #}
+<div id="savingOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;justify-content:center;align-items:center;">
+    <div id="savingOverlayBox" style="background:#fff;border-radius:8px;padding:32px 48px;box-shadow:0 8px 32px rgba(0,0,0,.3);text-align:center;max-width:400px;min-width:300px;">
+        {# Stato: spinner #}
+        <div id="savingStateLoading">
+            <div style="margin:0 auto 18px;width:44px;height:44px;border:4px solid #e0e0e0;border-top-color:#25b9d7;border-radius:50%;animation:spin .7s linear infinite;"></div>
+            <p style="margin:0;font-size:15px;font-weight:600;color:#363a41;">Salvataggio in corso&hellip;</p>
+            <p style="margin:6px 0 0;font-size:12px;color:#6c868e;">Attendere prego, non chiudere la pagina.</p>
+        </div>
+        {# Stato: risultato #}
+        <div id="savingStateResult" style="display:none;">
+            <div id="savingResultIcon" style="margin:0 auto 14px;width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;"></div>
+            <p id="savingResultMessage" style="margin:0;font-size:15px;font-weight:600;color:#363a41;"></p>
+            <button type="button" id="savingResultClose" class="btn btn-default" style="margin-top:18px;">Chiudi</button>
+        </div>
+    </div>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 
 <script>
     document.getElementById('update-order-reference-lengths').addEventListener('click', async () => {
@@ -135,4 +223,86 @@
             button.disabled = false;
         }
     });
+
+    // Funzione principale di salvataggio via AJAX alla classe Admin
+    async function performSaveConfiguration(event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        const form = document.getElementById('configForm') || document.querySelector('form');
+        const overlay = document.getElementById('savingOverlay');
+        const stateLoading = document.getElementById('savingStateLoading');
+        const stateResult = document.getElementById('savingStateResult');
+        const resultIcon = document.getElementById('savingResultIcon');
+        const resultMessage = document.getElementById('savingResultMessage');
+
+        // Mostra modale overlay con spinner
+        stateLoading.style.display = '';
+        stateResult.style.display = 'none';
+        overlay.style.display = 'flex';
+
+        try {
+            // 2) Inserimento form in FormData
+            const formData = new FormData(form);
+            formData.append('ajax', '1');
+            formData.append('action', 'saveSetupConfiguration');
+
+            const params = new URLSearchParams(formData);
+
+            // 3) Invio dati al controller admin
+            const response = await fetch('{{ adminControllerUrl|raw }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+                body: params,
+            });
+
+            const data = await response.json();
+
+            // Mostra esito dal JSON di risposta
+            stateLoading.style.display = 'none';
+            stateResult.style.display = '';
+
+            if (data.success) {
+                resultIcon.style.background = '#d4edda';
+                resultIcon.style.color = '#155724';
+                resultIcon.textContent = '✓';
+                resultMessage.style.color = '#155724';
+            } else {
+                resultIcon.style.background = '#f8d7da';
+                resultIcon.style.color = '#721c24';
+                resultIcon.textContent = '✗';
+                resultMessage.style.color = '#721c24';
+            }
+            resultMessage.textContent = data.message || 'Operazione completata.';
+        } catch (error) {
+            stateLoading.style.display = 'none';
+            stateResult.style.display = '';
+            resultIcon.style.background = '#f8d7da';
+            resultIcon.style.color = '#721c24';
+            resultIcon.textContent = '✗';
+            resultMessage.style.color = '#721c24';
+            resultMessage.textContent = error.message || 'Errore di comunicazione con il server.';
+        }
+
+        return false;
+    }
+
+    // 1) Intercetta il submit del form e il click del pulsante blocchi l'esecuzione nativa
+    const formElement = document.getElementById('configForm') || document.querySelector('form');
+    if (formElement) {
+        formElement.addEventListener('submit', performSaveConfiguration);
+    }
+    const btnSave = document.getElementById('btnSaveConfig');
+    if (btnSave) {
+        btnSave.addEventListener('click', performSaveConfiguration);
+    }
+
+    // Chiudi overlay al click sul pulsante Chiudi
+    document.getElementById('savingResultClose').addEventListener('click', function () {
+        document.getElementById('savingOverlay').style.display = 'none';
+    });
 </script>
+
+

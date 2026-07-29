@@ -59,6 +59,14 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
         exit(json_encode($params));
     }
 
+    public function setMedia($isNewTheme = false)
+    {
+        parent::setMedia($isNewTheme);
+
+        $baseCss = $this->module->getLocalPath() . 'views/assets/css/';
+        $this->context->controller->addCSS("{$baseCss}/theme-override.css");
+    }
+
     public function initPageHeaderToolbar()
     {
         parent::initPageHeaderToolbar();
@@ -127,7 +135,7 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
                 $this->content = $this->renderImportPage();
                 break;
             default:
-                $this->content = $this->renderCustomersPage();
+                $this->content = $this->renderSetupPage();
                 break;
         }
         parent::initContent();
@@ -161,6 +169,14 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
     {
         if (Tools::isSubmit('submitConfiguration')) {
             $this->saveSetupConfiguration();
+
+            if (Tools::isSubmit('ajax')) {
+                $this->response([
+                    'success' => true,
+                    'message' => $this->module->l('Configurazione salvata con successo.'),
+                ]);
+            }
+
             Tools::redirectAdmin($this->context->link->getAdminLink('AdminMpCustomerInvoice', true, [], [
                 'action' => 'showSetupPage',
                 'configured' => 1,
@@ -186,6 +202,13 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
             'EXPORT_FILE_NAME' => $this->getSetupConfig('EXPORT_FILE_NAME', 'export'),
             'REFERENCE_RENUMBER' => $this->getSetupConfig('REFERENCE_RENUMBER', '{$year}[{$id_order}|6]'),
             'MPCUSTOMERINVOICE_VAT_RATE' => $this->getSetupConfig('MPCUSTOMERINVOICE_VAT_RATE', 22.0),
+            'MPCUSTOMERINVOICE_OVERRIDE_ORDERS' => (int) Configuration::get('MPCUSTOMERINVOICE_OVERRIDE_ORDERS'),
+            'MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS' => (int) Configuration::get('MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS'),
+            'MPCUSTOMERINVOICE_ORDER_STATE_TRIGGER' => $this->getOrderStateTriggers(),
+            'MPCUSTOMERINVOICE_CREATE_BOTH' => (int) Configuration::get('MPCUSTOMERINVOICE_CREATE_BOTH'),
+            'MPCUSTOMERINVOICE_LABEL_WIDTH' => (int) $this->getSetupConfig('MPCUSTOMERINVOICE_LABEL_WIDTH', 100),
+            'MPCUSTOMERINVOICE_LABEL_HEIGHT' => (int) $this->getSetupConfig('MPCUSTOMERINVOICE_LABEL_HEIGHT', 50),
+            'orderStates' => OrderState::getOrderStates($this->context->language->id),
             'adminControllerUrl' => $this->ajaxController,
             'orderReferenceLengths' => $this->getOrderReferenceLengths(),
         ]);
@@ -298,6 +321,42 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
         ]);
     }
 
+    public function ajaxProcessRenderPdfDocument()
+    {
+        $idOrder = (int) Tools::getValue('id_order');
+        $documentType = (string) Tools::getValue('document_type', 'order');
+        $copies = max(1, (int) Tools::getValue('copies', 1));
+
+        $printerMap = [
+            'order' => \MpSoft\MpCustomerInvoice\PrintPdf\PrintPdfOrder::class,
+            'invoice' => \MpSoft\MpCustomerInvoice\PrintPdf\PrintPdfInvoice::class,
+            'delivery' => \MpSoft\MpCustomerInvoice\PrintPdf\PrintPdfDelivery::class,
+            'return' => \MpSoft\MpCustomerInvoice\PrintPdf\PrintPdfReturn::class,
+            'address' => \MpSoft\MpCustomerInvoice\PrintPdf\PrintPdfAddress::class,
+        ];
+
+        if (!isset($printerMap[$documentType])) {
+            $this->response([
+                'success' => false,
+                'message' => 'Tipo documento non valido per la stampa.',
+            ]);
+        }
+
+        $className = $printerMap[$documentType];
+        /** @var \MpSoft\MpCustomerInvoice\PrintPdf\PrintManager $printer */
+        $printer = new $className($idOrder, $copies, false, 'S');
+        $pdfData = $printer->renderPdf();
+
+        $this->response([
+            'success' => true,
+            'message' => sprintf('Stampa %s per ordine #%d generata con successo (%d copie).', $documentType, $idOrder, $copies),
+            'id_order' => $idOrder,
+            'document_type' => $documentType,
+            'copies' => $copies,
+            'pdf' => base64_encode($pdfData),
+        ]);
+    }
+
     private function getOrderReferenceLengths(): array
     {
         return [
@@ -320,48 +379,115 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
 
     private function saveSetupConfiguration(): void
     {
-        $values = [
-            'PAYMENT_SELECTED' => Tools::getValue('PAYMENT_SELECTED'),
-            'CUSTOMER_PREFIX' => Tools::getValue('CUSTOMER_PREFIX'),
-            'TYPE_ORDER' => Tools::getValue('TYPE_ORDER'),
-            'TYPE_DELIVERY' => Tools::getValue('TYPE_DELIVERY'),
-            'TYPE_INVOICE' => Tools::getValue('TYPE_INVOICE'),
-            'TYPE_RETURN' => Tools::getValue('TYPE_RETURN'),
-            'TYPE_SLIP' => Tools::getValue('TYPE_SLIP'),
-            'EXPORT_FILE_NAME' => Tools::getValue('EXPORT_FILE_NAME'),
-            'REFERENCE_RENUMBER' => Tools::getValue('REFERENCE_RENUMBER'),
-            'MPCUSTOMERINVOICE_VAT_RATE' => Tools::getValue('MPCUSTOMERINVOICE_VAT_RATE'),
-        ];
+        $orderStateTriggers = Tools::getValue('MPCUSTOMERINVOICE_ORDER_STATE_TRIGGER', null);
+        if ($orderStateTriggers === null || $orderStateTriggers === false) {
+            $orderStateTriggers = [];
+        } elseif (!is_array($orderStateTriggers)) {
+            $orderStateTriggers = [(int) $orderStateTriggers];
+        } else {
+            $orderStateTriggers = array_values(array_map('intval', array_filter($orderStateTriggers)));
+        }
+
+        $paymentSelected = Tools::getValue('PAYMENT_SELECTED', null);
+        if ($paymentSelected === null || $paymentSelected === false) {
+            $paymentSelected = [];
+        } elseif (!is_array($paymentSelected)) {
+            $paymentSelected = [$paymentSelected];
+        }
+
         $defaults = [
             'PAYMENT_SELECTED' => [],
             'CUSTOMER_PREFIX' => '',
-            'TYPE_ORDER' => 0,
-            'TYPE_DELIVERY' => 0,
-            'TYPE_INVOICE' => 0,
-            'TYPE_RETURN' => 0,
-            'TYPE_SLIP' => 0,
+            'TYPE_ORDER' => '0',
+            'TYPE_DELIVERY' => '0',
+            'TYPE_INVOICE' => '0',
+            'TYPE_RETURN' => '0',
+            'TYPE_SLIP' => '0',
             'EXPORT_FILE_NAME' => 'export',
             'REFERENCE_RENUMBER' => '{$year}[{$id_order}|6]',
-            'MPCUSTOMERINVOICE_VAT_RATE' => 22.0,
+            'MPCUSTOMERINVOICE_VAT_RATE' => '22.0',
+            'MPCUSTOMERINVOICE_OVERRIDE_ORDERS' => 0,
+            'MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS' => 0,
+            'MPCUSTOMERINVOICE_ORDER_STATE_TRIGGER' => json_encode([]),
+            'MPCUSTOMERINVOICE_CREATE_BOTH' => 0,
+            'MPCUSTOMERINVOICE_LABEL_WIDTH' => 100,
+            'MPCUSTOMERINVOICE_LABEL_HEIGHT' => 50,
         ];
 
-        foreach ($values as $key => $value) {
+        $keys = [
+            'PAYMENT_SELECTED' => $paymentSelected,
+            'CUSTOMER_PREFIX' => Tools::getValue('CUSTOMER_PREFIX', $defaults['CUSTOMER_PREFIX']),
+            'TYPE_ORDER' => Tools::getValue('TYPE_ORDER', $defaults['TYPE_ORDER']),
+            'TYPE_DELIVERY' => Tools::getValue('TYPE_DELIVERY', $defaults['TYPE_DELIVERY']),
+            'TYPE_INVOICE' => Tools::getValue('TYPE_INVOICE', $defaults['TYPE_INVOICE']),
+            'TYPE_RETURN' => Tools::getValue('TYPE_RETURN', $defaults['TYPE_RETURN']),
+            'TYPE_SLIP' => Tools::getValue('TYPE_SLIP', $defaults['TYPE_SLIP']),
+            'EXPORT_FILE_NAME' => Tools::getValue('EXPORT_FILE_NAME', $defaults['EXPORT_FILE_NAME']),
+            'REFERENCE_RENUMBER' => Tools::getValue('REFERENCE_RENUMBER', $defaults['REFERENCE_RENUMBER']),
+            'MPCUSTOMERINVOICE_VAT_RATE' => Tools::getValue('MPCUSTOMERINVOICE_VAT_RATE', $defaults['MPCUSTOMERINVOICE_VAT_RATE']),
+            'MPCUSTOMERINVOICE_OVERRIDE_ORDERS' => (int) Tools::getValue('MPCUSTOMERINVOICE_OVERRIDE_ORDERS', 0),
+            'MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS' => (int) Tools::getValue('MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS', 0),
+            'MPCUSTOMERINVOICE_ORDER_STATE_TRIGGER' => json_encode($orderStateTriggers),
+            'MPCUSTOMERINVOICE_CREATE_BOTH' => (int) Tools::getValue('MPCUSTOMERINVOICE_CREATE_BOTH', 0),
+            'MPCUSTOMERINVOICE_LABEL_WIDTH' => (int) Tools::getValue('MPCUSTOMERINVOICE_LABEL_WIDTH', 100),
+            'MPCUSTOMERINVOICE_LABEL_HEIGHT' => (int) Tools::getValue('MPCUSTOMERINVOICE_LABEL_HEIGHT', 50),
+        ];
+
+        foreach ($keys as $key => $value) {
             if (is_array($value)) {
                 $value = json_encode($value);
             }
-            Configuration::updateValue($key, $value ?: $defaults[$key]);
+            Configuration::updateValue($key, $value);
+        }
+    }
+
+    public function ajaxProcessSaveSetupConfiguration()
+    {
+        try {
+            $this->saveSetupConfiguration();
+
+            return [
+                'success' => true,
+                'message' => $this->module->l('Configurazione salvata con successo.'),
+            ];
+        } catch (\Throwable $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+            ];
         }
     }
 
     private function getSetupConfig(string $key, $default = null)
     {
         $value = Configuration::get($key);
-        try {
-            $value = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
-        } catch (\Throwable $exception) {
+        if ($value === false || $value === null) {
+            return $default;
         }
 
-        return $value ?: $default;
+        try {
+            $decoded = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
+            return $decoded;
+        } catch (\Throwable $exception) {
+            return $value;
+        }
+    }
+
+    private function getOrderStateTriggers(): array
+    {
+        $raw = Configuration::get('MPCUSTOMERINVOICE_ORDER_STATE_TRIGGER');
+        if (!$raw) {
+            return [];
+        }
+        $decoded = json_decode($raw, true);
+        if (is_array($decoded)) {
+            return array_map('intval', $decoded);
+        }
+        if (is_numeric($raw)) {
+            return [(int) $raw];
+        }
+
+        return [];
     }
 
     public function renderCustomersPage()
@@ -416,6 +542,12 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
                 true,
                 [],
                 ['id_order' => '999999999', 'vieworder' => true]
+            ),
+            'customerPageLink' => $this->context->link->getAdminLink(
+                'AdminCustomers',
+                true,
+                [],
+                ['id_customer' => '999999999', 'viewcustomer' => true]
             ),
             'invoicePdfLink' => $this->context->link->getAdminLink(
                 'AdminPdf',
@@ -1028,10 +1160,10 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
         $hasNotes = Module::getInstanceByName('mpnotes');
         $query = new DbQuery();
         $query
-            ->select('o.id_order, o.reference, o.total_paid_tax_incl, o.payment, o.date_add')
+            ->select('o.id_order, o.id_customer, o.reference, o.total_paid_tax_incl, o.payment, o.date_add')
             ->select('c.email')
             ->select("CONCAT(c.firstname, ' ', c.lastname) AS customer")
-            ->select('ci.id_eurosolution, osl.name AS status')
+            ->select('ci.id_eurosolution, ci.invoice_requested, ci.vat_number, ci.dni, osl.name AS status')
             ->select('COALESCE(CONCAT("", ad.id_country), "") AS delivery_country')
             ->from('orders', 'o')
             ->leftJoin('customer', 'c', 'c.id_customer = o.id_customer')

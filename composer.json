@@ -1,5 +1,5 @@
 {
-    "version": "1.3.71",
+    "version": "1.4.91",
     "name": "mpsoft/mpcustomerinvoice",
     "description": "Manage customer invoice codes.",
     "type": "prestashop-module",
@@ -32,7 +32,7 @@
         "prestashop": {
             "name": "mpcustomerinvoice",
             "displayName": "MP Customer Invoice",
-            "version": "1.3.71",
+            "version": "1.3.72",
             "description": "Manage customer invoice codes.",
             "author": "Massimiliano Palermo",
             "tab": "administration",

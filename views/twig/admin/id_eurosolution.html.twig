@@ -71,11 +71,29 @@
             })
             .then(response => response.json())
             .then(data => {
-                alert('ID Eurosolution salvato con successo');
+                const msg = (data && data.message) ? data.message : 'ID Eurosolution salvato con successo';
+                if (typeof showNoticeMessage === 'function') {
+                    showNoticeMessage(msg);
+                } else if (typeof window.showNoticeMessage === 'function') {
+                    window.showNoticeMessage(msg);
+                } else if (typeof showSuccessMessage === 'function') {
+                    showSuccessMessage(msg);
+                } else if (typeof window.showSuccessMessage === 'function') {
+                    window.showSuccessMessage(msg);
+                } else {
+                    alert(msg);
+                }
                 console.log('ID Eurosolution salvato con successo', data);
             })
             .catch(error => {
-                alert('Errore nel salvataggio dell\'ID Eurosolution');
+                const errMsg = 'Errore nel salvataggio dell\'ID Eurosolution';
+                if (typeof showErrorMessage === 'function') {
+                    showErrorMessage(errMsg);
+                } else if (typeof window.showErrorMessage === 'function') {
+                    window.showErrorMessage(errMsg);
+                } else {
+                    alert(errMsg);
+                }
                 console.error('Errore nel salvataggio dell\'ID Eurosolution', error);
             });
         }
