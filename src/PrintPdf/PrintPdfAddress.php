@@ -7,7 +7,7 @@ use Configuration;
 class PrintPdfAddress extends PrintManager
 {
     protected float $labelWidth = 100.0;
-    protected float $labelHeight = 50.0;
+    protected float $labelHeight = 80.0;
 
     public function __construct(int $idOrder, int $copies = 1, bool $print = false, string $outputMode = 'I')
     {
@@ -15,20 +15,16 @@ class PrintPdfAddress extends PrintManager
         $height = (float) Configuration::get('MPCUSTOMERINVOICE_LABEL_HEIGHT');
 
         $this->labelWidth = $width > 0 ? $width : 100.0;
-        $this->labelHeight = $height > 0 ? $height : 50.0;
+        $this->labelHeight = $height > 0 ? $height : 80.0;
 
-        // L'orientamento dipende dalle dimensioni reali dell'etichetta
         $orientation = $this->labelWidth >= $this->labelHeight ? 'L' : 'P';
 
-        // Per le etichette usiamo il formato custom [W, H] in mm (dimensione fisica del foglio)
-        // TCPDF si aspetta [larghezza, altezza] in formato PORTRAIT (la dimensione più corta come W)
         if ($orientation === 'L') {
             $pageFormat = [$this->labelHeight, $this->labelWidth];
         } else {
             $pageFormat = [$this->labelWidth, $this->labelHeight];
         }
 
-        // Margini ridotti per massimizzare lo spazio sull'etichetta
         $this->margin_left = 3;
         $this->margin_top = 3;
         $this->margin_right = 3;
@@ -39,34 +35,31 @@ class PrintPdfAddress extends PrintManager
 
     protected function initComponents(): void
     {
-        // L'etichetta non usa header/footer standard di PrintManager
         $this->headerComponent = null;
         $this->footerComponent = null;
     }
 
     public function renderPdf(): string
     {
-        // Disabilita header/footer automatici di TCPDF
+        // Disabilitazione totale dell'AutoPageBreak per garantire 1 sola pagina per copia
         $this->setPrintHeader(false);
         $this->setPrintFooter(false);
         $this->SetAutoPageBreak(false, 0);
 
-        // Dati ordine
         $invoice = $this->orderData['invoice'] ?? ($this->orderData['invoices']['invoice'] ?? []);
-        $orderDate = $invoice['order_date'] ?? '';
         $customer = $invoice['customer'] ?? [];
-        $deliveryAddress = $customer['address_delivery'] ?? [];
+        $delivery = $customer['address_delivery'] ?? [];
 
-        // Fallback alla data dell'oggetto Order
-        if (empty($orderDate) && $this->order) {
-            $orderDate = $this->order->date_add;
+        $totalPaid = $invoice['total_paid'] ?? $invoice['total_tax_incl'] ?? '0.00';
+        if ($this->order && (!isset($invoice['total_paid']) || (float) $totalPaid <= 0)) {
+            $totalPaid = $this->order->total_paid_tax_incl;
         }
 
-        $formattedDate = !empty($orderDate) ? date('d/m/Y', strtotime($orderDate)) : date('d/m/Y');
-
-        // Area utile dell'etichetta
         $usableW = $this->labelWidth - $this->margin_left - $this->margin_right;
         $usableH = $this->labelHeight - $this->margin_top - $this->margin_foot;
+
+        $logoPath = $this->getLogoPath();
+        $isCOD = $this->isCashOnDelivery();
 
         for ($i = 1; $i <= $this->copies; $i++) {
             $this->AddPage();
@@ -74,50 +67,194 @@ class PrintPdfAddress extends PrintManager
             $x = $this->margin_left;
             $y = $this->margin_top;
 
-            $orderLabel = $this->idOrder . '-' . $i;
+            // 1. LOGO IN ALTO AL CENTRO
+            $logoH = 8.0;
+            if (file_exists($logoPath)) {
+                $logoWidth = min(48, $usableW * 0.52);
+                $logoX = $x + ($usableW - $logoWidth) / 2;
 
-            // --- Banda ordine (sfondo scuro, testo bianco) ---
-            $headerH = min(8, $usableH * 0.18);
-            $this->SetFillColor(50, 50, 50);
-            $this->SetTextColor(255, 255, 255);
-            $this->RoundedRect($x, $y, $usableW, $headerH, 1.5, '0011', 'DF', [], [50, 50, 50]);
+                $imgSize = @getimagesize($logoPath);
+                if ($imgSize && $imgSize[0] > 0) {
+                    $logoH = ($logoWidth / $imgSize[0]) * $imgSize[1];
+                    if ($logoH > 11) {
+                        $logoH = 11;
+                    }
+                }
 
-            // Numero ordine a sinistra
-            $fontSize = min(9, max(6, $headerH * 0.85));
-            $this->SetFont('dejavusans', 'B', $fontSize);
-            $this->SetXY($x + 2, $y + ($headerH - $fontSize * 0.35) / 2 - 0.5);
-            $this->Cell($usableW * 0.6, $headerH - 2, 'Ordine: ' . $orderLabel, 0, 0, 'L');
+                $this->Image($logoPath, $logoX, $y, $logoWidth, 0, '', '', 'T', false, 300, '', false, false, 0, false, false, false);
+                $y += $logoH + 3.0;
+            } else {
+                $this->SetFont('helvetica', 'B', 12);
+                $this->SetXY($x, $y);
+                $this->Cell($usableW, 7, 'DALAVORO', 0, 1, 'C');
+                $y += 9;
+            }
 
-            // Data a destra
-            $this->SetFont('dejavusans', '', max(5, $fontSize - 1.5));
-            $this->SetXY($x + $usableW * 0.6, $y + ($headerH - $fontSize * 0.35) / 2 - 0.5);
-            $this->Cell($usableW * 0.4 - 2, $headerH - 2, $formattedDate, 0, 0, 'R');
+            // ABBASSAMENTO DI 1 CM (10 MM) DEI BOX E DEI DATI DELL'INDIRIZZO
+            $y += 10.0;
 
-            // --- Box indirizzo (bordo grigio chiaro, sfondo bianco) ---
-            $addressY = $y + $headerH + 1;
-            $addressH = $usableH - $headerH - 1;
+            // 2. BOX ID ORDINE & NUMERO COPIA (SPOSTATI PIÙ IN BASSO DI 1 CM)
+            $boxH = 8.5;
+            $boxOrderW = 36;
+            $boxCopyW = 15;
 
-            $this->SetDrawColor(180, 180, 180);
-            $this->SetFillColor(255, 255, 255);
-            $this->RoundedRect($x, $addressY, $usableW, $addressH, 1.5, '1100', 'DF', ['all' => ['width' => 0.3, 'color' => [180, 180, 180]]], [255, 255, 255]);
+            $this->SetDrawColor(0, 0, 0);
+            $this->SetLineWidth(0.3);
 
-            // Titoletto "SPEDIRE A:"
-            $titleH = min(5, $addressH * 0.15);
-            $labelFontSize = max(4.5, min(6, $titleH * 0.9));
-            $this->SetTextColor(100, 100, 100);
-            $this->SetFont('dejavusans', 'B', $labelFontSize);
-            $this->SetXY($x + 2, $addressY + 1);
-            $this->Cell($usableW - 4, $titleH, 'SPEDIRE A:', 0, 1, 'L');
-
-            // Righe indirizzo
-            $contentY = $addressY + $titleH + 1.5;
-            $contentH = $addressH - $titleH - 3;
+            // Box Ordine
+            $this->Rect($x, $y, $boxOrderW, $boxH);
+            $this->SetFont('helvetica', 'B', 14.5);
             $this->SetTextColor(0, 0, 0);
+            $this->SetXY($x, $y + 0.3);
+            $this->Cell($boxOrderW, $boxH - 0.6, (string) $this->idOrder, 0, 0, 'C');
 
-            $this->renderAddressBlock($x + 2, $contentY, $usableW - 4, $contentH, $deliveryAddress);
+            // Box Copie
+            $copyX = $x + $usableW - $boxCopyW;
+            $this->Rect($copyX, $y, $boxCopyW, $boxH);
+            $this->SetFont('helvetica', 'B', 14.5);
+            $this->SetXY($copyX, $y + 0.3);
+            $this->Cell($boxCopyW, $boxH - 0.6, (string) $i, 0, 0, 'C');
+
+            $y += $boxH + 3.0;
+
+            // 3. FOOTER POSIZIONATO IN BASSO RIGIDAMENTE (NON VIENE SPOSTATO)
+            $footerH = 11.5;
+            $footerY = $this->labelHeight - $this->margin_foot - $footerH;
+
+            // Dati Telefono per il Box sopra il Barcode
+            $phone = trim($delivery['phone_mobile'] ?? $delivery['phone'] ?? '');
+            $phoneBoxH = !empty($phone) ? 8.0 : 0.0;
+
+            // 4. CALCOLO DINAMICO DELLO SPAZIO DISPONIBILE PER INTESTATARIO + INDIRIZZO CENTRATI
+            $maxCenterH = $footerY - $phoneBoxH - $y - 1.5;
+
+            // Dati Destinatario
+            $company = trim(strtoupper($delivery['company'] ?? ''));
+            $firstname = trim(strtoupper($delivery['firstname'] ?? ''));
+            $lastname = trim(strtoupper($delivery['lastname'] ?? ''));
+            $fullName = trim($firstname . ' ' . $lastname);
+
+            $recipientLines = [];
+            if (!empty($company) && !empty($fullName) && $company !== $fullName) {
+                $recipientLines[] = $company;
+                $recipientLines[] = $fullName;
+            } else if (!empty($company)) {
+                $recipientLines[] = $company;
+            } else if (!empty($fullName)) {
+                $recipientLines[] = $fullName;
+            } else {
+                $recipientLines[] = 'DESTINATARIO NON SPECIFICATO';
+            }
+
+            // Dati Indirizzo
+            $addr1 = trim(strtoupper($delivery['address1'] ?? ''));
+            $addr2 = trim(strtoupper($delivery['address2'] ?? ''));
+            $fullAddr = array_filter([$addr1, $addr2]);
+            $addrText = implode(' , ', $fullAddr);
+
+            $postcode = trim($delivery['postcode'] ?? '');
+            $city = trim(strtoupper($delivery['city'] ?? ''));
+            $state = trim(strtoupper($delivery['state'] ?? $delivery['state_name'] ?? ''));
+            $cityText = array_filter([$postcode, $city, $state]);
+            $cityLine = implode(' - ', $cityText);
+
+            $country = trim(strtoupper($delivery['country_name'] ?? $delivery['country'] ?? 'ITALIA'));
+
+            // Righe al centro (Intestatario + Indirizzo + Nazione)
+            $totalLines = count($recipientLines) + ($addrText ? 1 : 0) + ($cityLine ? 1 : 0) + ($country ? 1 : 0);
+
+            $lineH = min(5.5, max(3.8, ($maxCenterH - 1) / $totalLines));
+            $recipientFontSize = min(14.0, max(10.5, $lineH * 2.4));
+            $addressFontSize = min(12.5, max(9.0, $lineH * 2.2));
+
+            // Stampa Intestatario (Centrato 'C', Grassetto)
+            $this->SetFont('helvetica', 'B', $recipientFontSize);
+            foreach ($recipientLines as $recLine) {
+                $this->SetXY($x, $y);
+                $this->Cell($usableW, $lineH, $recLine, 0, 1, 'C');
+                $y += $lineH;
+            }
+            $y += 1.0;
+
+            // Stampa Indirizzo (TUTTI CENTRATI 'C', Maiuscolo)
+            $this->SetFont('helvetica', '', $addressFontSize);
+            if ($addrText) {
+                $this->SetXY($x, $y);
+                $this->Cell($usableW, $lineH, $addrText, 0, 1, 'C');
+                $y += $lineH;
+            }
+
+            if ($cityLine) {
+                $this->SetXY($x, $y);
+                $this->Cell($usableW, $lineH, $cityLine, 0, 1, 'C');
+                $y += $lineH;
+            }
+
+            if ($country) {
+                $this->SetXY($x, $y);
+                $this->Cell($usableW, $lineH, $country, 0, 1, 'C');
+                $y += $lineH;
+            }
+
+            // 5. RENDERING BOX TELEFONO APPENA SOPRA IL CODICE A BARRE (POSIZIONE FISSA)
+            $barcodeW = 40;
+            $barcodeH = $footerH;
+            $barcodeX = $x + $usableW - $barcodeW;
+
+            if (!empty($phone)) {
+                $phoneBoxW = $barcodeW;
+                $phoneBoxH = 7.0;
+                $phoneBoxY = $footerY - $phoneBoxH - 1.5;
+
+                $this->SetDrawColor(0, 0, 0);
+                $this->SetLineWidth(0.3);
+                $this->Rect($barcodeX, $phoneBoxY, $phoneBoxW, $phoneBoxH);
+
+                $this->SetFont('helvetica', 'B', 11);
+                $this->SetTextColor(0, 0, 0);
+                $this->SetXY($barcodeX, $phoneBoxY + 0.5);
+                $this->Cell($phoneBoxW, $phoneBoxH - 1, $phone, 0, 0, 'C');
+            }
+
+            // 6. RENDERING FOOTER RIGIDO IN BASSO ($footerY) (POSIZIONE FISSA)
+            if ($isCOD) {
+                // Box Totale da Pagare per Contrassegno
+                $boxTotalW = 38;
+                $boxTotalH = $footerH;
+                $this->Rect($x, $footerY, $boxTotalW, $boxTotalH);
+
+                $this->SetFont('helvetica', 'B', 7);
+                $this->SetXY($x, $footerY + 0.8);
+                $this->Cell($boxTotalW, 3.2, 'TOTALE DA PAGARE', 0, 1, 'C');
+
+                $this->SetFont('helvetica', 'B', 10.5);
+                $this->SetXY($x, $footerY + 4.5);
+                $this->Cell($boxTotalW, 5, number_format((float) $totalPaid, 2, ',', '.') . ' €', 0, 0, 'C');
+            }
+
+            // Barcode a destra (Code128)
+            $barcodeCode = $this->idOrder . '-' . $i;
+
+            $styleBarcode = [
+                'position' => '',
+                'align' => 'C',
+                'stretch' => false,
+                'fitwidth' => true,
+                'cellfstyle' => '',
+                'border' => false,
+                'hpadding' => 'auto',
+                'vpadding' => 'auto',
+                'fgcolor' => [0, 0, 0],
+                'bgcolor' => false,
+                'text' => true,
+                'font' => 'helvetica',
+                'fontsize' => 7,
+                'stretchtext' => 4
+            ];
+
+            $this->write1DBarcode($barcodeCode, 'C128', $barcodeX, $footerY, $barcodeW, $barcodeH, 0.4, $styleBarcode, 'N');
         }
 
-        // Output
         $filename = 'Etichetta_' . $this->idOrder . '.pdf';
 
         if ($this->print) {
@@ -126,139 +263,69 @@ class PrintPdfAddress extends PrintManager
 
         if ($this->outputMode === 'I') {
             $this->Output($filename, 'I');
-            return "Stampa PDF Etichetta #{$this->idOrder} ({$this->copies} copie, {$this->labelWidth}x{$this->labelHeight}mm) inviata al browser.";
+            return "Stampa PDF Etichetta #{$this->idOrder} ({$this->copies} copie) inviata al browser.";
         }
 
         return $this->Output($filename, 'S');
     }
 
     /**
-     * Renderizza il blocco indirizzo adattando la dimensione del font allo spazio disponibile.
+     * Verifica se l'ordine è stato pagato in contrassegno.
      */
-    protected function renderAddressBlock(float $x, float $y, float $maxW, float $maxH, array $address): void
+    protected function isCashOnDelivery(): bool
     {
-        if (empty($address)) {
-            $this->SetFont('dejavusans', 'I', 7);
-            $this->SetXY($x, $y);
-            $this->Cell($maxW, 5, 'Indirizzo non disponibile', 0, 0, 'L');
-            return;
-        }
+        $invoice = $this->orderData['invoice'] ?? ($this->orderData['invoices']['invoice'] ?? $this->orderData);
 
-        // Costruiamo le righe dell'indirizzo
-        $lines = $this->buildAddressLines($address);
-        if (empty($lines)) {
-            return;
-        }
+        $moduleName = strtolower($this->order->module ?? $invoice['module'] ?? '');
+        $paymentName = strtolower($this->order->payment ?? $invoice['payment'] ?? $invoice['payment_method'] ?? '');
 
-        // Calcola font size ottimale in base allo spazio disponibile
-        $lineCount = count($lines);
-        $maxFontSize = 9;
-        $minFontSize = 5;
-        $lineSpacing = 1.15; // rapporto tra altezza riga e font size (in punti)
-
-        // Partendo dal font più grande, riduciamo fino a che le righe entrano nel box
-        $fontSize = $maxFontSize;
-        for ($fs = $maxFontSize; $fs >= $minFontSize; $fs -= 0.5) {
-            $lineH = $fs * 0.42; // approssimazione altezza riga in mm
-            $totalH = $lineCount * $lineH * $lineSpacing;
-            if ($totalH <= $maxH) {
-                $fontSize = $fs;
-                break;
+        // 1. Configurazione specifica del modulo se presente
+        $codModulesConfig = Configuration::get('MPCUSTOMERINVOICE_COD_MODULES');
+        if (!empty($codModulesConfig)) {
+            $codModules = array_map('trim', array_map('strtolower', explode(',', (string) $codModulesConfig)));
+            if (in_array($moduleName, $codModules, true)) {
+                return true;
             }
-            $fontSize = $fs;
+            foreach ($codModules as $codMod) {
+                if (!empty($codMod) && (strpos($moduleName, $codMod) !== false || strpos($paymentName, $codMod) !== false)) {
+                    return true;
+                }
+            }
         }
 
-        $lineH = $fontSize * 0.42;
-        $currentY = $y;
-
-        foreach ($lines as $idx => $line) {
-            if (($currentY - $y + $lineH) > $maxH) {
-                break; // non sforiamo dal box
-            }
-
-            $style = '';
-            // La prima riga (nome/azienda) in grassetto
-            if ($idx === 0) {
-                $style = 'B';
-            }
-
-            $this->SetFont('dejavusans', $style, $fontSize);
-            $this->SetXY($x, $currentY);
-            $this->Cell($maxW, $lineH * $lineSpacing, $line, 0, 1, 'L');
-            $currentY += $lineH * $lineSpacing;
+        // 2. Spese contrassegno presenti
+        if (!empty($invoice['fees']['fee_tax_incl']) && (float) $invoice['fees']['fee_tax_incl'] > 0) {
+            return true;
         }
+
+        // 3. Nomi moduli contrassegno noti
+        $knownCodModules = ['ps_cashondelivery', 'cashondelivery', 'maofree_cashondelivery', 'cod', 'mppaymentswithfees', 'cashondeliverywithfee'];
+        if (in_array($moduleName, $knownCodModules, true)) {
+            return true;
+        }
+
+        // 4. Controllo testo metodo di pagamento o nome modulo
+        $keywords = ['contrassegno', 'cash on delivery', 'cashondelivery', 'cod', 'alla consegna', 'contanti alla consegna'];
+        foreach ($keywords as $kw) {
+            if (strpos($paymentName, $kw) !== false || strpos($moduleName, $kw) !== false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
-    /**
-     * Costruisce un array di righe dell'indirizzo a partire dai dati grezzi.
-     */
-    protected function buildAddressLines(array $addr): array
+    protected function getLogoPath(): string
     {
-        $lines = [];
-
-        // Riga 1: Azienda oppure Nome Cognome
-        $company = trim($addr['company'] ?? '');
-        $firstname = trim($addr['firstname'] ?? '');
-        $lastname = trim($addr['lastname'] ?? '');
-
-        if (!empty($company)) {
-            $lines[] = $company;
-            // Se c'è anche nome e cognome, aggiungiamo come riga sotto
-            $fullName = trim($firstname . ' ' . $lastname);
-            if (!empty($fullName)) {
-                $lines[] = $fullName;
-            }
-        } else {
-            $fullName = trim($firstname . ' ' . $lastname);
-            if (!empty($fullName)) {
-                $lines[] = $fullName;
-            }
+        $logo = Configuration::get('PS_LOGO');
+        $path = _PS_ROOT_DIR_ . '/img/' . $logo;
+        if (file_exists($path)) {
+            return $path;
         }
-
-        // Indirizzo
-        $address1 = trim($addr['address1'] ?? '');
-        if (!empty($address1)) {
-            $lines[] = $address1;
+        $altPath = _PS_IMG_DIR_ . $logo;
+        if (file_exists($altPath)) {
+            return $altPath;
         }
-        $address2 = trim($addr['address2'] ?? '');
-        if (!empty($address2)) {
-            $lines[] = $address2;
-        }
-
-        // CAP + Città + Provincia
-        $postcode = trim($addr['postcode'] ?? '');
-        $city = trim($addr['city'] ?? '');
-        $state = trim($addr['state_name'] ?? ($addr['state'] ?? ''));
-        $cityLine = '';
-        if (!empty($postcode)) {
-            $cityLine .= $postcode . ' ';
-        }
-        if (!empty($city)) {
-            $cityLine .= $city;
-        }
-        if (!empty($state)) {
-            $cityLine .= ' (' . $state . ')';
-        }
-        $cityLine = trim($cityLine);
-        if (!empty($cityLine)) {
-            $lines[] = $cityLine;
-        }
-
-        // Paese
-        $country = trim($addr['country_name'] ?? ($addr['country'] ?? ''));
-        if (!empty($country)) {
-            $lines[] = $country;
-        }
-
-        // Telefono
-        $phone = trim($addr['phone'] ?? '');
-        $phoneMobile = trim($addr['phone_mobile'] ?? '');
-        if (!empty($phoneMobile)) {
-            $lines[] = 'Tel: ' . $phoneMobile;
-        } elseif (!empty($phone)) {
-            $lines[] = 'Tel: ' . $phone;
-        }
-
-        return $lines;
+        return _PS_IMG_DIR_ . 'logo.jpg';
     }
 }

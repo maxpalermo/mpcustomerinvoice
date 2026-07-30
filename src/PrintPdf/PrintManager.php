@@ -93,7 +93,12 @@ abstract class PrintManager extends TCPDF
             }
             if (class_exists('\MpSoft\MpCustomerInvoice\Export\ExportOrder')) {
                 $exporter = new ExportOrder($this->idOrder, 'order');
-                $this->orderData = $exporter->getData();
+                $raw = $exporter->getData();
+                $invoiceData = $raw['invoices']['invoice'] ?? $raw['invoice'] ?? $raw;
+                $this->orderData = array_merge($raw, [
+                    'invoice' => $invoiceData,
+                    'invoices' => ['invoice' => $invoiceData]
+                ]);
             }
         }
     }

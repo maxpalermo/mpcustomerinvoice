@@ -73,220 +73,26 @@ class AdminOrderExportHelper {
     }
 
     static openExportDialog(idOrder) {
-        if (!idOrder) {
-            idOrder = this.getOrderIdFromUrlOrData();
-        }
-        if (!idOrder) {
-            alert('Impossibile determinare l\'ID dell\'ordine per l\'esportazione.');
-            return;
-        }
-
-        const dialog = this.ensureDialogElement();
-        const titleElem = dialog.querySelector('#order-action-dialog-title');
-        const bodyElem = dialog.querySelector('#order-action-dialog-body');
-        const formElem = dialog.querySelector('#order-action-form');
-
-        if (titleElem) {
-            titleElem.textContent = 'Esporta documento';
-        }
-
-        if (bodyElem) {
-            bodyElem.innerHTML = `
-                <div class="dialog-option">
-                    <label><input type="radio" name="document" value="order" checked> Esporta Ordine</label>
-                </div>
-                <div class="dialog-option">
-                    <label><input type="radio" name="document" value="invoice"> Esporta Fattura</label>
-                </div>
-                <div class="dialog-option">
-                    <label><input type="radio" name="document" value="sales_note"> Esporta Nota vendita</label>
-                </div>
-            `;
-        }
-
-        // Sostituzione form per resettare listener ed evitare duplicati
-        const newFormElem = formElem.cloneNode(true);
-        formElem.parentNode.replaceChild(newFormElem, formElem);
-
-        // Re-bind del pulsante Annulla
-        const cancelBtn = newFormElem.querySelector('#order-action-dialog-cancel');
-        if (cancelBtn) {
-            cancelBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                dialog.close();
-            });
-        }
-
-        // Handler invio form di conferma
-        newFormElem.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const formData = new FormData(newFormElem);
-            const documentType = formData.get('document') || 'order';
-            dialog.close();
-            this.exportDocument(idOrder, documentType);
-        });
-
-        if (typeof dialog.showModal === 'function') {
-            dialog.showModal();
+        if (typeof MpPrintDialog !== 'undefined') {
+            MpPrintDialog.open(idOrder, 'export');
         } else {
-            dialog.setAttribute('open', '');
+            console.error('Componente MpPrintDialog non disponibile.');
         }
     }
 
     static openPrintDialog(idOrder) {
-        if (!idOrder) {
-            idOrder = this.getOrderIdFromUrlOrData();
-        }
-        if (!idOrder) {
-            if (typeof showErrorMessage === 'function') {
-                showErrorMessage('Impossibile determinare l\'ID dell\'ordine per la stampa.');
-            } else {
-                alert('Impossibile determinare l\'ID dell\'ordine per la stampa.');
-            }
-            return;
-        }
-
-        const dialog = this.ensureDialogElement();
-        const titleElem = dialog.querySelector('#order-action-dialog-title');
-        const bodyElem = dialog.querySelector('#order-action-dialog-body');
-        const formElem = dialog.querySelector('#order-action-form');
-
-        if (titleElem) {
-            titleElem.textContent = 'Stampa documento';
-        }
-
-        if (bodyElem) {
-            bodyElem.innerHTML = `
-                <div class="dialog-option">
-                    <label><input type="radio" name="document" value="order" checked> Ordine</label>
-                </div>
-                <div class="dialog-option">
-                    <label><input type="radio" name="document" value="invoice"> Fattura</label>
-                </div>
-                <div class="dialog-option">
-                    <label><input type="radio" name="document" value="delivery"> Spedizione</label>
-                </div>
-                <div class="dialog-option">
-                    <label><input type="radio" name="document" value="address"> Etichetta Indirizzo</label>
-                </div>
-                <div class="dialog-suboption" id="print-copies-container" style="display:none;margin-top:10px;margin-left:24px;">
-                    <label style="display:flex;align-items:center;gap:8px;">
-                        Copie:
-                        <input type="number" name="copies" id="print-copies-input" value="1" min="1" max="99" class="form-control" style="width:80px;display:inline-block;">
-                    </label>
-                </div>
-            `;
-        }
-
-        const newFormElem = formElem.cloneNode(true);
-        formElem.parentNode.replaceChild(newFormElem, formElem);
-
-        const radios = newFormElem.querySelectorAll('input[name="document"]');
-        const copiesContainer = newFormElem.querySelector('#print-copies-container');
-
-        radios.forEach(radio => {
-            radio.addEventListener('change', () => {
-                if (radio.value === 'address' && radio.checked) {
-                    if (copiesContainer) copiesContainer.style.display = 'block';
-                } else {
-                    if (copiesContainer) copiesContainer.style.display = 'none';
-                }
-            });
-        });
-
-        const cancelBtn = newFormElem.querySelector('#order-action-dialog-cancel');
-        if (cancelBtn) {
-            cancelBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                dialog.close();
-            });
-        }
-
-        newFormElem.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const formData = new FormData(newFormElem);
-            const documentType = formData.get('document') || 'order';
-            const copies = parseInt(formData.get('copies') || '1') || 1;
-            dialog.close();
-            this.executePrint(idOrder, documentType, copies);
-        });
-
-        if (typeof dialog.showModal === 'function') {
-            dialog.showModal();
+        if (typeof MpPrintDialog !== 'undefined') {
+            MpPrintDialog.open(idOrder);
         } else {
-            dialog.setAttribute('open', '');
+            console.error('Componente MpPrintDialog non disponibile.');
         }
     }
 
-    static async executePrint(idOrder, documentType = 'order', copies = 1) {
-        const adminUrl = this.getAdminControllerUrl();
-        if (!adminUrl || !idOrder) {
-            if (typeof showErrorMessage === 'function') {
-                showErrorMessage('Impossibile completare la stampa: dati insufficienti.');
-            } else {
-                alert('Impossibile completare la stampa: dati insufficienti.');
-            }
-            return;
-        }
-
-        // Apriamo la nuova scheda prima del fetch asincrono per evitare il blocco popup del browser
-        let printWindow = null;
-        try {
-            printWindow = window.open('about:blank', '_blank');
-        } catch (e) {
-            console.warn('Impossibile aprire nuova scheda in anticipo:', e);
-        }
-
-        try {
-            const printUrl = `${adminUrl}&ajax=1&action=renderPdfDocument&id_order=${idOrder}&document_type=${documentType}&copies=${copies}`;
-            const response = await fetch(printUrl);
-            const res = await response.json();
-            if (res && res.success) {
-                if (typeof showSuccessMessage === 'function') {
-                    showSuccessMessage(res.message);
-                } else if (typeof showNoticeMessage === 'function') {
-                    showNoticeMessage(res.message);
-                } else {
-                    alert(res.message);
-                }
-
-                if (res.pdf) {
-                    const byteCharacters = atob(res.pdf);
-                    const byteNumbers = new Array(byteCharacters.length);
-                    for (let i = 0; i < byteCharacters.length; i++) {
-                        byteNumbers[i] = byteCharacters.charCodeAt(i);
-                    }
-                    const byteArray = new Uint8Array(byteNumbers);
-                    const blob = new Blob([byteArray], { type: 'application/pdf' });
-                    const blobUrl = URL.createObjectURL(blob);
-
-                    if (printWindow && !printWindow.closed) {
-                        printWindow.location.href = blobUrl;
-                    } else {
-                        window.open(blobUrl, '_blank');
-                    }
-                } else if (printWindow && !printWindow.closed) {
-                    printWindow.close();
-                }
-            } else {
-                if (printWindow && !printWindow.closed) {
-                    printWindow.close();
-                }
-                const msg = (res && res.message) ? res.message : 'Errore durante la generazione del documento PDF.';
-                if (typeof showErrorMessage === 'function') {
-                    showErrorMessage(msg);
-                } else {
-                    alert(msg);
-                }
-            }
-        } catch (err) {
-            if (printWindow && !printWindow.closed) {
-                printWindow.close();
-            }
-            console.error('Errore durante la richiesta di stampa PDF:', err);
-            if (typeof showErrorMessage === 'function') {
-                showErrorMessage('Errore di comunicazione durante la richiesta di stampa.');
-            }
+    static executePrint(idOrder, documentType = 'order', copies = 1) {
+        if (typeof MpPrintDialog !== 'undefined') {
+            MpPrintDialog.executePrint(idOrder, documentType, copies);
+        } else {
+            console.error('Componente MpPrintDialog non disponibile.');
         }
     }
 

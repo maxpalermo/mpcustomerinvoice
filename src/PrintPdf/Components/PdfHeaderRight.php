@@ -11,12 +11,12 @@ class PdfHeaderRight
 
     public function __construct(array $orderData)
     {
-        $invoice = $orderData['invoice'] ?? [];
+        $invoice = $orderData['invoice'] ?? $orderData['invoices']['invoice'] ?? $orderData;
 
         $this->orderData = [
-            'id_order' => $invoice['order_id'] ?? '--',
-            'metodo_pagamento' => $invoice['payment'] ?? '--',
-            'data_stampa' => $this->formatDate($invoice['order_date'] ?? date('Y-m-d H:i:s')),
+            'id_order' => $invoice['order_id'] ?? $invoice['invoice_id'] ?? '--',
+            'metodo_pagamento' => !empty($invoice['payment']) ? strtoupper($invoice['payment']) : '--',
+            'data_stampa' => date('d/m/Y H:i:s'),
             'corriere' => $invoice['carrier'] ?? '--',
             'stato' => $invoice['current_status'] ?? '--',
             'current_status' => $invoice['current_status'] ?? '',

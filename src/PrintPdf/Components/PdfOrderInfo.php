@@ -9,15 +9,20 @@ class PdfOrderInfo
 
     public function __construct(array $orderData)
     {
-        $invoice = $orderData['invoice'] ?? [];
+        $invoice = $orderData['invoice'] ?? $orderData['invoices']['invoice'] ?? $orderData;
         $customer = $invoice['customer'] ?? [];
 
+        $codCliente = $customer['id'] ?? '';
+        if (empty($codCliente) && !empty($customer['id_customer'])) {
+            $codCliente = 'DL' . $customer['id_customer'];
+        }
+
         $this->orderData = [
-            'cod_cliente' => $customer['id'] ?? '--',
-            'id_customer' => $customer['id'] ?? '--',
-            'new_customer' => $customer['new'] ?? true,
+            'cod_cliente' => $codCliente ?: '--',
+            'id_customer' => $customer['id_customer'] ?? '--',
+            'has_invoice_requested' => (!empty($customer['address_invoice']['vat_number']) || !empty($customer['pec']) || !empty($customer['uid'])),
             'data_ordine' => $this->formatDate($invoice['order_date'] ?? date('Y-m-d H:i:s')),
-            'totale_ordine' => $this->formatPrice($invoice['total_tax_incl'] ?? '0.00'),
+            'totale_ordine' => $this->formatPrice($invoice['total_tax_incl'] ?? $invoice['total_paid'] ?? '0.00'),
         ];
 
         $this->styles = [
@@ -70,12 +75,12 @@ class PdfOrderInfo
         $rowHeight = 12;
 
         $codiceCliente = $data['cod_cliente'];
-        $isNewCustomer = $data['new_customer'];
+        $hasInvoice = $data['has_invoice_requested'];
         $this->renderSingleCell($pdf, $x, $currentY, $width, 'COD. CLIENTE', $codiceCliente, $styles);
-        if (!$isNewCustomer) {
-            $pdf->SetTextColor(255, 0, 0);
+        if ($hasInvoice) {
+            $pdf->SetTextColor(200, 0, 0);
             $pdf->SetFont($styles['font_family'], 'B', 14);
-            $pdf->SetXY($x + $width - 15, $currentY + 8);
+            $pdf->SetXY($x + $width - 15, $currentY + 6);
             $pdf->Cell(10, 6, 'V', 0, 0, 'C', 0, '', 1, false, 'C', 'M');
             $pdf->SetTextColor(0, 0, 0);
         }

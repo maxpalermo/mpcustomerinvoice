@@ -1,10 +1,11 @@
 class AdminTableOrders {
-    constructor(tableId, adminControllerUrl, orderPageLink, customerPageLink, orderStates, orderFlagItems, orderCountries, invoicePdfLink, deliveryPdfLink, labelPrintEndpoint) {
+    constructor(tableId, adminControllerUrl, orderPageLink, customerPageLink, orderStates, orderFlagItems, orderCountries, invoicePdfLink, deliveryPdfLink, labelPrintEndpoint, orderStateColors) {
         this.table = document.getElementById(tableId);
         this.adminControllerUrl = adminControllerUrl;
         this.orderPageLink = orderPageLink;
         this.customerPageLink = customerPageLink;
         this.orderStates = orderStates || {};
+        this.orderStateColors = orderStateColors || {};
         this.orderFlags = (orderFlagItems || []).reduce((items, item) => {
             items[item.id_order_flag_item] = item;
             return items;
@@ -17,6 +18,7 @@ class AdminTableOrders {
         this.invoicePdfLink = invoicePdfLink;
         this.deliveryPdfLink = deliveryPdfLink;
         this.labelPrintEndpoint = labelPrintEndpoint;
+        this.brtShipmentsUrl = (typeof orderTableLinks !== 'undefined' && orderTableLinks.brtShipmentsUrl) ? orderTableLinks.brtShipmentsUrl : '';
         this.limit = 25;
         this.offset = 0;
         this.sort = "id_order";
@@ -66,6 +68,7 @@ class AdminTableOrders {
                 }, 0);
             },
             columns: [
+                { checkbox: true, align: "center", valign: "middle" },
                 { field: "id_order", title: "ID", sortable: true, align: "center", filterControl: "input" },
                 { field: "order_flag_item", title: "Semaforo", align: "center", filterControl: "select", filterData: `json:${JSON.stringify(this.orderFlagFilterOptions)}`, formatter: (value) => this.formatOrderFlag(value) },
                 { field: "delivery_country", title: "Consegna", align: "center", filterControl: "select", filterData: `json:${JSON.stringify(this.orderCountries)}`, formatter: (value) => this.orderCountries[value] || "--" },
@@ -89,7 +92,7 @@ class AdminTableOrders {
                     formatter: (value, row) => this.formatTotalColumn(value, row),
                 },
                 { field: "payment", title: "Pagamento", sortable: true, filterControl: "input" },
-                { field: "status", title: "Stato", sortable: true, filterControl: "select", filterData: `json:${JSON.stringify(this.orderStates)}` },
+                { field: "status", title: "Stato", sortable: true, filterControl: "select", filterData: `json:${JSON.stringify(this.orderStates)}`, formatter: (value, row) => this.formatStatusColumn(value, row) },
                 { field: "notes", title: "Note", align: "center", formatter: (value, row) => this.formatNotes(row) },
                 { field: "date_add", title: "Data", sortable: true, align: "center", filterControl: "input", filterControlPlaceholder: "Da - A (GG/MM/AAAA)" },
                 {
@@ -99,11 +102,10 @@ class AdminTableOrders {
                     formatter: (value, row) => {
                         const orderUrl = this.orderPageLink.replace("999999999", row.id_order);
                         const actionButtonStyle = "display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:34px;height:34px;padding:0;margin:0;";
-                        return `<div role="group" style="display:grid;grid-template-columns:repeat(2, 34px);grid-template-rows:repeat(2, 34px);gap:3px;width:71px;">
+                        return `<div role="group" style="display:flex;flex-direction:row;gap:3px;align-items:center;justify-content:center;">
                             <a class="btn btn-default" style="${actionButtonStyle}" href="${orderUrl}" target="_blank" title="Vedi ordine"><span class="material-icons">visibility</span></a>
                             <button class="btn btn-default js-order-action-print" style="${actionButtonStyle}" type="button" data-order-id="${row.id_order}" title="Stampa"><span class="material-icons">print</span></button>
                             <button class="btn btn-default js-order-action-export" style="${actionButtonStyle}" type="button" data-order-id="${row.id_order}" title="Esporta"><span class="material-icons">file_download</span></button>
-                            <button class="btn btn-default js-order-action-label" style="${actionButtonStyle}" type="button" data-order-id="${row.id_order}" title="Etichette"><span class="material-icons">label</span></button>
                         </div>`;
                     },
                 },
@@ -165,6 +167,35 @@ class AdminTableOrders {
 
         const color = /^#[0-9a-f]{3,8}$/i.test(flag.color || "") ? flag.color : "#6c757d";
         return `<span class="material-icons" title="${this.escape(flag.name || "")}" style="color:${color};font-size:20px;vertical-align:middle;">${this.escape(flag.icon || "flag")}</span>`;
+    }
+
+    getContrastingTextColor(hexColor) {
+        if (!hexColor || typeof hexColor !== "string") {
+            return "#ffffff";
+        }
+        let hex = hexColor.replace("#", "").trim();
+        if (hex.length === 3) {
+            hex = hex.split("").map((c) => c + c).join("");
+        }
+        if (hex.length !== 6) {
+            return "#ffffff";
+        }
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+
+        const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+        return yiq >= 128 ? "#1e293b" : "#ffffff";
+    }
+
+    formatStatusColumn(value, row) {
+        if (!value) {
+            return "--";
+        }
+        const color = (row && row.status_color) || (row && this.orderStateColors && this.orderStateColors[row.current_state]) || "#6c757d";
+        const textColor = this.getContrastingTextColor(color);
+
+        return `<span class="badge" style="background-color:${this.escape(color)}!important;color:${textColor}!important;font-weight:600;font-size:0.75rem;padding:0.45em 0.75em;border-radius:4px;display:inline-block;white-space:normal;text-align:center;">${this.escape(value)}</span>`;
     }
 
     formatCustomerColumn(value, row) {
@@ -232,187 +263,31 @@ class AdminTableOrders {
     }
 
     bindRowActions() {
+        const openPrint = (orderId) => {
+            if (typeof MpPrintDialog !== 'undefined') {
+                MpPrintDialog.open(orderId);
+            } else if (typeof window.AdminOrderExportHelper !== 'undefined') {
+                window.AdminOrderExportHelper.openPrintDialog(orderId);
+            }
+        };
+
         $(this.table)
             .off("click.orderPrint", ".js-order-action-print")
             .off("click.orderExport", ".js-order-action-export")
-            .off("click.orderLabel", ".js-order-action-label")
             .on("click.orderPrint", ".js-order-action-print", (event) => {
                 event.preventDefault();
-                this.openActionDialog("printOrder", Number(event.currentTarget.dataset.orderId));
+                const $btn = $(event.currentTarget);
+                const orderId = $btn.data("order-id") || $btn.attr("data-order-id") || (event.currentTarget ? event.currentTarget.dataset.orderId : null);
+                openPrint(orderId);
             })
             .on("click.orderExport", ".js-order-action-export", (event) => {
                 event.preventDefault();
-                this.openActionDialog("exportOrder", Number(event.currentTarget.dataset.orderId));
-            })
-            .on("click.orderLabel", ".js-order-action-label", (event) => {
-                event.preventDefault();
-                this.openActionDialog("printLabel", Number(event.currentTarget.dataset.orderId));
+                const $btn = $(event.currentTarget);
+                const orderId = $btn.data("order-id") || $btn.attr("data-order-id") || (event.currentTarget ? event.currentTarget.dataset.orderId : null);
+                if (typeof window.AdminOrderExportHelper !== 'undefined') {
+                    window.AdminOrderExportHelper.exportDocument(orderId);
+                }
             });
-    }
-
-    getDialog() {
-        if (this.dialog) {
-            return this.dialog;
-        }
-
-        this.dialog = document.getElementById("order-action-dialog");
-        if (!this.dialog) {
-            console.error("Elemento <dialog> #order-action-dialog non trovato");
-            return null;
-        }
-
-        const form = this.dialog.querySelector("form");
-        if (form && !this.dialogBound) {
-            form.addEventListener("submit", (event) => this.handleDialogSubmit(event));
-            const cancelBtn = this.dialog.querySelector("#order-action-dialog-cancel");
-            if (cancelBtn) {
-                cancelBtn.addEventListener("click", () => this.dialog.close());
-            }
-            this.dialogBound = true;
-        }
-
-        return this.dialog;
-    }
-
-    openActionDialog(action, orderId) {
-        const dialog = this.getDialog();
-        if (!dialog) {
-            return;
-        }
-
-        this.currentAction = action;
-        this.currentOrderId = orderId;
-
-        const titles = {
-            printOrder: "Stampa documento",
-            exportOrder: "Esporta documento",
-            printLabel: "Stampa etichette",
-        };
-
-        dialog.querySelector("#order-action-dialog-title").textContent = titles[action] || "Azione";
-        dialog.querySelector("#order-action-dialog-body").innerHTML = this.buildDialogBody(action);
-        dialog.showModal();
-    }
-
-    buildDialogBody(action) {
-        if (action === "printOrder" || action === "exportOrder") {
-            const verb = action === "printOrder" ? "Stampa" : "Esporta";
-            return `
-                <div class="dialog-option">
-                    <label><input type="radio" name="document" value="order" checked> ${verb} Ordine</label>
-                </div>
-                <div class="dialog-option">
-                    <label><input type="radio" name="document" value="invoice"> ${verb} Fattura</label>
-                </div>
-                <div class="dialog-option">
-                    <label><input type="radio" name="document" value="sales_note"> ${verb} Nota vendita</label>
-                </div>
-            `;
-        }
-
-        if (action === "printLabel") {
-            return `
-                <div class="dialog-option">
-                    <label><input type="radio" name="labelType" value="address" checked> Etichette indirizzi</label>
-                    <div class="dialog-suboption">
-                        <label>Copie <input type="number" name="copies" value="1" min="1" max="99" style="width:60px;"></label>
-                    </div>
-                </div>
-                <div class="dialog-option">
-                    <label><input type="radio" name="labelType" value="brt"> Segnacollo Bartolini</label>
-                </div>
-            `;
-        }
-
-        return "";
-    }
-
-    getPrintUrl(documentType, orderId) {
-        let baseLink = "";
-        let targetDoc = "";
-
-        if (documentType === "invoice") {
-            baseLink = this.invoicePdfLink;
-            targetDoc = "generate-invoice-pdf";
-        } else if (documentType === "sales_note") {
-            baseLink = this.deliveryPdfLink;
-            targetDoc = "generate-delivery-slip-pdf";
-        } else {
-            baseLink = this.invoicePdfLink;
-            targetDoc = "generate-order-pdf";
-        }
-
-        if (!baseLink) {
-            return "";
-        }
-
-        let url = baseLink.replace("999999999", String(orderId));
-        url = url.replace(/generate-(invoice|delivery-slip|order)-pdf/, targetDoc);
-
-        return url;
-    }
-
-    async handleDialogSubmit(event) {
-        event.preventDefault();
-
-        const dialog = this.getDialog();
-        if (!dialog) {
-            return;
-        }
-
-        const form = event.currentTarget;
-        const formData = new FormData(form);
-        const action = this.currentAction;
-        const orderId = this.currentOrderId;
-
-        dialog.close();
-
-        if (action === "printOrder") {
-            const documentType = formData.get("document") || "order";
-            const url = this.getPrintUrl(documentType, orderId);
-            if (url) {
-                window.open(url, "_blank");
-            }
-            return;
-        }
-
-        if (action === "exportOrder") {
-            const documentType = formData.get("document") || "order";
-            if (window.AdminOrderExportHelper) {
-                window.AdminOrderExportHelper.exportDocument(orderId, documentType);
-            } else {
-                const url = `${this.adminControllerUrl}&action=showCustomExportPage&id_order=${orderId}&document_type=${documentType}`;
-                window.open(url, "_blank");
-            }
-            return;
-        }
-
-        const payload = new URLSearchParams({ ajax: "1", action, id_order: String(orderId) });
-        if (action === "printLabel") {
-            payload.set("labelType", formData.get("labelType") || "address");
-            payload.set("copies", formData.get("copies") || "1");
-        } else {
-            payload.set("document", formData.get("document") || "order");
-        }
-
-        try {
-            const response = await fetch(this.adminControllerUrl, {
-                method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-                body: payload,
-            });
-            const data = await response.json();
-
-            if (!response.ok || !data || data.success === false) {
-                throw new Error(data.message || "Risposta non valida");
-            }
-
-            console.log(`Risposta ${action}:`, data);
-            window.alert(data.message || "Operazione simulata completata");
-        } catch (error) {
-            console.error(`Errore ${action}:`, error);
-            window.alert("Si è verificato un errore nella richiesta.");
-        }
     }
 
     renderSearchActions() {
@@ -420,6 +295,33 @@ class AdminTableOrders {
 
         if ($columns.find("[data-orders-search]").length) {
             return;
+        }
+
+        if (!$columns.find("[data-batch-state-wrapper]").length) {
+            const $wrapper = $("<div>", {
+                class: "d-inline-flex align-items-center mr-2",
+                "data-batch-state-wrapper": "",
+                style: "gap: 6px;",
+            });
+
+            const $select = $("<select>", {
+                class: "form-control chosen-ignore",
+                style: "max-width: 220px; display: inline-block; font-size: 0.85rem; height: 36px; padding: 4px 8px;",
+            });
+
+            $select.append('<option value="">-- Cambia stato a... --</option>');
+            Object.entries(this.orderStates).forEach(([idState, stateName]) => {
+                $select.append(`<option value="${idState}">${this.escape(stateName)}</option>`);
+            });
+
+            const $btnChange = $("<button>", {
+                type: "button",
+                class: "btn btn-primary",
+                html: '<i class="material-icons">published_with_changes</i> Cambia Stato ordine',
+            }).on("click", () => this.handleBatchChangeStatus($select.val()));
+
+            $wrapper.append($select).append($btnChange);
+            $columns.prepend($wrapper);
         }
 
         $("<button>", {
@@ -439,6 +341,75 @@ class AdminTableOrders {
         })
             .on("click", () => this.resetFilters())
             .appendTo($columns);
+
+        if (this.brtShipmentsUrl && !$columns.find("[data-orders-bordero]").length) {
+            $("<a>", {
+                class: "btn btn-primary ml-1",
+                href: this.brtShipmentsUrl,
+                "data-orders-bordero": "",
+                html: '<i class="material-icons">local_shipping</i> Borderò',
+            }).appendTo($columns);
+        }
+    }
+
+    handleBatchChangeStatus(targetStateId) {
+        const selectedRows = $(this.table).bootstrapTable("getSelections");
+        const stateId = parseInt(targetStateId);
+
+        if (!selectedRows || selectedRows.length === 0) {
+            if (typeof showNoticeMessage === "function") {
+                showNoticeMessage("Seleziona almeno un ordine dalla tabella.");
+            } else {
+                alert("Seleziona almeno un ordine dalla tabella.");
+            }
+            return;
+        }
+
+        if (!stateId) {
+            if (typeof showNoticeMessage === "function") {
+                showNoticeMessage("Seleziona uno stato di destinazione dal menu a tendina.");
+            } else {
+                alert("Seleziona uno stato di destinazione dal menu a tendina.");
+            }
+            return;
+        }
+
+        const stateName = this.orderStates[stateId] || `ID ${stateId}`;
+
+        if (!this.batchProgressDialog) {
+            this.batchProgressDialog = new MpBatchProgressDialog({
+                title: "Aggiornamento Stato Ordini",
+                onComplete: () => {
+                    this.load();
+                },
+                onStop: () => {
+                    this.load();
+                },
+            });
+        }
+
+        this.batchProgressDialog.setTitle(`Cambio Stato in "${stateName}"`);
+
+        this.batchProgressDialog.runBatch(selectedRows, async (row, signal) => {
+            const formData = new FormData();
+            formData.append("ajax", "1");
+            formData.append("action", "changeOrderStatus");
+            formData.append("id_order", row.id_order);
+            formData.append("id_order_state", stateId);
+
+            const response = await fetch(this.adminControllerUrl, {
+                method: "POST",
+                body: formData,
+                signal: signal,
+            });
+
+            if (!response.ok) {
+                throw new Error(`Errore Server HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data;
+        });
     }
 
     applyFilters() {

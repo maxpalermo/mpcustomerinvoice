@@ -31,7 +31,7 @@ class PdfOrderAddresses
     public function render($pdf, float $x, float $y, float $totalWidth): float
     {
         $styles = $this->styles;
-        $invoice = $this->orderData['invoice'] ?? [];
+        $invoice = $this->orderData['invoice'] ?? $this->orderData['invoices']['invoice'] ?? $this->orderData;
         $customer = $invoice['customer'] ?? [];
 
         $addressDelivery = $customer['address_delivery'] ?? [];

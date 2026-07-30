@@ -321,11 +321,181 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
         ]);
     }
 
+    public function ajaxProcessChangeOrderStatus()
+    {
+        $idOrder = (int) Tools::getValue('id_order');
+        $idOrderState = (int) Tools::getValue('id_order_state');
+
+        if (!$idOrder || !$idOrderState) {
+            $this->response([
+                'success' => false,
+                'message' => 'Parametri mancanti per l\'aggiornamento dello stato.',
+            ]);
+        }
+
+        $order = new \Order($idOrder);
+        if (!\Validate::isLoadedObject($order)) {
+            $this->response([
+                'success' => false,
+                'message' => sprintf('Ordine #%d non trovato.', $idOrder),
+            ]);
+        }
+
+        $orderState = new \OrderState($idOrderState, $this->context->language->id);
+        if (!\Validate::isLoadedObject($orderState)) {
+            $this->response([
+                'success' => false,
+                'message' => 'Stato ordine non valido.',
+            ]);
+        }
+
+        if ((int) $order->current_state === $idOrderState) {
+            $this->response([
+                'success' => true,
+                'message' => sprintf('Ordine #%d già nello stato "%s".', $idOrder, $orderState->name),
+            ]);
+        }
+
+        try {
+            $history = new \OrderHistory();
+            $history->id_order = (int) $order->id;
+            $history->id_employee = (int) $this->context->employee->id;
+            $history->changeIdOrderState($idOrderState, (int) $order->id);
+
+            if ((bool) $orderState->send_email) {
+                $history->addWithemail(true);
+            } else {
+                $history->add(true);
+            }
+
+            $this->response([
+                'success' => true,
+                'id_order' => $idOrder,
+                'id_order_state' => $idOrderState,
+                'state_name' => $orderState->name,
+                'message' => sprintf('Ordine #%d: stato aggiornato a "%s".', $idOrder, $orderState->name),
+            ]);
+        } catch (\Exception $e) {
+            $this->response([
+                'success' => false,
+                'message' => sprintf('Ordine #%d: errore %s', $idOrder, $e->getMessage()),
+            ]);
+        }
+    }
+
+    public function ajaxProcessGetOrderPrintInfo()
+    {
+        $idOrder = (int) Tools::getValue('id_order');
+        if (!$idOrder) {
+            $this->response([
+                'success' => false,
+                'message' => 'ID ordine non specificato.',
+            ]);
+        }
+
+        $order = new \Order($idOrder);
+        if (!\Validate::isLoadedObject($order)) {
+            $this->response([
+                'success' => false,
+                'message' => 'Ordine non trovato.',
+            ]);
+        }
+
+        $hasInvoice = false;
+        if ($order->hasInvoice() || (int) $order->invoice_number > 0) {
+            $hasInvoice = true;
+        } else {
+            if (class_exists('\MpSoft\MpCustomerInvoice\Helpers\GenerateDocumentRestrictions')) {
+                $hasInvoice = \MpSoft\MpCustomerInvoice\Helpers\GenerateDocumentRestrictions::isInvoiceRequired($order->id_customer);
+            }
+        }
+
+        $isBrtActive = (bool) (\Module::isInstalled('mpbrtrestapishipments') && \Module::isEnabled('mpbrtrestapishipments'));
+        $hasBrtLabel = false;
+
+        if ($isBrtActive) {
+            $modelsAutoload = _PS_MODULE_DIR_ . 'mpbrtrestapishipments/src/Models/autoload.php';
+            if (file_exists($modelsAutoload)) {
+                require_once $modelsAutoload;
+            }
+            if (class_exists('ModelBrtRestApiShipmentResponse')) {
+                $responseModel = \ModelBrtRestApiShipmentResponse::getByOrderOrReference($idOrder);
+                if ($responseModel) {
+                    $labels = $responseModel->getLabelsArray();
+                    $labelList = $labels['label'] ?? [];
+                    foreach ($labelList as $lbl) {
+                        if (!empty($lbl['stream'])) {
+                            $hasBrtLabel = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        $this->response([
+            'success' => true,
+            'id_order' => $idOrder,
+            'reference' => $order->reference,
+            'has_invoice' => $hasInvoice,
+            'is_brt_active' => $isBrtActive,
+            'has_brt_label' => $hasBrtLabel,
+        ]);
+    }
+
     public function ajaxProcessRenderPdfDocument()
     {
         $idOrder = (int) Tools::getValue('id_order');
         $documentType = (string) Tools::getValue('document_type', 'order');
         $copies = max(1, (int) Tools::getValue('copies', 1));
+
+        if ($documentType === 'brt') {
+            if (Module::isInstalled('mpbrtrestapishipments') && Module::isEnabled('mpbrtrestapishipments')) {
+                $modelsAutoload = _PS_MODULE_DIR_ . 'mpbrtrestapishipments/src/Models/autoload.php';
+                if (file_exists($modelsAutoload)) {
+                    require_once $modelsAutoload;
+                }
+                $vendorAutoload = _PS_MODULE_DIR_ . 'mpbrtrestapishipments/vendor/autoload.php';
+                if (file_exists($vendorAutoload)) {
+                    require_once $vendorAutoload;
+                }
+
+                if (class_exists('ModelBrtRestApiShipmentResponse')) {
+                    $responseModel = ModelBrtRestApiShipmentResponse::getByOrderOrReference($idOrder);
+                    if ($responseModel) {
+                        $labels = $responseModel->getLabelsArray();
+                        $labelList = $labels['label'] ?? [];
+                        $streams = [];
+                        foreach ($labelList as $label) {
+                            if (!empty($label['stream'])) {
+                                $streams[] = $label['stream'];
+                            }
+                        }
+                        if (!empty($streams) && class_exists('\MpSoft\MpBrtRestApiShipments\Helpers\BrtPdfMerger')) {
+                            try {
+                                $mergedPdf = \MpSoft\MpBrtRestApiShipments\Helpers\BrtPdfMerger::mergePdfs($streams);
+                                $this->response([
+                                    'success' => true,
+                                    'message' => sprintf('Segnacollo BRT per ordine #%d recuperato con successo.', $idOrder),
+                                    'id_order' => $idOrder,
+                                    'document_type' => 'brt',
+                                    'pdf' => base64_encode($mergedPdf),
+                                ]);
+                            } catch (\Exception $e) {
+                                $this->response([
+                                    'success' => false,
+                                    'message' => 'Errore unione segnacollo BRT: ' . $e->getMessage(),
+                                ]);
+                            }
+                        }
+                    }
+                }
+            }
+            $this->response([
+                'success' => false,
+                'message' => sprintf('Nessun segnacollo PDF BRT trovato per l\'ordine #%d.', $idOrder),
+            ]);
+        }
 
         $printerMap = [
             'order' => \MpSoft\MpCustomerInvoice\PrintPdf\PrintPdfOrder::class,
@@ -514,11 +684,13 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
         $twig = new GetTwigEnvironment($this->module->name);
         $template = $twig->load('@ModuleTwig/admin/orders.html.twig');
         $orderStates = [];
+        $orderStateColors = [];
         $cancelledStateIds = [];
 
         foreach (OrderState::getOrderStates($this->id_lang) as $orderState) {
             $idOrderState = (int) $orderState['id_order_state'];
             $orderStates[$idOrderState] = $orderState['name'];
+            $orderStateColors[$idOrderState] = $orderState['color'] ?? '';
 
             if ($idOrderState === 6 || preg_match('/annull|cancel/i', Tools::strtolower($orderState['name']))) {
                 $cancelledStateIds[] = $idOrderState;
@@ -530,10 +702,10 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
             $orderCountries[(int) $country['id_country']] = $country['name'];
         }
 
-
         return $template->render([
             'adminControllerUrl' => $this->ajaxController,
             'orderStates' => $orderStates,
+            'orderStateColors' => $orderStateColors,
             'orderCountries' => $orderCountries,
             'cancelledStateIds' => array_values(array_unique($cancelledStateIds)),
             'orderFlagItems' => $this->getOrderFlagItems(),
@@ -560,6 +732,9 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
                 ['route' => 'admin_orders_generate_delivery_slip_pdf', 'orderId' => '999999999']
             ),
             'labelPrintEndpoint' => $this->context->link->getModuleLink('mplabelprint', 'Fetch', ['ajax' => 1]),
+            'brtShipmentsUrl' => (Module::isInstalled('mpbrtrestapishipments') && Module::isEnabled('mpbrtrestapishipments'))
+                ? $this->context->link->getAdminLink('AdminMpBrtRestApiShipments') . '&tab=shipments'
+                : '',
         ]);
     }
 
@@ -1160,15 +1335,16 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
         $hasNotes = Module::getInstanceByName('mpnotes');
         $query = new DbQuery();
         $query
-            ->select('o.id_order, o.id_customer, o.reference, o.total_paid_tax_incl, o.payment, o.date_add')
+            ->select('o.id_order, o.id_customer, o.reference, o.total_paid_tax_incl, o.payment, o.date_add, o.current_state')
             ->select('c.email')
             ->select("CONCAT(c.firstname, ' ', c.lastname) AS customer")
-            ->select('ci.id_eurosolution, ci.invoice_requested, ci.vat_number, ci.dni, osl.name AS status')
+            ->select('ci.id_eurosolution, ci.invoice_requested, ci.vat_number, ci.dni, osl.name AS status, os.color AS status_color')
             ->select('COALESCE(CONCAT("", ad.id_country), "") AS delivery_country')
             ->from('orders', 'o')
             ->leftJoin('customer', 'c', 'c.id_customer = o.id_customer')
             ->leftJoin('customer_invoice', 'ci', 'ci.id_customer = o.id_customer')
             ->leftJoin('address', 'ad', 'ad.id_address = o.id_address_delivery')
+            ->leftJoin('order_state', 'os', 'os.id_order_state = o.current_state')
             ->leftJoin('order_state_lang', 'osl', 'osl.id_order_state = o.current_state AND osl.id_lang = ' . (int) $this->id_lang);
 
         $hasFeesModule = Module::isInstalled('mppaymentswithfees') && Module::isEnabled('mppaymentswithfees');

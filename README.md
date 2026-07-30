@@ -4,6 +4,166 @@ Modulo per gestire i codici della fatturazione elettronica.
 
 ## Changelog
 
+### 1.4.116
+
+- **Selezione Multipla Ordini & Cambio Stato a Blocchi (`MpBatchProgressDialog.js` & `adminTableOrders.js`)**:
+  - Inserita la colonna di selezione con checkbox multipli come prima colonna nella tabella ordini (con spunta "Seleziona Tutti" nell'intestazione).
+  - Aggiunta nella toolbar della tabella la select degli stati ordine ed il pulsante **"Cambia Stato ordine"**.
+  - Creata la classe componente JS riutilizzabile ed indipendente `MpBatchProgressDialog.js` con interfaccia moderna, statistiche in tempo reale, barra di progresso percentuale, log dettagliato dell'elaborazione e pulsante **STOP (Interrompi)** per l'annullamento immediato delle chiamate Fetch/AJAX.
+  - Implementato l'endpoint AJAX `ajaxProcessChangeOrderStatus` in `AdminMpCustomerInvoice.php` tramite `OrderHistory`.
+
+### 1.4.115
+
+- **Pulsante "Borderò" nella Toolbar Tabella Ordini (`AdminMpCustomerInvoice.php` & `adminTableOrders.js`)**:
+  - Verificato l'abbinamento ed attivazione del modulo `mpbrtrestapishipments` (`Module::isInstalled` && `Module::isEnabled`).
+  - Inserito il pulsante primario **Borderò** nella toolbar delle azioni della tabella ordini per accedere direttamente alla scheda spedizioni del modulo BRT (`AdminMpBrtRestApiShipments&tab=shipments`).
+
+### 1.4.114
+
+- **Styling Dinamico Badge Colonna "Stato" (`adminTableOrders.js` & `AdminMpCustomerInvoice.php`)**:
+  - Colorato lo sfondo del badge della colonna **Stato** utilizzando il colore della tabella `order_state.color`.
+  - Calcolato dinamicamente il colore del testo (bianco o scuro) tramite algoritmo di luminosità relativa YIQ, garantendo la massima leggibilità su qualsiasi colore di sfondo.
+
+### 1.4.113
+
+- **Restyling Modale di Stampa con Schede Moderne (Card UI) & Componente Indipendente (`MpPrintDialog.js`)**:
+  - Sostituzione completa dei radio button tradizionali con schede interattive moderne dotate di icone Material, badge colorati e spunte di selezione `check_circle`.
+  - Inserimento dell'azione AJAX `ajaxProcessGetOrderPrintInfo` per determinare la visibilità dinamica:
+    - **Fattura** (verde) per ordini con fattura vs **Nota di vendita** (viola) per ordini senza fattura.
+    - **Etichetta Indirizzo** (ambra) con campo per il numero di copie integrato con pulsanti stepper (`+` e `-`).
+    - **Segnacollo Bartolini** (rosso BRT) visibile esclusivamente se il modulo BRT è attivo e l'etichetta PDF è già stata generata per l'ordine.
+  - Piena compatibilità e riutilizzo autonomo sia dal pulsante della tabella ordini che dal pulsante **Stampe** della barra strumenti dell'ordine (`AdminOrders`).
+
+### 1.4.112
+
+- **Integrazione Condizionale "Segnacollo Bartolini" (`MpPrintDialog.js`) & Fix Fallback Backend (`AdminMpCustomerInvoice.php`)**:
+  - Mostrata l'opzione "Segnacollo Bartolini" nel modale di stampa solo se il modulo `mpbrtrestapishipments` è installato ed attivo (`isBrtModuleActive`).
+  - Mostrata la casella del numero di copie esclusivamente quando viene selezionata l'opzione "Etichetta Indirizzo".
+  - Aggiunto il gestore esplicito per `document_type = 'brt'` nel controller `AdminMpCustomerInvoice.php` (`ajaxProcessRenderPdfDocument`) per eliminare l'errore "Tipo documento non valido per la stampa" e consentire il recupero diretto del segnacollo PDF dal database BRT.
+
+### 1.4.111
+
+- **Fix Recupero Posizione Prodotto Magazzino & Logica Generazione Documenti**:
+  - **Ubicazione Prodotto (`ExportManager.php` e `PdfOrderBody.php`)**: Risolto il problema per cui `$product['location']` risultava vuoto quando la posizione in magazzino è registrata sulla tabella principale `ps_product.location` invece che su `ps_stock_available`. Aggiunto il fallback dinamico di query SQL su `ps_product`.
+  - **Generazione Automatica Documenti (`GenerateDocumentRestrictions.php`)**: Perfezionata la gestione della creazione e rimozione automatica di Fattura e Nota di Consegna (DDT) nei cambi stato ordine in base alle preferenze del modulo ed ai dati fiscali del cliente.
+
+### 1.4.110
+
+- **Aggiornamento Override Db (`override/classes/db/Db.php`) e Ottimizzazione Restrizioni Generazione Documenti (`GenerateDocumentRestrictions.php`)**:
+  - Aggiornato l'override della classe `Db` per la gestione avanzata e sicura delle query al database (inclusa validazione e supporto prefissi tabelle).
+  - Affinata la verifica dei requisiti di fatturazione in `GenerateDocumentRestrictions::isInvoiceRequired()` e `checkCustomerInvoiceFields()`, aggiungendo il controllo obbligatorio dell'indirizzo di fatturazione (`id_address_invoice`) e correggendo la sintassi della query SQL.
+
+### 1.4.109
+
+- **Occultamento Elementi Nativi Nota di Consegna (`[data-role="view-delivery-slip"]`)**:
+  - Aggiunto il selettore `[data-role="view-delivery-slip"]` in `theme-override.css` ed in `MpPrintDialog.js` per nascondere i pulsanti nativi della nota di consegna nella pagina dell'ordine.
+
+### 1.4.108
+
+- **Occultamento Elementi Nativi Fattura Ordine (`[data-role="view-invoice"]`)**:
+  - Estesa la regola CSS in `theme-override.css` ed il listener JS in `MpPrintDialog.js` per nascondere sia `.js-print-order-view-page` che l'elemento nativo `[data-role="view-invoice"]` nella pagina dell'ordine.
+
+### 1.4.107
+
+- **Occultamento Pulsante Stampa Nativo Ordine (`.js-print-order-view-page`)**:
+  - Inserita la regola CSS `display: none !important;` in `theme-override.css` per nascondere il pulsante `.js-print-order-view-page` nella pagina del dettaglio ordine.
+  - Aggiunta la funzione JS `hideNativePrintButtons()` in `MpPrintDialog.js` per garantire l'occultamento dinamico anche in caso di caricamento differito.
+
+### 1.4.106
+
+- **Rimozione Pulsante Etichette e Unificazione Azioni Stampa (`adminTableOrders.js`)**:
+  - Rimosso il pulsante ridondante etichette (`.js-order-action-label`) dalla tabella ordini.
+  - Tutta la logica di apertura del dialog unificato di stampa e scelta documenti/etichette è ora associata esclusivamente al pulsante **Stampa** (`.js-order-action-print`).
+  - Riorganizzata la griglia delle azioni della tabella con layout orizzontale compatto a 3 pulsanti (Vedi ordine, Stampa, Esporta).
+
+### 1.4.105
+
+- **Riconoscimento Avanzato Contrassegno (`PrintPdfAddress.php`)**:
+  - Estesa la funzione `isCashOnDelivery()` per analizzare sia l'oggetto `Order` che i dati restituiti da `$orderData` / `$invoice`.
+  - Aggiunti controlli sulle spese contrassegno (`fees`), moduli aggiuntivi (`mppaymentswithfees`, `cashondeliverywithfee`) e parole chiave dinamiche (`contrassegno`, `cash on delivery`, `cod`, `alla consegna`, `contanti alla consegna`).
+
+### 1.4.104
+
+- **Abbassamento 1 cm Sezione Ordine e Indirizzo (`PrintPdfAddress.php`)**:
+  - Traslati verso il basso di 10 mm (1 cm) i box Numero Ordine, Progressivo Copia ed i Dati Indirizzo, lasciando invariata la posizione in basso di Telefono, Codice a Barre e Contrassegno.
+
+### 1.4.103
+
+- **Centratura Indirizzo, Font Ingrandito e Box Telefono sopra Barcode (`PrintPdfAddress.php`)**:
+  - Centrate tutte le righe dell'indirizzo (Via, Cap - Città - Provincia, Nazione) con font ingrandito a 13pt.
+  - Inserito il numero di telefono in un box rettangolare dedicato con bordo posizionato direttamente sopra il codice a barre a destra.
+
+### 1.4.102
+
+- **Garantita Singola Pagina Rigida per Copia Etichetta (`PrintPdfAddress.php`)**:
+  - Disabilitata l'AutoPageBreak di TCPDF (`SetAutoPageBreak(false, 0)`) ed introdotto un calcolo dinamico dell'altezza delle celle e dei font size in base allo spazio utile rimanente tra i box dell'ordine ed il footer.
+  - Ciascuna copia dell'etichetta viene stampata rigorosamente su una sola ed unica pagina PDF fisica.
+
+### 1.4.101
+
+- **Fix Spaziatura Logo, Font Indirizzo e Condizionale Contrassegno (`PrintPdfAddress.php`)**:
+  - Calcolata dinamicamente l'altezza reale del logo per posizionare i box Ordine e Copia completamente al di sotto, evitando qualsiasi sovrapposizione.
+  - Ingranditi i caratteri dell'indirizzo di spedizione a 11.5pt (e 12pt per il telefono) per una migliore visibilità.
+  - Aggiunta la funzione `isCashOnDelivery()` per fare in modo che il box **TOTALE DA PAGARE** compaia esclusivamente sugli ordini pagati in contrassegno.
+
+### 1.4.100
+
+- **Restyling Completo Stampa Etichetta Spedizione (`PrintPdfAddress.php`)**:
+  - Riscritto il layout PDF dell'etichetta indirizzo per rispecchiare fedelmente l'immagine fornita.
+  - Inseriti logo centrato in alto, box bordati per ID Ordine e Numero Copia, intestatario centrato (`COMPANY` + `NOME E COGNOME`), indirizzo completo in maiuscolo, nazione e telefono.
+  - Inserito il footer con box bordato **TOTALE DA PAGARE** a sinistra e **Codice a barre (Code128)** con numerazione progressiva a destra.
+
+### 1.4.99
+
+- **Posizionamento Campo Location/Ubicazione in Rosso Sotto la Combinazione**:
+  - Aggiunto il recupero automatico del campo `location` (ubicazione del prodotto/combinazione) da `StockAvailable` e DB in `ExportManager.php`.
+  - Aggiornato `PdfOrderBody.php` per posizionare il campo `location` in **rosso** sotto la combinazione/varianti (stampata in **blu**) nella colonna RIFERIMENTO della tabella prodotti del PDF.
+
+### 1.4.98
+
+- **Correzione Completa Logica di Stampa PDF Documento Ordine**:
+  - Risolto un bug nell'estrazione dei dati dove `orderData['invoice']` valutava a vuoto. Normalizzati i dati in `PrintManager.php` per garantire il popolamento completo di Header, Indirizzi, Info Cliente e Totali.
+  - Implementato in `PdfOrderBody.php` il rendering completo della tabella prodotti (Immagine, Riferimento, Ubicazione Magazzino in rosso, Attributi in blu, Nome Prodotto, Qta in blu, Magazzino in rosso, Stato Verifica ARR e Prezzo unitario).
+  - Aggiunto il badge rosso **`V`** di fianco al codice cliente (`DL...`) quando la fattura è richiesta.
+
+### 1.4.97
+
+- **Fix Caricamento Assets & Listener Globale Etichette Ordini (`.js-order-action-label`)**:
+  - Risolto un problema per cui `MpPrintDialog.js` non veniva caricato nelle pagine admin del controller del modulo `AdminMpCustomerInvoice`.
+  - Inserito in `MpPrintDialog.js` un event listener delegato sul `document` per intercettare automaticamente tutti i click sui pulsanti `.js-order-action-label` e `.js-order-action-print` ovunque si trovino.
+  - Perfezionata l'estrazione sicura di `data-order-id` sia via jQuery che via DOM dataset.
+
+### 1.4.96
+
+- **Estrapolazione Componente Standalone `MpPrintDialog` (`MpPrintDialog.js`)**:
+  - Estrapolata la gestione del modale di stampa e dell'esecuzione delle chiamate AJAX in una classe JS autonoma e riusabile `MpPrintDialog` in `views/assets/js/admin/MpPrintDialog.js`.
+  - Inclusione automatica del componente tramite `hookActionAdminControllerSetMedia` in `mpcustomerinvoice.php`.
+  - Aggiornati `adminOrderExportHelper.js` e `adminTableOrders.js` per delegare l'apertura e la stampa a `MpPrintDialog`.
+
+### 1.4.95
+
+- **Eliminazione Codice Ridondante & Centralizzazione Modale Stampa**:
+  - Rimossi tutti i metodi duplicati relativi ai dialog (`getDialog`, `openActionDialog`, `buildDialogBody`, `handleDialogSubmit`) da `adminTableOrders.js`.
+  - Centralizzata l'intera gestione del modale unificato `openPrintDialog` e dell'esecuzione delle chiamate di stampa in `AdminOrderExportHelper` (`adminOrderExportHelper.js`), riutilizzabile ovunque nel backoffice.
+
+### 1.4.94
+
+- **Allineamento Totale Modale Stampa Documenti ("Stampa documento")**:
+  - Modificato sia `adminOrderExportHelper.js` che `adminTableOrders.js` per mostrare unicamente il modale unificato intitolato "Stampa documento".
+  - Opzioni disponibili: Ordine, Fattura, Spedizione, Etichetta Indirizzo e Segnacollo Bartolini.
+  - Visualizzazione dinamica del selettore Copie per le opzioni etichetta (Indirizzi / Segnacollo BRT).
+
+### 1.4.93
+
+- **Integrazione "Segnacollo Bartolini" & Modale Stampa Unificato**:
+  - Aggiunta la voce "Segnacollo Bartolini" (`brt`) nel modale di stampa unificato `openPrintDialog` in `adminOrderExportHelper.js` (con visualizzazione dinamica del selettore Copie per etichette indirizzi e segnacollo BRT).
+  - Rafforzato l'aggancio di `window.AdminOrderExportHelper` in `adminTableOrders.js` per garantire l'apertura del modale unificato al click sul pulsante `.js-order-action-label` dell'elenco ordini.
+
+### 1.4.92
+
+- **Uniformazione Azione Pulsante Etichetta `.js-order-action-label`**:
+  - Il pulsante etichetta nell'elenco ordini (`adminTableOrders.js`) invoca ora `AdminOrderExportHelper.openPrintDialog(orderId)`, condividendo esattamente lo stesso modale di stampa dinamico (con selezione Ordine, Fattura, Spedizione, Etichetta Indirizzo e numero copie) utilizzato dal pulsante "Stampe" nella pagina di dettaglio ordine.
+
 ### 1.4.91
 
 - **Fix Blocco Popup del Browser nella Stampa PDF (`executePrint`)**:

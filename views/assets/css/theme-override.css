@@ -230,3 +230,19 @@ a:focus {
 .order-action-dialog .dialog-suboption {
     margin: 8px 0 0 24px !important;
 }
+
+/* ========================================
+   NASCONDI PULSANTI STAMPA / FATTURA NATIVI ORDINE
+   ======================================== */
+.js-print-order-view-page,
+button.js-print-order-view-page,
+a.js-print-order-view-page,
+[class*="js-print-order-view-page"],
+[data-role="view-invoice"],
+a[data-role="view-invoice"],
+button[data-role="view-invoice"],
+[data-role="view-delivery-slip"],
+a[data-role="view-delivery-slip"],
+button[data-role="view-delivery-slip"] {
+    display: none !important;
+}

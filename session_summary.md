@@ -185,8 +185,115 @@ This document summarizes the changes, logic, and configurations implemented for 
 - Fixed silent popup blocking by Chrome/Firefox/Safari when calling `window.open()` after async `await fetch()` in [adminOrderExportHelper.js](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/adminOrderExportHelper.js).
 - `executePrint` now opens a target tab (`about:blank`) immediately upon user click/submit, and updates its `location.href` to the PDF `Blob` URL once `fetch` completes, cleanly bypassing popup blockers.
 
+### Y. Unify Order List Label Action Button (`.js-order-action-label`) (v1.4.92)
+
+- Updated `.js-order-action-label` click handler in [adminTableOrders.js](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/adminTableOrders.js) to trigger `AdminOrderExportHelper.openPrintDialog(orderId)`.
+- The label button in the order list now shares the exact same print dialog (Order, Invoice, Delivery, Address Label + copies input) as the "Stampe" button on the order detail page.
+
+### Z. Add BRT Label Option & Robust Dialog Trigger (v1.4.93)
+
+- Added "Segnacollo Bartolini" (`brt`) radio option to `openPrintDialog` in [adminOrderExportHelper.js](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/adminOrderExportHelper.js) (showing copies input when either `address` or `brt` is selected).
+- Strengthened `window.AdminOrderExportHelper` binding in [adminTableOrders.js](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/adminTableOrders.js) to ensure `.js-order-action-label` in order list opens the unified print dialog reliably.
+
+### AA. Complete Unification of "Stampa documento" Modal (v1.4.94)
+
+- Replaced old dialog template in [adminTableOrders.js](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/adminTableOrders.js) with the exact unified layout (2nd image).
+- Unified title to **"Stampa documento"** with options: Ordine, Fattura, Spedizione, Etichetta Indirizzo, Segnacollo Bartolini.
+- Dynamic toggle for copies selector container when either Address Label or Bartolini is selected.
+
+### BB. Code Refactoring & Centralized Helper (v1.4.95)
+
+- Completely removed duplicated dialog logic (`getDialog`, `openActionDialog`, `buildDialogBody`, `handleDialogSubmit`) from [adminTableOrders.js](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/adminTableOrders.js).
+- Centralized all print and export dialog rendering and execution in the standalone, reusable helper class `AdminOrderExportHelper` in [adminOrderExportHelper.js](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/adminOrderExportHelper.js).
+
+### CC. Standalone Component MpPrintDialog.js (v1.4.96)
+
+- Extracted the print modal rendering, event handling, popup blocker bypass, and AJAX fetch logic into an independent JS class [MpPrintDialog.js](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/MpPrintDialog.js).
+- Added `MpPrintDialog.js` inclusion in `hookActionAdminControllerSetMedia` of [mpcustomerinvoice.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/mpcustomerinvoice.php).
+- Delegated print triggers in [adminOrderExportHelper.js](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/adminOrderExportHelper.js) and [adminTableOrders.js](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/adminTableOrders.js) to `MpPrintDialog.open(idOrder)`.
+
+### DD. Fix Asset Inclusion & Global Label Click Listener (v1.4.97)
+
+- Added `AdminMpCustomerInvoice` controller to the JS asset loading rule in [mpcustomerinvoice.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/mpcustomerinvoice.php).
+- Added automatic global delegated click listener on `document` inside [MpPrintDialog.js](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/MpPrintDialog.js) for `.js-order-action-label` and `.js-order-action-print`.
+- Enhanced safe `orderId` extraction (`data-order-id`, `dataset.orderId`, jQuery `.data()`) in [adminTableOrders.js](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/adminTableOrders.js).
+
+### EE. Order PDF Render & Data Fix (v1.4.98)
+
+- Normalized `orderData` array structure in [PrintManager.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/src/PrintPdf/PrintManager.php) so that all child components receive populated data (`invoice`, `invoices`, etc.).
+- Fixed data mapping in [PdfHeaderRight.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/src/PrintPdf/Components/PdfHeaderRight.php), [PdfOrderAddresses.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/src/PrintPdf/Components/PdfOrderAddresses.php), and [PdfOrderInfo.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/src/PrintPdf/Components/PdfOrderInfo.php) (including red **`V`** badge for requested invoices).
+- Implemented full products table rendering in [PdfOrderBody.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/src/PrintPdf/Components/PdfOrderBody.php) with product image, reference, red warehouse location, blue attributes, uppercase name, blue QTY, red MAG stock, verification status, and unit price.
+
+### FF. Product Location Under Attributes in Red (v1.4.99)
+
+- Implemented dynamic location extraction from `StockAvailable` and `ps_stock_available` database table in [ExportManager.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/src/Export/ExportManager.php).
+- Updated RIFERIMENTO column rendering order in [PdfOrderBody.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/src/PrintPdf/Components/PdfOrderBody.php) to print the reference (bold black), attribute combinations (bold blue), and the location (bold red) placed directly below the combinations.
+
+### GG. Shipping Address Label Exact PDF Restyle (v1.4.100)
+
+- Completely redesigned [PrintPdfAddress.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/src/PrintPdf/PrintPdfAddress.php) to match the exact physical label layout from the user's photo.
+- Layout elements:
+  - Top centered logo.
+  - Bordered box for Order ID (left) and Copy number (right).
+  - Centered recipient line (`COMPANY` + `FIRSTNAME LASTNAME`, deduped if identical).
+  - Upper-case address, city line (`CAP - CITY - PROVINCE`), country and phone.
+  - Bottom left: Bordered box for **TOTALE DA PAGARE** with amount.
+  - Bottom right: **1D Barcode (Code 128)** with progressive order label text (`<id_order>-<copy>`).
+
+### HH. Address Label Spacing, Font Size & COD Conditional Fix (v1.4.101)
+
+- In [PrintPdfAddress.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/src/PrintPdf/PrintPdfAddress.php):
+  - Fixed logo overlapping: dynamically calculated exact proportional height of the logo image (`$logoH`) so that Order ID & Copy boxes are placed cleanly below the logo.
+  - Increased address font size to `11.5pt` (and phone number to `12pt`) for improved legibility.
+  - Implemented `isCashOnDelivery()` check: **TOTALE DA PAGARE** box now appears **only** when the payment method is Cash on Delivery / Contrassegno.
+
+### II. Strict Single Page Per Label Copy Fix (v1.4.102)
+
+- In [PrintPdfAddress.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/src/PrintPdf/PrintPdfAddress.php):
+  - Completely disabled TCPDF automatic page breaks (`$this->SetAutoPageBreak(false, 0)`).
+  - Dynamically budgeted vertical space (`$maxCenterH`) between top boxes and fixed bottom footer to auto-scale cell line height (`$lineH`) and font sizes (`$recipientFontSize`, `$addressFontSize`).
+  - Ensured that each copy of an address label fits strictly onto 1 single physical page.
+
+### JJ. Centered Address, Larger Font & Phone Box Above Barcode (v1.4.103)
+
+- In [PrintPdfAddress.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/src/PrintPdf/PrintPdfAddress.php):
+  - Centered all address lines (Address 1/2, CAP - City - Province, Country) and increased font size to `13pt`.
+  - Moved the phone number into a dedicated bordered rectangle box positioned directly above the Code128 barcode on the right.
+
+### KK. Shift 1cm Down for Order Boxes & Address Data (v1.4.104)
+
+- In [PrintPdfAddress.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/src/PrintPdf/PrintPdfAddress.php):
+  - Shifted down by `10mm` (1 cm) the Order ID box, Copy progress box, and all address data.
+  - Kept fixed in their original bottom positions: Phone number box, Code128 Barcode, and Contrassegno box.
+
+### LL. Robust Cash-On-Delivery Detection Fix (v1.4.105)
+
+- In [PrintPdfAddress.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/src/PrintPdf/PrintPdfAddress.php):
+  - Enhanced `isCashOnDelivery()` to inspect both `$this->order` and `$this->orderData['invoice']`.
+  - Added checks for extra COD fee amounts (`fees`), additional modules (`mppaymentswithfees`, `cashondeliverywithfee`), and fuzzy keyword matching (`contrassegno`, `cash on delivery`, `cod`, `alla consegna`, `contanti alla consegna`).
+
+### MM. Remove Redundant Label Action Button & Consolidate Print Action (v1.4.106)
+
+- In [adminTableOrders.js](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/adminTableOrders.js):
+  - Removed `.js-order-action-label` button from the table action formatter.
+  - Re-arranged the action buttons into a clean 3-item row layout: **Vedi ordine** (`visibility`), **Stampa** (`.js-order-action-print`), and **Esporta** (`.js-order-action-export`).
+  - Clicking **Stampa** (`.js-order-action-print`) triggers `MpPrintDialog.open(orderId)` which manages all document and label print options.
+
+### NN. Hide Native Order View Print Button (`.js-print-order-view-page`) (v1.4.107)
+
+- Added CSS override in [theme-override.css](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/css/theme-override.css) to hide `.js-print-order-view-page` with `display: none !important`.
+- Added dynamic DOM enforcement in [MpPrintDialog.js](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/MpPrintDialog.js) to ensure `.js-print-order-view-page` remains hidden.
+
+### OO. Hide Native View Invoice Button (`[data-role="view-invoice"]`) (v1.4.108)
+
+- Updated [theme-override.css](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/css/theme-override.css) and [MpPrintDialog.js](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/MpPrintDialog.js) to hide `[data-role="view-invoice"]` alongside `.js-print-order-view-page`.
+
+### PP. Hide Native View Delivery Slip Button (`[data-role="view-delivery-slip"]`) (v1.4.109)
+
+- Updated [theme-override.css](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/css/theme-override.css) and [MpPrintDialog.js](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/MpPrintDialog.js) to hide `[data-role="view-delivery-slip"]` alongside `[data-role="view-invoice"]` and `.js-print-order-view-page`.
+
 ## 3. Module Version Tracking
-* **Latest Stable Version**: `1.4.91`
+* **Latest Stable Version**: `1.4.109`
 - Files updated with version bump:
     - `mpcustomerinvoice.php`
     - `composer.json`

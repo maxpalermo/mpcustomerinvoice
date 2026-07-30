@@ -43,7 +43,7 @@ class MpCustomerInvoice extends Module implements WidgetInterface
     {
         $this->name = 'mpcustomerinvoice';
         $this->tab = 'administration';
-        $this->version = '1.4.91';
+        $this->version = '1.4.113';
         $this->author = 'Massimiliano Palermo';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -820,8 +820,13 @@ class MpCustomerInvoice extends Module implements WidgetInterface
         $baseCss = $this->getLocalPath() . 'views/assets/css/';
 
         $adminControllerUrl = $this->context->link->getAdminLink('AdminMpCustomerInvoice');
+        $isBrtModuleActive = (bool) (Module::isInstalled('mpbrtrestapishipments') && Module::isEnabled('mpbrtrestapishipments'));
+        $brtAdminUrl = $isBrtModuleActive ? $this->context->link->getAdminLink('AdminMpBrtRestApiShipments') : '';
+
         Media::addJsDef([
             'mpCustomerInvoiceAdminUrl' => $adminControllerUrl,
+            'isBrtModuleActive' => $isBrtModuleActive,
+            'brtAdminUrl' => $brtAdminUrl,
         ]);
 
         $isAdminCustomerPage = (
@@ -835,13 +840,21 @@ class MpCustomerInvoice extends Module implements WidgetInterface
             $this->context->controller->addJS("{$baseJs}admin/jobLinkManager.js");
         }
 
+        $isModuleAdminController = (
+            $controller === 'AdminMpCustomerInvoice'
+            || strpos($requestUri, 'AdminMpCustomerInvoice') !== false
+            || strpos($requestUri, 'mpcustomerinvoice') !== false
+        );
+
         $isAdminOrderPage = (
             $controller === 'adminorders'
             || strpos($requestUri, '/orders/') !== false
             || strpos($requestUri, 'admin_orders') !== false
+            || $isModuleAdminController
         );
 
         if ($isAdminOrderPage) {
+            $this->context->controller->addJS("{$baseJs}admin/MpPrintDialog.js");
             $this->context->controller->addJS("{$baseJs}admin/adminOrderExportHelper.js");
             $this->context->controller->addCSS("{$baseCss}/theme-override.css");
         }
@@ -902,63 +915,6 @@ class MpCustomerInvoice extends Module implements WidgetInterface
         return 0;
     }
 
-    protected function handleAutomaticDocumentGeneration(array $params)
-    {
-        $rawTriggers = Configuration::get('MPCUSTOMERINVOICE_ORDER_STATE_TRIGGER');
-        $triggers = [];
-        if ($rawTriggers) {
-            $decoded = json_decode($rawTriggers, true);
-            if (is_array($decoded)) {
-                $triggers = array_map('intval', $decoded);
-            } elseif (is_numeric($rawTriggers)) {
-                $triggers = [(int) $rawTriggers];
-            }
-        }
-
-        if (empty($triggers)) {
-            return;
-        }
-
-        $newOrderStatus = $params['newOrderStatus'] ?? null;
-        $idOrderState = (int) ($newOrderStatus->id ?? $params['id_order_state'] ?? 0);
-        $idOrder = (int) ($params['id_order'] ?? 0);
-
-        if (!in_array($idOrderState, $triggers, true) || $idOrder <= 0) {
-            return;
-        }
-
-        $order = new Order($idOrder);
-        if (!Validate::isLoadedObject($order)) {
-            return;
-        }
-
-        $createBoth = (int) Configuration::get('MPCUSTOMERINVOICE_CREATE_BOTH') === 1;
-
-        $customerInvoice = new ModelCustomerInvoice((int) $order->id_customer);
-        $isInvoiceRequested = (int) $customerInvoice->invoice_requested === 1
-            || !empty($customerInvoice->vat_number)
-            || !empty($customerInvoice->dni);
-
-        if ($createBoth) {
-            if (!$order->hasInvoice()) {
-                $order->setInvoice(true);
-            }
-            if (empty($order->delivery_number)) {
-                $order->setDeliverySlip();
-            }
-        } else {
-            if ($isInvoiceRequested) {
-                if (!$order->hasInvoice()) {
-                    $order->setInvoice(true);
-                }
-            } else {
-                if (empty($order->delivery_number)) {
-                    $order->setDeliverySlip();
-                }
-            }
-        }
-    }
-
     private function formatOrderReference(string $pattern, int $idOrder): string
     {
         $reference = str_replace('{$year}', date('Y'), $pattern);
@@ -1002,15 +958,11 @@ class MpCustomerInvoice extends Module implements WidgetInterface
 
     public function hookActionOrderStatusUpdate($params)
     {
-        $restriction = new \MpSoft\MpCustomerInvoice\Helpers\GenerateDocumentRestrictions();
-        $restriction->hookActionOrderStatusUpdate($params);
-        $this->handleAutomaticDocumentGeneration($params);
+        //nothing;
     }
 
     public function hookActionOrderStatusPostUpdate($params)
     {
-        $restriction = new \MpSoft\MpCustomerInvoice\Helpers\GenerateDocumentRestrictions();
-        $restriction->hookActionOrderStatusPostUpdate($params);
-        $this->handleAutomaticDocumentGeneration($params);
+        \MpSoft\MpCustomerInvoice\Helpers\GenerateDocumentRestrictions::handleAutomaticDocumentGeneration($params);
     }
 }

@@ -344,6 +344,36 @@ abstract class ExportManager
             $productNameQuery = "SELECT COALESCE(`name`, '--') FROM {$table} WHERE id_product = {$productId} AND id_lang = {$idLang}";
             $productName = \Db::getInstance()->getValue($productNameQuery);
 
+            // Location / Ubicazione prodotto
+            $location = '';
+            $idProd = (int) $product['product_id'];
+            $idAttr = (int) $product['product_attribute_id'];
+
+            if (class_exists('\StockAvailable')) {
+                $location = \StockAvailable::getLocation($idProd, $idAttr);
+                if (empty($location) && $idAttr > 0) {
+                    $location = \StockAvailable::getLocation($idProd, 0);
+                }
+            }
+
+            if (empty($location) && !empty($product['location'])) {
+                $location = $product['location'];
+            }
+
+            if (empty($location)) {
+                $sqlLoc = 'SELECT location FROM ' . _DB_PREFIX_ . 'stock_available WHERE id_product = ' . $idProd . ' AND id_product_attribute = ' . $idAttr;
+                $location = (string) \Db::getInstance()->getValue($sqlLoc);
+                if (empty($location) && $idAttr > 0) {
+                    $sqlLoc = 'SELECT location FROM ' . _DB_PREFIX_ . 'stock_available WHERE id_product = ' . $idProd . ' AND id_product_attribute = 0';
+                    $location = (string) \Db::getInstance()->getValue($sqlLoc);
+                }
+            }
+
+            if (empty($location)) {
+                $sqlLocProd = 'SELECT location FROM ' . _DB_PREFIX_ . 'product WHERE id_product = ' . $idProd;
+                $location = (string) \Db::getInstance()->getValue($sqlLocProd);
+            }
+
             $rows[] = [
                 'ean13' => (string) $product['ean13'],
                 'reference' => (string) $product['reference'],
@@ -379,7 +409,8 @@ abstract class ExportManager
                 'image_url' => $imageUrl,
                 'customization' => $customizationData,
                 'attributes' => !empty($attributes) ? $attributes : '',
-                'product_position' => ''
+                'location' => (string) $location,
+                'product_position' => (string) $location
             ];
         }
 

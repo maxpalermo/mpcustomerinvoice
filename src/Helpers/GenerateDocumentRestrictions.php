@@ -23,228 +23,234 @@ namespace MpSoft\MpCustomerInvoice\Helpers;
 use \Order;
 use \Validate;
 use \Db;
+use \Configuration;
 use \OrderInvoice;
 use \PrestaShopLogger;
+use MpSoft\MpCustomerInvoice\Models\ModelCustomerInvoice;
 
 class GenerateDocumentRestrictions
 {
-    /**
-     * Intercept order status update BEFORE PrestaShop generates documents.
-     * Overrides $params['newOrderStatus'] flags to ensure only Invoice OR Delivery is generated, never both.
-     *
-     * @param array $params
-     */
-    public function hookActionOrderStatusUpdate($params)
-    {
-        if (empty($params['id_order']) || empty($params['newOrderStatus'])) {
-            return;
-        }
-
-        $idOrder = (int) $params['id_order'];
-        $newOrderStatus = $params['newOrderStatus'];
-
-        $order = new Order($idOrder);
-        if (!Validate::isLoadedObject($order)) {
-            return;
-        }
-
-        // If status triggers neither invoice nor delivery, return
-        if (!$newOrderStatus->invoice && !$newOrderStatus->delivery) {
-            return;
-        }
-
-        $isInvoiceRequired = $this->isInvoiceRequired($order->id_customer);
-
-        if ($isInvoiceRequired) {
-            $newOrderStatus->invoice = 1;
-            $newOrderStatus->delivery = 0;
-        } else {
-            $newOrderStatus->invoice = 0;
-            $newOrderStatus->delivery = 1;
-        }
-    }
-
-    /**
-     * Intercept order status update AFTER status is changed.
-     * Guarantees strict mutual exclusion on order_invoice records for the order.
-     *
-     * @param array $params
-     */
-    public function hookActionOrderStatusPostUpdate($params)
-    {
-        if (empty($params['id_order']) || empty($params['newOrderStatus'])) {
-            return;
-        }
-
-        $idOrder = (int) $params['id_order'];
-        $newOrderStatus = $params['newOrderStatus'];
-
-        $order = new Order($idOrder);
-        if (!Validate::isLoadedObject($order)) {
-            return;
-        }
-
-        if (!$newOrderStatus->invoice && !$newOrderStatus->delivery && !$order->hasInvoice() && !$order->hasDelivery()) {
-            return;
-        }
-
-        $isInvoiceRequired = $this->isInvoiceRequired($order->id_customer);
-        $invoices = $order->getInvoicesCollection();
-
-        if ($isInvoiceRequired) {
-            // Invoice required: number > 0, delivery_number = 0
-            if ($invoices->count() == 0) {
-                $this->createInvoiceOnly($order);
-            } else {
-                foreach ($invoices as $orderInvoice) {
-                    $changed = false;
-                    if ((int) $orderInvoice->number <= 0) {
-                        $orderInvoice->number = $orderInvoice->getNextInvoiceNumber();
-                        if (empty($orderInvoice->invoice_date) || $orderInvoice->invoice_date === '0000-00-00 00:00:00') {
-                            $orderInvoice->invoice_date = date('Y-m-d H:i:s');
-                        }
-                        $changed = true;
-                    }
-                    if ((int) $orderInvoice->delivery_number > 0) {
-                        $orderInvoice->delivery_number = 0;
-                        $orderInvoice->delivery_date = '0000-00-00 00:00:00';
-                        $changed = true;
-                    }
-                    if ($changed) {
-                        $orderInvoice->save();
-                    }
-                }
-            }
-        } else {
-            // Delivery required: delivery_number > 0, number = 0
-            if ($invoices->count() == 0) {
-                $this->createDeliveryOnly($order);
-            } else {
-                foreach ($invoices as $orderInvoice) {
-                    $changed = false;
-                    if ((int) $orderInvoice->delivery_number <= 0) {
-                        $orderInvoice->delivery_number = $orderInvoice->getNextDeliveryNumber();
-                        if (empty($orderInvoice->delivery_date) || $orderInvoice->delivery_date === '0000-00-00 00:00:00') {
-                            $orderInvoice->delivery_date = date('Y-m-d H:i:s');
-                        }
-                        $changed = true;
-                    }
-                    if ((int) $orderInvoice->number > 0) {
-                        $orderInvoice->number = 0;
-                        $orderInvoice->invoice_date = '0000-00-00 00:00:00';
-                        $changed = true;
-                    }
-                    if ($changed) {
-                        $orderInvoice->save();
-                    }
-                }
-            }
-        }
-    }
-
     /**
      * Check if customer exists in customer_invoice and has non-empty vat_number OR dni.
      *
      * @param int $idCustomer
      * @return bool
      */
-    public function isInvoiceRequired($idCustomer)
+    public static function isInvoiceRequired($idCustomer)
     {
         if (empty($idCustomer)) {
             return false;
         }
+        $table = _DB_PREFIX_ . 'customer_invoice';
+        $idCustomer = (int) $idCustomer;
 
-        $sql = 'SELECT `vat_number`, `dni` FROM `' . _DB_PREFIX_ . 'customer_invoice` WHERE `id_customer` = ' . (int) $idCustomer;
+        $sql = "
+            SELECT
+                `company`, 
+                `type`, 
+                `invoice_requested`, 
+                `vat_number`, 
+                `dni`,
+                `id_address_invoice`
+            FROM 
+                {$table} 
+            WHERE 
+                `id_customer` = {$idCustomer}
+        ";
+
         $row = Db::getInstance()->getRow($sql);
 
         if (!$row) {
             return false;
         }
 
-        $hasVat = !empty($row['vat_number']) && trim((string) $row['vat_number']) !== '';
-        $hasDni = !empty($row['dni']) && trim((string) $row['dni']) !== '';
-
-        return $hasVat || $hasDni;
-    }
-
-    /**
-     * Create ONLY invoice for order.
-     *
-     * @param Order $order
-     */
-    private function createInvoiceOnly(Order $order)
-    {
-        $order_invoice = new OrderInvoice();
-        $order_invoice->id_order = $order->id;
-        $order_invoice->number = $order_invoice->getNextInvoiceNumber();
-        $order_invoice->delivery_number = 0;
-        $order_invoice->invoice_date = date('Y-m-d H:i:s');
-        $order_invoice->delivery_date = '0000-00-00 00:00:00';
-        $order_invoice->total_paid_tax_incl = $order->total_paid_tax_incl;
-        $order_invoice->total_paid_tax_excl = $order->total_paid_tax_excl;
-        $order_invoice->total_products = $order->total_products;
-        $order_invoice->total_products_wt = $order->total_products_wt;
-        $order_invoice->total_shipping_tax_incl = $order->total_shipping_tax_incl;
-        $order_invoice->total_shipping_tax_excl = $order->total_shipping_tax_excl;
-        $order_invoice->total_discount_tax_excl = $order->total_discounts_tax_excl;
-        $order_invoice->total_discount_tax_incl = $order->total_discounts_tax_incl;
-        $order_invoice->total_wrapping_tax_excl = $order->total_wrapping_tax_excl;
-        $order_invoice->total_wrapping_tax_incl = $order->total_wrapping_tax_incl;
-
-        $order_invoice->add();
-
-        $order->invoice_date = $order_invoice->invoice_date;
-        $order->save();
-
-        $orderDetails = $order->getProductsDetail();
-        foreach ($orderDetails as $detail) {
-            $order_invoice->addProduct($detail, $detail['product_quantity']);
+        if ($row['type'] === 'PRIVATO' && $row['invoice_requested']) {
+            $hasCompany = !empty($row['company']) && trim((string) $row['company']) !== '';
+            $hasDni = !empty($row['dni']) && trim((string) $row['dni']) !== '';
+            $hasIdAddressInvoice = (int) $row['id_address_invoice'];
+            return $hasCompany && $hasDni && $hasIdAddressInvoice;
         }
 
-        PrestaShopLogger::addLog(
-            sprintf('Fattura creata per ordine %d (GenerateDocumentRestrictions)', $order->id),
-            1,
-            null,
-            'Order',
-            $order->id
-        );
+        if ($row['type'] === 'PARTITA_IVA' && $row['invoice_requested']) {
+            $hasCompany = !empty($row['company']) && trim((string) $row['company']) !== '';
+            $hasVat = !empty($row['vat_number']) && trim((string) $row['vat_number']) !== '';
+            $hasIdAddressInvoice = (int) $row['id_address_invoice'];
+            return $hasCompany && $hasVat && $hasIdAddressInvoice;
+        }
+
+        if ($row['type'] === 'ENTE' && $row['invoice_requested']) {
+            $hasCompany = !empty($row['company']) && trim((string) $row['company']) !== '';
+            $hasDni = !empty($row['dni']) && trim((string) $row['dni']) !== '';
+            $hasIdAddressInvoice = (int) $row['id_address_invoice'];
+            return $hasCompany && $hasDni && $hasIdAddressInvoice;
+        }
+
+        return false;
     }
 
-    /**
-     * Create ONLY delivery for order.
-     *
-     * @param Order $order
-     */
-    private function createDeliveryOnly(Order $order)
+    public static function handleAutomaticDocumentGeneration(array $params)
     {
-        $order_invoice = new OrderInvoice();
-        $order_invoice->id_order = $order->id;
-        $order_invoice->number = 0;
-        $order_invoice->delivery_number = $order_invoice->getNextDeliveryNumber();
-        $order_invoice->invoice_date = '0000-00-00 00:00:00';
-        $order_invoice->delivery_date = date('Y-m-d H:i:s');
-        $order_invoice->total_paid_tax_incl = $order->total_paid_tax_incl;
-        $order_invoice->total_paid_tax_excl = $order->total_paid_tax_excl;
-        $order_invoice->total_products = $order->total_products;
-        $order_invoice->total_products_wt = $order->total_products_wt;
-        $order_invoice->total_shipping_tax_incl = $order->total_shipping_tax_incl;
-        $order_invoice->total_shipping_tax_excl = $order->total_shipping_tax_excl;
-        $order_invoice->total_discount_tax_excl = $order->total_discounts_tax_excl;
-        $order_invoice->total_discount_tax_incl = $order->total_discounts_tax_incl;
-        $order_invoice->total_wrapping_tax_excl = $order->total_wrapping_tax_excl;
-        $order_invoice->total_wrapping_tax_incl = $order->total_wrapping_tax_incl;
+        $createBoth = (int) Configuration::get('MPCUSTOMERINVOICE_CREATE_BOTH') === 1;
+        $newOrderStatus = $params['newOrderStatus'] ?? null;
+        $idOrderState = (int) ($newOrderStatus->id ?? $params['id_order_state'] ?? 0);
+        $idOrder = (int) ($params['id_order'] ?? 0);
 
-        $order_invoice->add();
+        PrestaShopLogger::addLog("hookActionOrderStatusPostUpdate: Generazione documenti per l'ordine {$idOrder}.");
 
-        $order->delivery_date = $order_invoice->delivery_date;
-        $order->save();
+        $rawTriggers = Configuration::get('MPCUSTOMERINVOICE_ORDER_STATE_TRIGGER');
+        $triggers = [];
+        if ($rawTriggers) {
+            $decoded = json_decode($rawTriggers, true);
+            if (is_array($decoded)) {
+                $triggers = array_map('intval', $decoded);
+            } elseif (is_numeric($rawTriggers)) {
+                $triggers = [(int) $rawTriggers];
+            }
+        }
 
-        PrestaShopLogger::addLog(
-            sprintf('Delivery creato per ordine %d (GenerateDocumentRestrictions)', $order->id),
-            1,
-            null,
-            'Order',
-            $order->id
-        );
+        if (empty($triggers)) {
+            return;
+        }
+
+        if (!in_array($idOrderState, $triggers, true) || $idOrder <= 0) {
+            PrestaShopLogger::addLog("hookActionOrderStatusPostUpdate: trigger or id_order non valido", 3, 0, 'Mpcustomerinvoice');
+            return;
+        }
+        $order = new Order($idOrder);
+        if (!Validate::isLoadedObject($order)) {
+            PrestaShopLogger::addLog("hookActionOrderStatusPostUpdate: Ordine {$idOrder} non validato", 3, 0, 'Mpcustomerinvoice');
+            return;
+        }
+        $isInvoiceRequired = self::isInvoiceRequired($order->id_customer);
+
+        if (!$order->hasInvoice()) {
+            $order->setInvoice(true);
+            PrestaShopLogger::addLog("Fattura per l'ordine {$idOrder} creata.");
+        }
+        if (empty($order->delivery_number)) {
+            $order->setDeliverySlip();
+            PrestaShopLogger::addLog("DDT per l'ordine {$idOrder} creato.");
+        }
+
+        if (!$createBoth) {
+            if ($isInvoiceRequired) {
+                PrestaShopLogger::addLog("Bisogna generare solo la fattura per l'ordine {$idOrder}. Semplice correzione del documento.");
+            } else {
+                PrestaShopLogger::addLog("Bisogna generare solo il DDT per l'ordine {$idOrder}. Semplice correzione del documento.");
+            }
+
+            $orderTable = Db::getFullTableName('orders');
+            $orderInvoiceTable = Db::getFullTableName('order_invoice');
+            if (!$createBoth && $isInvoiceRequired) {
+                PrestaShopLogger::addLog("Rimozione DDT per l'ordine {$idOrder}.");
+
+                $query = "
+                    UPDATE 
+                        {$orderTable} o
+                        INNER JOIN {$orderInvoiceTable} oi ON o.id_order = oi.id_order
+                    SET 
+                        o.delivery_number = 0, 
+                        o.delivery_date = null,
+                        oi.delivery_number=0,
+                        oi.delivery_date=null
+                    WHERE 
+                        o.id_order = {$idOrder}
+                ";
+                try {
+                    $result = Db::getInstance()->execute($query);
+                } catch (\Throwable $th) {
+                    PrestaShopLogger::addLog("Errore rimozione DDT per l'ordine {$idOrder}. Errore: {$th->getMessage()}");
+                    PrestaShopLogger::addLog("QUERY: {$query}");
+                    $result = false;
+                }
+                if ($result) {
+                    PrestaShopLogger::addLog("DDT per l'ordine {$idOrder} rimosso.");
+                }
+            }
+
+            if (!$createBoth && !$isInvoiceRequired) {
+                PrestaShopLogger::addLog("Rimozione fattura per l'ordine {$idOrder}.");
+
+                $query = "
+                    UPDATE 
+                        {$orderTable} o
+                        INNER JOIN {$orderInvoiceTable} oi ON o.id_order = oi.id_order
+                    SET 
+                        o.invoice_number = 0, 
+                        o.invoice_date = null,
+                        oi.number=0
+                    WHERE 
+                        o.id_order = {$idOrder}
+                ";
+                try {
+                    $result = Db::getInstance()->execute($query);
+                } catch (\Throwable $th) {
+                    PrestaShopLogger::addLog("Errore rimozione fattura per l'ordine {$idOrder}. Errore: {$th->getMessage()}");
+                    PrestaShopLogger::addLog("QUERY: {$query}");
+                    $result = false;
+                }
+                if ($result) {
+                    PrestaShopLogger::addLog("Fattura per l'ordine {$idOrder} rimossa.");
+                }
+            }
+        }
+    }
+
+    public static function checkCustomerInvoiceFields($id_customer)
+    {
+        $db = Db::getInstance();
+        $table = Db::getFullTableName('customer_invoice');
+        $id_customer = (int) $id_customer;
+
+        $sql = "
+            SELECT 
+                *
+            FROM 
+                {$table} 
+            WHERE 
+                `id_customer` = {$id_customer}
+        ";
+
+        $row = $db->getRow($sql);
+
+        if (!$row) {
+            return false;
+        }
+
+        if ($row['type'] === 'PRIVATO' && $row['invoice_requested']) {
+            return [
+                'requested_invoice' => (int) $row['requested_invoice'],
+                'company' => strlen(trim($row['company'])) > 0,
+                'dni' => strlen(trim($row['dni'])) > 0,
+                'address_invoice' => (int) $row['id_address_invoice'],
+                'is_foreign' => (int) $row['is_foreign'],
+            ];
+        }
+
+        if ($row['type'] === 'PARTITA_IVA' && $row['invoice_requested']) {
+            return [
+                'requested_invoice' => (int) $row['requested_invoice'],
+                'company' => strlen(trim($row['company'])) > 0,
+                'vat_number' => strlen(trim($row['vat_number'])) > 0,
+                'cuu' => strlen(trim($row['cuu'])) > 0,
+                'pec' => strlen(trim($row['pec'])) > 0,
+                'address_invoice' => (int) $row['id_address_invoice'],
+                'is_foreign' => (int) $row['is_foreign'],
+            ];
+        }
+
+        if ($row['type'] === 'ENTE' && $row['invoice_requested']) {
+            return [
+                'requested_invoice' => (int) $row['requested_invoice'],
+                'company' => strlen(trim($row['company'])) > 0,
+                'dni' => strlen(trim($row['vat_number'])) > 0,
+                'cig' => strlen(trim($row['cig'])) > 0,
+                'cup' => strlen(trim($row['cup'])) > 0,
+                'address_invoice' => (int) $row['id_address_invoice'],
+                'is_foreign' => (int) $row['is_foreign'],
+            ];
+        }
+
+        return false;
     }
 }
