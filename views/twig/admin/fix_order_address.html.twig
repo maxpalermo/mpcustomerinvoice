@@ -1,0 +1,207 @@
+{% extends 'admin/templateAdminPage.html.twig' %}
+
+{% block content %}
+	<div class="container-fluid p-3">
+		{# Banner di Avviso Principale #}
+		<div class="alert alert-danger d-flex align-items-center mb-4 p-3 shadow-sm" role="alert" style="border-left: 5px solid #dc3545;">
+			<i class="material-icons mr-3" style="font-size: 36px; color: #dc3545;">warning</i>
+			<div>
+				<h4 class="alert-heading mb-1 font-weight-bold" style="color: #721c24;">Anomalia Indirizzi Ordine #{{ order.id }}</h4>
+				<p class="mb-0">
+					Impossibile visualizzare la scheda dell'ordine poiché uno o entrambi gli indirizzi (spedizione/fatturazione) risultano non validi, rimossi o corrotti nel database.
+					Seleziona o crea un indirizzo valido per consentire a PrestaShop di caricare l'ordine senza errori.
+				</p>
+			</div>
+		</div>
+
+		<div class="row">
+			{# Colonna Sinistra: Riepilogo Ordine e Stato Indirizzi #}
+			<div class="col-12 col-lg-5">
+				{# Card Dati Ordine #}
+				<div class="card mb-4 shadow-sm">
+					<div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+						<h3 class="card-header-title mb-0 font-weight-bold" style="color: #fff;">
+							<i class="material-icons mr-1">shopping_cart</i>
+							Dati Ordine #{{ order.id }}
+						</h3>
+						<span class="badge badge-light text-primary font-weight-bold">{{ order.reference }}</span>
+					</div>
+					<div class="card-body">
+						<table class="table table-sm table-borderless mb-0">
+							<tr>
+								<th class="text-muted" style="width: 35%;">ID Ordine:</th>
+								<td><strong>#{{ order.id }}</strong></td>
+							</tr>
+							<tr>
+								<th class="text-muted">Riferimento:</th>
+								<td><code>{{ order.reference }}</code></td>
+							</tr>
+							<tr>
+								<th class="text-muted">Cliente:</th>
+								<td>
+									<strong>{{ order.customer_name }}</strong>
+									{% if order.customer_email %}
+										<br><small class="text-muted"><i class="material-icons" style="font-size:12px">email</i> {{ order.customer_email }}</small>
+									{% endif %}
+								</td>
+							</tr>
+							<tr>
+								<th class="text-muted">Data Ordine:</th>
+								<td>{{ order.date_add }}</td>
+							</tr>
+							<tr>
+								<th class="text-muted">Totale Ordine:</th>
+								<td><strong class="text-success" style="font-size: 1.1rem;">€ {{ order.total }}</strong></td>
+							</tr>
+						</table>
+					</div>
+				</div>
+
+				{# Card Stato Attuale Indirizzi #}
+				<div class="card mb-4 shadow-sm">
+					<div class="card-header d-flex align-items-center">
+						<h3 class="card-header-title mb-0 font-weight-bold">
+							<i class="material-icons mr-1">location_on</i>
+							Stato Attuale Indirizzi
+						</h3>
+					</div>
+					<div class="card-body">
+						{# Indirizzo Spedizione #}
+						<div class="p-3 mb-3 border rounded {% if not delivery_info.is_valid %}bg-light-danger border-danger{% else %}bg-light-success border-success{% endif %}">
+							<div class="d-flex justify-content-between align-items-center mb-2">
+								<strong class="text-uppercase" style="font-size: 0.85rem;">
+									<i class="material-icons mr-1" style="font-size: 16px;">local_shipping</i>
+									Indirizzo di Spedizione
+								</strong>
+								{% if delivery_info.is_valid %}
+									<span class="badge badge-success px-2 py-1">
+										<i class="material-icons" style="font-size: 12px;">check_circle</i> Valido
+									</span>
+								{% else %}
+									<span class="badge badge-danger px-2 py-1">
+										<i class="material-icons" style="font-size: 12px;">error</i> NON VALIDO
+									</span>
+								{% endif %}
+							</div>
+							<div class="text-secondary small">
+								{{ delivery_info.formatted }}
+							</div>
+						</div>
+
+						{# Indirizzo Fatturazione #}
+						<div class="p-3 border rounded {% if not invoice_info.is_valid %}bg-light-danger border-danger{% else %}bg-light-success border-success{% endif %}">
+							<div class="d-flex justify-content-between align-items-center mb-2">
+								<strong class="text-uppercase" style="font-size: 0.85rem;">
+									<i class="material-icons mr-1" style="font-size: 16px;">receipt</i>
+									Indirizzo di Fatturazione
+								</strong>
+								{% if invoice_info.is_valid %}
+									<span class="badge badge-success px-2 py-1">
+										<i class="material-icons" style="font-size: 12px;">check_circle</i> Valido
+									</span>
+								{% else %}
+									<span class="badge badge-danger px-2 py-1">
+										<i class="material-icons" style="font-size: 12px;">error</i> NON VALIDO
+									</span>
+								{% endif %}
+							</div>
+							<div class="text-secondary small">
+								{{ invoice_info.formatted }}
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			{# Colonna Destra: Selezione o Creazione Indirizzi #}
+			<div class="col-12 col-lg-7">
+				<div class="card shadow-sm">
+					<div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+						<h3 class="card-header-title mb-0 font-weight-bold" style="color:#fff;">
+							<i class="material-icons mr-1">build</i>
+							Correggi Indirizzi dell'Ordine
+						</h3>
+						<span class="badge badge-warning">{{ valid_addresses|length }} indirizzi disponibili</span>
+					</div>
+					<div class="card-body">
+						{% if valid_addresses is not empty %}
+							<form action="{{ form_action_url }}" method="post">
+								<input type="hidden" name="submitFixOrderAddress" value="1">
+
+								{# Selettore Spedizione #}
+								<div class="form-group mb-4">
+									<label for="id_address_delivery" class="font-weight-bold">
+										<i class="material-icons text-primary mr-1" style="font-size: 18px;">local_shipping</i>
+										Seleziona Indirizzo di Spedizione:
+									</label>
+									<select name="id_address_delivery" id="id_address_delivery" class="form-control form-control-lg custom-select">
+										{% for addr in valid_addresses %}
+											<option value="{{ addr.id_address }}" {% if addr.id_address == delivery_info.id %}selected{% endif %}>
+												{{ addr.formatted }}
+											</option>
+										{% endfor %}
+									</select>
+									<small class="form-text text-muted">Scegli uno degli indirizzi registrati per il cliente <strong>{{ order.customer_name }}</strong>.</small>
+								</div>
+
+								{# Selettore Fatturazione #}
+								<div class="form-group mb-4">
+									<label for="id_address_invoice" class="font-weight-bold">
+										<i class="material-icons text-info mr-1" style="font-size: 18px;">receipt</i>
+										Seleziona Indirizzo di Fatturazione:
+									</label>
+									<select name="id_address_invoice" id="id_address_invoice" class="form-control form-control-lg custom-select">
+										{% for addr in valid_addresses %}
+											<option value="{{ addr.id_address }}" {% if addr.id_address == invoice_info.id %}selected{% endif %}>
+												{{ addr.formatted }}
+											</option>
+										{% endfor %}
+									</select>
+									<small class="form-text text-muted">Se il cliente desidera fattura, seleziona l'indirizzo con dati fiscali validi.</small>
+								</div>
+
+								<div class="border-top pt-4 d-flex justify-content-between align-items-center gap-2">
+									<button type="submit" class="btn btn-success btn-lg font-weight-bold shadow-sm">
+										<i class="material-icons mr-1">save</i>
+										SALVA E APRI ORDINE
+									</button>
+
+									<a href="{{ create_address_url }}" class="btn btn-outline-primary">
+										<i class="material-icons mr-1">add_location</i>
+										Crea Nuovo Indirizzo
+									</a>
+								</div>
+							</form>
+						{% else %}
+							<div class="text-center py-4">
+								<i class="material-icons text-warning mb-2" style="font-size: 64px;">person_add_disabled</i>
+								<h4 class="font-weight-bold text-dark mb-2">Nessun Indirizzo Valido Trovato</h4>
+								<p class="text-muted mb-4 max-w-md mx-auto">
+									Il cliente <strong>{{ order.customer_name }}</strong> non possiede alcun indirizzo valido attivo nel database.
+									Devi creare un nuovo indirizzo prima di poter sbloccare l'ordine.
+								</p>
+
+								<div class="d-flex justify-content-center gap-3">
+									<a href="{{ create_address_url }}" class="btn btn-primary btn-lg font-weight-bold shadow-sm">
+										<i class="material-icons mr-1">add_location</i>
+										CREA NUOVO INDIRIZZO PER IL CLIENTE
+									</a>
+									<a href="{{ customer_edit_url }}" class="btn btn-outline-secondary btn-lg" target="_blank">
+										<i class="material-icons mr-1">person</i>
+										Scheda Cliente
+									</a>
+								</div>
+							</div>
+						{% endif %}
+					</div>
+					<div class="card-footer bg-light d-flex justify-content-between align-items-center">
+						<small class="text-muted">ID Cliente: #{{ order.id_customer }}</small>
+						<a href="{{ customer_edit_url }}" target="_blank" class="btn btn-sm btn-link">
+							<i class="material-icons" style="font-size: 14px;">open_in_new</i> Apri scheda cliente #{{ order.id_customer }}
+						</a>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+{% endblock %}

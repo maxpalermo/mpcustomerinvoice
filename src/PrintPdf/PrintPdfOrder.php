@@ -1,36 +1,43 @@
 <?php
 
+/**
+ * Copyright since 2007 PrestaShop SA and Contributors
+ * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Academic Free License version 3.0
+ * that is bundled with this package in the file LICENSE.md.
+ * It is also available through the world-wide-web at this URL:
+ * https://opensource.org/licenses/AFL-3.0
+ *
+ * @author    Massimiliano Palermo <maxx.palermo@gmail.com>
+ * @copyright Since 2016 Massimiliano Palermo
+ * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
+ */
+
 namespace MpSoft\MpCustomerInvoice\PrintPdf;
 
-use MpSoft\MpCustomerInvoice\PrintPdf\Components\PdfOrderHeader;
-use MpSoft\MpCustomerInvoice\PrintPdf\Components\PdfOrderBody;
-use MpSoft\MpCustomerInvoice\PrintPdf\Components\PdfOrderFooter;
+use Configuration;
+use MpSoft\MpCustomerInvoice\PrintPdf\Templates\PrintTemplateFactory;
+use MpSoft\MpCustomerInvoice\PrintPdf\Templates\Orders\Default\DefaultOrderTemplate;
 
 class PrintPdfOrder extends PrintManager
 {
     protected function initComponents(): void
     {
-        $header = new PdfOrderHeader(
-            $this->orderData,
-            [
-                'logo_x' => 20,
-                'logo_y' => 10,
-                'logo_width' => 80,
-                'logo_height' => 0,
-                'table_width' => 100,
-                'table_right_margin' => 10,
-                'table_top_margin' => 10
-            ]
-        );
+        $templateName = (string) Configuration::get('MPCUSTOMERINVOICE_TEMPLATE_ORDERS');
+        if (empty($templateName)) {
+            $templateName = 'Default';
+        }
 
-        $body = new PdfOrderBody($this->orderData, $this->order);
+        $template = PrintTemplateFactory::createTemplate('Orders', $templateName, $this->idOrder);
 
-        $footer = new PdfOrderFooter([
-            'show_separator' => true,
-            'font_size' => 8,
-            'bottom_margin' => 15
-        ]);
-
-        $this->setComponents($header, $body, $footer);
+        if ($template) {
+            $template->render($this);
+        } else {
+            $default = new DefaultOrderTemplate($this->idOrder);
+            $default->render($this);
+        }
     }
 }

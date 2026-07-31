@@ -1,19 +1,48 @@
 <?php
 
+/**
+ * Copyright since 2007 PrestaShop SA and Contributors
+ * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Academic Free License version 3.0
+ * that is bundled with this package in the file LICENSE.md.
+ * It is also available through the world-wide-web at this URL:
+ * https://opensource.org/licenses/AFL-3.0
+ *
+ * @author    Massimiliano Palermo <maxx.palermo@gmail.com>
+ * @copyright Since 2016 Massimiliano Palermo
+ * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
+ */
+
 namespace MpSoft\MpCustomerInvoice\PrintPdf;
 
-use MpSoft\MpCustomerInvoice\PrintPdf\Components\PdfOrderHeader;
-use MpSoft\MpCustomerInvoice\PrintPdf\Components\PdfOrderBody;
-use MpSoft\MpCustomerInvoice\PrintPdf\Components\PdfOrderFooter;
+use Configuration;
+use MpSoft\MpCustomerInvoice\PrintPdf\Templates\PrintTemplateFactory;
+use MpSoft\MpCustomerInvoice\PrintPdf\Templates\Orders\Default\DefaultOrderTemplate;
 
 class PrintPdfInvoice extends PrintManager
 {
     protected function initComponents(): void
     {
-        $header = new PdfOrderHeader($this->orderData);
-        $body = new PdfOrderBody($this->orderData, $this->order);
-        $footer = new PdfOrderFooter();
+        $templateName = (string) Configuration::get('MPCUSTOMERINVOICE_TEMPLATE_INVOICES');
+        if (empty($templateName)) {
+            $templateName = 'Default';
+        }
 
-        $this->setComponents($header, $body, $footer);
+        $template = PrintTemplateFactory::createTemplate('Invoices', $templateName, $this->idOrder);
+
+        if (!$template) {
+            // Fallback to Orders template if Invoices folder does not have dedicated template yet
+            $template = PrintTemplateFactory::createTemplate('Orders', $templateName, $this->idOrder);
+        }
+
+        if ($template) {
+            $template->render($this);
+        } else {
+            $default = new DefaultOrderTemplate($this->idOrder);
+            $default->render($this);
+        }
     }
 }

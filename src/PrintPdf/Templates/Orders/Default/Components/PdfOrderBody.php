@@ -1,6 +1,6 @@
 <?php
 
-namespace MpSoft\MpCustomerInvoice\PrintPdf\Components;
+namespace MpSoft\MpCustomerInvoice\PrintPdf\Templates\Orders\Default\Components;
 
 use Context;
 use Order;

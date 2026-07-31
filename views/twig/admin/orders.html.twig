@@ -148,6 +148,7 @@
     <script id="order-state-colors" type="application/json">{{ orderStateColors|json_encode|raw }}</script>
     <script id="order-countries" type="application/json">{{ orderCountries|json_encode|raw }}</script>
     <script id="order-flag-items" type="application/json">{{ orderFlagItems|json_encode|raw }}</script>
+    <script id="show-customizations-column" type="application/json">{{ showCustomizationsColumn|json_encode|raw }}</script>
     <script id="order-table-links" type="application/json">{{ {'orderPageLink': orderPageLink, 'customerPageLink': customerPageLink, 'invoicePdfLink': invoicePdfLink, 'deliveryPdfLink': deliveryPdfLink, 'labelPrintEndpoint': labelPrintEndpoint, 'brtShipmentsUrl': brtShipmentsUrl}|json_encode|raw }}</script>
     <script type="text/javascript">
         const orderStates = JSON.parse(document.getElementById("order-states").textContent);

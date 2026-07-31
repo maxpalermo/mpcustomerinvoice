@@ -109,13 +109,19 @@ class GenerateDocumentRestrictions
         }
 
         if (empty($triggers)) {
+            PrestaShopLogger::addLog("hookActionOrderStatusPostUpdate: Nessun trigger impostato. Controllare Configurazione Modulo.", 3, 0, 'Mpcustomerinvoice');
             return;
         }
 
-        if (!in_array($idOrderState, $triggers, true) || $idOrder <= 0) {
-            PrestaShopLogger::addLog("hookActionOrderStatusPostUpdate: trigger or id_order non valido", 3, 0, 'Mpcustomerinvoice');
+        if (!in_array($idOrderState, $triggers, true)) {
             return;
         }
+
+        if ($idOrder <= 0) {
+            PrestaShopLogger::addLog("hookActionOrderStatusPostUpdate: id_order non valido {$idOrder}", 3, 0, 'Mpcustomerinvoice');
+            return;
+        }
+
         $order = new Order($idOrder);
         if (!Validate::isLoadedObject($order)) {
             PrestaShopLogger::addLog("hookActionOrderStatusPostUpdate: Ordine {$idOrder} non validato", 3, 0, 'Mpcustomerinvoice');

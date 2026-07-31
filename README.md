@@ -4,6 +4,25 @@ Modulo per gestire i codici della fatturazione elettronica.
 
 ## Changelog
 
+### 1.4.118
+
+- **Integrazione Stampa Diretta WebPrint JS (`micwallace/WebPrint`)**:
+  - Inclusa la libreria client [`webprint.js`](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/webprint.js) per la comunicazione diretta HTTP POST / WebSocket con il relè di stampa locale.
+  - Incluso il file eseguibile [`WebPrint.jar`](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/download/WebPrint.jar) nel modulo con il pulsante **"Scarica Servizio WebPrint (.jar)"** nella pagina di configurazione.
+  - Aggiunte le configurazioni `MPCUSTOMERINVOICE_WEBPRINT_*` (switch attivo, host, porta, stampanti per Ordine, Fattura, Spedizione, Indirizzo e Segnacollo BRT) in [`AdminMpCustomerInvoice.php`](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/controllers/admin/AdminMpCustomerInvoice.php).
+  - Aggiunta la card di configurazione WebPrint ed il pulsante *"Rileva Stampanti Collegate"* in [`configuration.html.twig`](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/twig/admin/configuration.html.twig).
+  - Aggiornati `executePrint()` ed `executeBatchPrint()` in [`MpPrintDialog.js`](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/MpPrintDialog.js) per inviare direttamente i PDF alle stampanti selezionate senza anteprima del browser.
+- **Bottoni di Stampa Separati & Fix Copie / Rilevamento Documenti**:
+  - Inserito lo switch di configurazione per i bottoni di stampa separati nel container `.order-actions` della pagina ordine.
+  - Bloccata la propagazione degli eventi sul campo del numero di copie (`#mp-print-copies-input-address`) ed invio corretto del parametro `copies`.
+  - Risolta l'eccezione 500 fatale sostituendo la chiamata al metodo inesistente `hasDeliveryNumber()` in `AdminMpCustomerInvoice.php`.
+
+### 1.4.117
+
+- **Validazione & Correzione Indirizzi Corrotti Ordine (`OrderAddressValidator.php`, `fix_order_address.html.twig`)**:
+  - Intercettati i tentativi di apertura della scheda ordine (`/sell/orders/{id}/view` ed `AdminOrders`) per verificare la presenza ed integrità degli indirizzi di spedizione e fatturazione nel database (prevenendo il crash 500 `Warning: Trying to access array offset on value of type null` in `GetOrderForViewingHandler.php`).
+  - Creata la nuova pagina di correzione guidata `showFixOrderAddressPage`: mostra il riepilogo dell'ordine, evidenzia gli indirizzi non trovati o non validi, permette la selezione rapida di un indirizzo valido del cliente o il reindirizzamento per la creazione di un nuovo indirizzo.
+
 ### 1.4.116
 
 - **Selezione Multipla Ordini & Cambio Stato a Blocchi (`MpBatchProgressDialog.js` & `adminTableOrders.js`)**:

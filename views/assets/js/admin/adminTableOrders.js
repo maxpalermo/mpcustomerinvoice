@@ -19,12 +19,18 @@ class AdminTableOrders {
         this.deliveryPdfLink = deliveryPdfLink;
         this.labelPrintEndpoint = labelPrintEndpoint;
         this.brtShipmentsUrl = (typeof orderTableLinks !== 'undefined' && orderTableLinks.brtShipmentsUrl) ? orderTableLinks.brtShipmentsUrl : '';
+        const showCustomizationsEl = document.getElementById("show-customizations-column");
+        this.showCustomizationsColumn = showCustomizationsEl ? Boolean(Number(JSON.parse(showCustomizationsEl.textContent))) : false;
+
         this.limit = 25;
         this.offset = 0;
         this.sort = "id_order";
         this.order = "desc";
         this.filters = {};
         this.filterableFields = ["id_order", "order_flag_item", "delivery_country", "reference", "email", "customer", "id_eurosolution", "total_paid_tax_incl", "payment", "status", "date_add"];
+        if (this.showCustomizationsColumn) {
+            this.filterableFields.splice(1, 0, "has_customization");
+        }
         this.excludedStates = this.getExcludedStates();
         this.currentAction = null;
         this.currentOrderId = null;
@@ -42,6 +48,65 @@ class AdminTableOrders {
     }
 
     initTable() {
+        const columns = [
+            { checkbox: true, align: "center", valign: "middle" },
+            { field: "id_order", title: "ID", sortable: true, align: "center", filterControl: "input" },
+        ];
+
+        if (this.showCustomizationsColumn) {
+            columns.push({
+                field: "has_customization",
+                title: "Custom",
+                sortable: true,
+                align: "center",
+                filterControl: "select",
+                filterData: `json:{"": "-- Tutti --", "1": "Con personalizzazioni", "0": "Senza personalizzazioni"}`,
+                formatter: (value) => (Number(value) === 1 ? '<span class="material-icons text-success" title="Contiene prodotti con personalizzazione" style="font-size:20px;vertical-align:middle;">check_circle</span>' : '--'),
+            });
+        }
+
+        columns.push(
+            { field: "order_flag_item", title: "Semaforo", align: "center", filterControl: "select", filterData: `json:${JSON.stringify(this.orderFlagFilterOptions)}`, formatter: (value) => this.formatOrderFlag(value) },
+            { field: "delivery_country", title: "Consegna", align: "center", filterControl: "select", filterData: `json:${JSON.stringify(this.orderCountries)}`, formatter: (value) => this.orderCountries[value] || "--" },
+            { field: "reference", title: "Riferimento", sortable: true, filterControl: "input" },
+            { field: "email", title: "Email", sortable: true, filterControl: "input" },
+            { field: "customer", title: "Cliente", sortable: true, filterControl: "input", formatter: (value, row) => this.formatCustomerColumn(value, row) },
+            {
+                field: "id_eurosolution",
+                title: "Eurosolution",
+                sortable: true,
+                align: "center",
+                filterControl: "input",
+                formatter: (value) => (value ? `<span class="badge badge-info">${this.escape(value)}</span>` : "--"),
+            },
+            {
+                field: "total_paid_tax_incl",
+                title: "Totale",
+                sortable: true,
+                align: "right",
+                filterControl: "input",
+                formatter: (value, row) => this.formatTotalColumn(value, row),
+            },
+            { field: "payment", title: "Pagamento", sortable: true, filterControl: "input" },
+            { field: "status", title: "Stato", sortable: true, filterControl: "select", filterData: `json:${JSON.stringify(this.orderStates)}`, formatter: (value, row) => this.formatStatusColumn(value, row) },
+            { field: "notes", title: "Note", align: "center", formatter: (value, row) => this.formatNotes(row) },
+            { field: "date_add", title: "Data", sortable: true, align: "center", filterControl: "input", filterControlPlaceholder: "Da - A (GG/MM/AAAA)" },
+            {
+                field: "actions",
+                title: "Azioni",
+                align: "center",
+                formatter: (value, row) => {
+                    const orderUrl = this.orderPageLink.replace("999999999", row.id_order);
+                    const actionButtonStyle = "display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:34px;height:34px;padding:0;margin:0;";
+                    return `<div role="group" style="display:flex;flex-direction:row;gap:3px;align-items:center;justify-content:center;">
+                        <a class="btn btn-default" style="${actionButtonStyle}" href="${orderUrl}" target="_blank" title="Vedi ordine"><span class="material-icons">visibility</span></a>
+                        <button class="btn btn-default js-order-action-print" style="${actionButtonStyle}" type="button" data-order-id="${row.id_order}" title="Stampa"><span class="material-icons">print</span></button>
+                        <button class="btn btn-default js-order-action-export" style="${actionButtonStyle}" type="button" data-order-id="${row.id_order}" title="Esporta"><span class="material-icons">file_download</span></button>
+                    </div>`;
+                },
+            }
+        );
+
         $(this.table).bootstrapTable({
             filterControl: true,
             filterControlVisible: true,
@@ -67,49 +132,7 @@ class AdminTableOrders {
                     this.bindRowActions();
                 }, 0);
             },
-            columns: [
-                { checkbox: true, align: "center", valign: "middle" },
-                { field: "id_order", title: "ID", sortable: true, align: "center", filterControl: "input" },
-                { field: "order_flag_item", title: "Semaforo", align: "center", filterControl: "select", filterData: `json:${JSON.stringify(this.orderFlagFilterOptions)}`, formatter: (value) => this.formatOrderFlag(value) },
-                { field: "delivery_country", title: "Consegna", align: "center", filterControl: "select", filterData: `json:${JSON.stringify(this.orderCountries)}`, formatter: (value) => this.orderCountries[value] || "--" },
-                { field: "reference", title: "Riferimento", sortable: true, filterControl: "input" },
-                { field: "email", title: "Email", sortable: true, filterControl: "input" },
-                { field: "customer", title: "Cliente", sortable: true, filterControl: "input", formatter: (value, row) => this.formatCustomerColumn(value, row) },
-                {
-                    field: "id_eurosolution",
-                    title: "Eurosolution",
-                    sortable: true,
-                    align: "center",
-                    filterControl: "input",
-                    formatter: (value) => (value ? `<span class="badge badge-info">${this.escape(value)}</span>` : "--"),
-                },
-                {
-                    field: "total_paid_tax_incl",
-                    title: "Totale",
-                    sortable: true,
-                    align: "right",
-                    filterControl: "input",
-                    formatter: (value, row) => this.formatTotalColumn(value, row),
-                },
-                { field: "payment", title: "Pagamento", sortable: true, filterControl: "input" },
-                { field: "status", title: "Stato", sortable: true, filterControl: "select", filterData: `json:${JSON.stringify(this.orderStates)}`, formatter: (value, row) => this.formatStatusColumn(value, row) },
-                { field: "notes", title: "Note", align: "center", formatter: (value, row) => this.formatNotes(row) },
-                { field: "date_add", title: "Data", sortable: true, align: "center", filterControl: "input", filterControlPlaceholder: "Da - A (GG/MM/AAAA)" },
-                {
-                    field: "actions",
-                    title: "Azioni",
-                    align: "center",
-                    formatter: (value, row) => {
-                        const orderUrl = this.orderPageLink.replace("999999999", row.id_order);
-                        const actionButtonStyle = "display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:34px;height:34px;padding:0;margin:0;";
-                        return `<div role="group" style="display:flex;flex-direction:row;gap:3px;align-items:center;justify-content:center;">
-                            <a class="btn btn-default" style="${actionButtonStyle}" href="${orderUrl}" target="_blank" title="Vedi ordine"><span class="material-icons">visibility</span></a>
-                            <button class="btn btn-default js-order-action-print" style="${actionButtonStyle}" type="button" data-order-id="${row.id_order}" title="Stampa"><span class="material-icons">print</span></button>
-                            <button class="btn btn-default js-order-action-export" style="${actionButtonStyle}" type="button" data-order-id="${row.id_order}" title="Esporta"><span class="material-icons">file_download</span></button>
-                        </div>`;
-                    },
-                },
-            ],
+            columns: columns,
         });
 
         $(this.table).on("page-change.bs.table", (event, page, pageSize) => {
@@ -291,22 +314,44 @@ class AdminTableOrders {
     }
 
     renderSearchActions() {
-        const $columns = $(this.table).closest(".bootstrap-table").find(".fixed-table-toolbar .columns");
+        const $toolbar = $(this.table).closest(".bootstrap-table").find(".fixed-table-toolbar");
+        const $columns = $toolbar.find(".columns");
 
-        if ($columns.find("[data-orders-search]").length) {
+        if ($toolbar.find("[data-orders-search]").length) {
             return;
         }
 
-        if (!$columns.find("[data-batch-state-wrapper]").length) {
+        let $leftBars = $toolbar.find(".bs-bars");
+        if (!$leftBars.length) {
+            $leftBars = $("<div>", {
+                class: "bs-bars pull-left float-left d-inline-flex align-items-center flex-wrap",
+                style: "gap: 8px;",
+            });
+            $toolbar.prepend($leftBars);
+        } else {
+            $leftBars.addClass("d-inline-flex align-items-center flex-wrap").css("gap", "8px");
+        }
+
+        if (this.brtShipmentsUrl && !$leftBars.find("[data-orders-bordero]").length) {
+            $("<a>", {
+                class: "btn btn-dark font-weight-bold text-uppercase d-inline-flex align-items-center",
+                href: this.brtShipmentsUrl,
+                "data-orders-bordero": "",
+                style: "background-color: #1e1e1e; color: #ffffff; border-color: #1e1e1e; font-size: 0.85rem; height: 36px; padding: 0 12px;",
+                html: '<i class="material-icons mr-1" style="font-size:18px;">local_shipping</i> BORDERÒ',
+            }).appendTo($leftBars);
+        }
+
+        if (!$leftBars.find("[data-batch-state-wrapper]").length) {
             const $wrapper = $("<div>", {
-                class: "d-inline-flex align-items-center mr-2",
+                class: "input-group d-inline-flex align-items-center",
                 "data-batch-state-wrapper": "",
-                style: "gap: 6px;",
+                style: "width: auto;",
             });
 
             const $select = $("<select>", {
                 class: "form-control chosen-ignore",
-                style: "max-width: 220px; display: inline-block; font-size: 0.85rem; height: 36px; padding: 4px 8px;",
+                style: "max-width: 240px; font-size: 0.85rem; height: 36px; padding: 4px 8px; border-top-right-radius: 0; border-bottom-right-radius: 0;",
             });
 
             $select.append('<option value="">-- Cambia stato a... --</option>');
@@ -314,41 +359,77 @@ class AdminTableOrders {
                 $select.append(`<option value="${idState}">${this.escape(stateName)}</option>`);
             });
 
+            const $btnGroupAppend = $("<div>", { class: "input-group-append" });
+
             const $btnChange = $("<button>", {
                 type: "button",
-                class: "btn btn-primary",
-                html: '<i class="material-icons">published_with_changes</i> Cambia Stato ordine',
+                class: "btn btn-dark font-weight-bold text-uppercase d-inline-flex align-items-center",
+                style: "background-color: #1e1e1e; color: #ffffff; border-color: #1e1e1e; font-size: 0.85rem; height: 36px; padding: 0 12px; border-top-left-radius: 0; border-bottom-left-radius: 0;",
+                html: '<i class="material-icons mr-1" style="font-size:18px;">published_with_changes</i> CAMBIA STATO ORDINE',
             }).on("click", () => this.handleBatchChangeStatus($select.val()));
 
-            $wrapper.append($select).append($btnChange);
-            $columns.prepend($wrapper);
+            const $btnPrint = $("<button>", {
+                type: "button",
+                class: "btn btn-primary font-weight-bold text-uppercase d-inline-flex align-items-center ml-1",
+                style: "height: 36px; padding: 0 12px;",
+                html: '<i class="material-icons mr-1" style="font-size:18px;">print</i> STAMPA',
+            }).on("click", () => this.handleBatchPrint());
+
+            $btnGroupAppend.append($btnChange);
+            $wrapper.append($select).append($btnGroupAppend);
+            $leftBars.append($wrapper).append($btnPrint);
         }
 
         $("<button>", {
             type: "button",
-            class: "btn btn-info",
+            class: "btn btn-info font-weight-bold d-inline-flex align-items-center ml-1",
             "data-orders-search": "",
-            html: '<i class="material-icons">search</i> Cerca',
+            style: "height: 36px;",
+            html: '<i class="material-icons mr-1" style="font-size:18px;">search</i> Cerca',
         })
             .on("click", () => this.applyFilters())
             .appendTo($columns);
 
         $("<button>", {
             type: "button",
-            class: "btn btn-warning",
+            class: "btn btn-warning font-weight-bold d-inline-flex align-items-center ml-1",
             "data-orders-reset": "",
-            html: '<i class="material-icons">refresh</i> Reset',
+            style: "height: 36px; background-color: #fff8e1; border-color: #ffe082; color: #5d4037;",
+            html: '<i class="material-icons mr-1" style="font-size:18px;">refresh</i> Reset',
         })
             .on("click", () => this.resetFilters())
             .appendTo($columns);
+    }
 
-        if (this.brtShipmentsUrl && !$columns.find("[data-orders-bordero]").length) {
-            $("<a>", {
-                class: "btn btn-primary ml-1",
-                href: this.brtShipmentsUrl,
-                "data-orders-bordero": "",
-                html: '<i class="material-icons">local_shipping</i> Borderò',
-            }).appendTo($columns);
+    handleBatchPrint() {
+        const selectedRows = $(this.table).bootstrapTable("getSelections");
+
+        if (!selectedRows || selectedRows.length === 0) {
+            if (typeof showNoticeMessage === "function") {
+                showNoticeMessage("Seleziona almeno un ordine dalla tabella per la stampa massiva.");
+            } else {
+                alert("Seleziona almeno un ordine dalla tabella per la stampa massiva.");
+            }
+            return;
+        }
+
+        const orderIds = selectedRows
+            .map((row) => parseInt(row.id_order || row.id || 0, 10))
+            .filter((id) => id > 0);
+
+        if (orderIds.length === 0) {
+            if (typeof showErrorMessage === "function") {
+                showErrorMessage("Nessun ID ordine valido trovato tra gli elementi selezionati.");
+            } else {
+                alert("Nessun ID ordine valido trovato tra gli elementi selezionati.");
+            }
+            return;
+        }
+
+        if (typeof MpPrintDialog !== "undefined") {
+            MpPrintDialog.openBatch(orderIds);
+        } else {
+            console.error("Componente MpPrintDialog non disponibile per la stampa massiva.");
         }
     }
 

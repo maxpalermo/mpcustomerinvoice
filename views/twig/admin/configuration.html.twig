@@ -1,308 +1,519 @@
 <section class="bootstrap">
-    {% if message %}
-        <div class="alert alert-{{ message.type }}">
-            {{ message.content }}
-        </div>
-    {% endif %}
+	{% if message %}
+		<div class="alert alert-{{ message.type }}">
+			{{ message.content }}
+		</div>
+	{% endif %}
 
-    <form id="configForm" method="post" onsubmit="return false;">
-        <div class="panel">
-            <div class="panel-heading">
-                <i class="icon icon-cogs"></i>
-                <span>Configurazione</span>
-            </div>
-            <div class="panel-body">
-                <div class="row">
-                    <div class="col-md-6 col-xs-9">
-                        <fieldset class="mb-4">
-                            <legend class="legend">Cliente</legend>
-                            <div class="form-group">
-                                <label for="CUSTOMER_PREFIX">Prefisso cliente</label>
-                                <div class="input-group">
-                                    <span class="input-group-addon"><i class="icon icon-chevron-right"></i></span>
-                                    <input type="text" id="CUSTOMER_PREFIX" name="CUSTOMER_PREFIX" class="form-control" value="{{ CUSTOMER_PREFIX }}">
-                                    <span class="input-group-addon">[A-Z]</span>
-                                </div>
-                            </div>
-                        </fieldset>
-                        <fieldset class="mb-4">
-                            <legend class="legend">Reindirizzamento Menu Backoffice</legend>
-                            <div class="form-group">
-                                <label>Reindirizza Pagina Ordini</label>
-                                <span class="prestashop-switch">
-                                    <input type="radio" name="MPCUSTOMERINVOICE_OVERRIDE_ORDERS" id="MPCUSTOMERINVOICE_OVERRIDE_ORDERS_on" value="1"{% if MPCUSTOMERINVOICE_OVERRIDE_ORDERS %} checked="checked"{% endif %}>
-                                    <label for="MPCUSTOMERINVOICE_OVERRIDE_ORDERS_on">Sì</label>
-                                    <input type="radio" name="MPCUSTOMERINVOICE_OVERRIDE_ORDERS" id="MPCUSTOMERINVOICE_OVERRIDE_ORDERS_off" value="0"{% if not MPCUSTOMERINVOICE_OVERRIDE_ORDERS %} checked="checked"{% endif %}>
-                                    <label for="MPCUSTOMERINVOICE_OVERRIDE_ORDERS_off">No</label>
-                                    <a class="slide-button btn"></a>
-                                </span>
-                            </div>
-                            <div class="form-group">
-                                <label>Reindirizza Pagina Clienti</label>
-                                <span class="prestashop-switch">
-                                    <input type="radio" name="MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS" id="MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS_on" value="1"{% if MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS %} checked="checked"{% endif %}>
-                                    <label for="MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS_on">Sì</label>
-                                    <input type="radio" name="MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS" id="MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS_off" value="0"{% if not MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS %} checked="checked"{% endif %}>
-                                    <label for="MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS_off">No</label>
-                                    <a class="slide-button btn"></a>
-                                </span>
-                            </div>
-                        </fieldset>
-                        <fieldset class="mb-4">
-                            <legend class="legend">Generazione Automatica Documenti</legend>
-                            <div class="form-group">
-                                <label for="MPCUSTOMERINVOICE_ORDER_STATE_TRIGGER">Stati ordine per la creazione di Fattura o Nota di Consegna</label>
-                                <select id="MPCUSTOMERINVOICE_ORDER_STATE_TRIGGER" name="MPCUSTOMERINVOICE_ORDER_STATE_TRIGGER[]" class="form-control chosen" multiple data-placeholder="Seleziona uno o più stati ordine">
-                                    {% for state in orderStates %}
-                                        <option value="{{ state.id_order_state }}"{% if state.id_order_state in MPCUSTOMERINVOICE_ORDER_STATE_TRIGGER %} selected="selected"{% endif %}>{{ state.name }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Crea sia Fattura che Nota di Consegna</label>
-                                <span class="prestashop-switch">
-                                    <input type="radio" name="MPCUSTOMERINVOICE_CREATE_BOTH" id="MPCUSTOMERINVOICE_CREATE_BOTH_on" value="1"{% if MPCUSTOMERINVOICE_CREATE_BOTH %} checked="checked"{% endif %}>
-                                    <label for="MPCUSTOMERINVOICE_CREATE_BOTH_on">Sì</label>
-                                    <input type="radio" name="MPCUSTOMERINVOICE_CREATE_BOTH" id="MPCUSTOMERINVOICE_CREATE_BOTH_off" value="0"{% if not MPCUSTOMERINVOICE_CREATE_BOTH %} checked="checked"{% endif %}>
-                                    <label for="MPCUSTOMERINVOICE_CREATE_BOTH_off">No</label>
-                                    <a class="slide-button btn"></a>
-                                </span>
-                            </div>
-                        </fieldset>
-                        <fieldset class="mb-4">
-                            <legend class="legend">Esportazione Documenti</legend>
-                            <div class="form-group">
-                                <label for="MPCUSTOMERINVOICE_VAT_RATE">Aliquota IVA Arrotondamento (%)</label>
-                                <div class="input-group">
-                                    <span class="input-group-addon"><i class="icon icon-chevron-right"></i></span>
-                                    <input type="number" step="0.01" min="0" max="100" id="MPCUSTOMERINVOICE_VAT_RATE" name="MPCUSTOMERINVOICE_VAT_RATE" class="form-control" value="{{ MPCUSTOMERINVOICE_VAT_RATE }}">
-                                    <span class="input-group-addon">%</span>
-                                </div>
-                            </div>
-                        </fieldset>
-                        <fieldset class="mb-4">
-                            <legend class="legend">Dimensioni Etichetta (Stampa PDF)</legend>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="MPCUSTOMERINVOICE_LABEL_WIDTH">Larghezza etichetta (mm)</label>
-                                        <div class="input-group">
-                                            <span class="input-group-addon"><i class="icon icon-arrows-h"></i></span>
-                                            <input type="number" step="1" min="10" max="500" id="MPCUSTOMERINVOICE_LABEL_WIDTH" name="MPCUSTOMERINVOICE_LABEL_WIDTH" class="form-control" value="{{ MPCUSTOMERINVOICE_LABEL_WIDTH }}">
-                                            <span class="input-group-addon">mm</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="MPCUSTOMERINVOICE_LABEL_HEIGHT">Altezza etichetta (mm)</label>
-                                        <div class="input-group">
-                                            <span class="input-group-addon"><i class="icon icon-arrows-v"></i></span>
-                                            <input type="number" step="1" min="10" max="500" id="MPCUSTOMERINVOICE_LABEL_HEIGHT" name="MPCUSTOMERINVOICE_LABEL_HEIGHT" class="form-control" value="{{ MPCUSTOMERINVOICE_LABEL_HEIGHT }}">
-                                            <span class="input-group-addon">mm</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </fieldset>
-                        <fieldset class="mb-4">
-                            <legend class="legend">Tipo di documento</legend>
-                            {% set documentTypes = {
+	<form id="configForm" method="post" onsubmit="return false;">
+		<div class="panel">
+			<div class="panel-heading">
+				<i class="icon icon-cogs"></i>
+				<span>Configurazione</span>
+			</div>
+			<div class="panel-body">
+				<div class="row">
+					<div class="col-md-6 col-xs-9">
+						<fieldset class="mb-4">
+							<legend class="legend">Cliente</legend>
+							<div class="form-group">
+								<label for="CUSTOMER_PREFIX">Prefisso cliente</label>
+								<div class="input-group">
+									<span class="input-group-addon">
+										<i class="icon icon-chevron-right"></i>
+									</span>
+									<input type="text" id="CUSTOMER_PREFIX" name="CUSTOMER_PREFIX" class="form-control" value="{{ CUSTOMER_PREFIX }}">
+									<span class="input-group-addon">[A-Z]</span>
+								</div>
+							</div>
+						</fieldset>
+						<fieldset class="mb-4">
+							<legend class="legend">Tabella Elenco Ordini</legend>
+							<div class="form-group">
+								<label>Mostra colonna personalizzazioni</label>
+								<span class="prestashop-switch">
+									<input type="radio" name="MPCUSTOMERINVOICE_SHOW_CUSTOMIZATIONS" id="MPCUSTOMERINVOICE_SHOW_CUSTOMIZATIONS_on" value="1" {% if MPCUSTOMERINVOICE_SHOW_CUSTOMIZATIONS %} checked="checked" {% endif %}>
+									<label for="MPCUSTOMERINVOICE_SHOW_CUSTOMIZATIONS_on">Sì</label>
+									<input type="radio" name="MPCUSTOMERINVOICE_SHOW_CUSTOMIZATIONS" id="MPCUSTOMERINVOICE_SHOW_CUSTOMIZATIONS_off" value="0" {% if not MPCUSTOMERINVOICE_SHOW_CUSTOMIZATIONS %} checked="checked" {% endif %}>
+									<label for="MPCUSTOMERINVOICE_SHOW_CUSTOMIZATIONS_off">No</label>
+									<a class="slide-button btn"></a>
+								</span>
+							</div>
+						</fieldset>
+						<fieldset class="mb-4">
+							<legend class="legend">Reindirizzamento Menu Backoffice</legend>
+							<div class="form-group">
+								<label>Reindirizza Pagina Ordini</label>
+								<span class="prestashop-switch">
+									<input type="radio" name="MPCUSTOMERINVOICE_OVERRIDE_ORDERS" id="MPCUSTOMERINVOICE_OVERRIDE_ORDERS_on" value="1" {% if MPCUSTOMERINVOICE_OVERRIDE_ORDERS %} checked="checked" {% endif %}>
+									<label for="MPCUSTOMERINVOICE_OVERRIDE_ORDERS_on">Sì</label>
+									<input type="radio" name="MPCUSTOMERINVOICE_OVERRIDE_ORDERS" id="MPCUSTOMERINVOICE_OVERRIDE_ORDERS_off" value="0" {% if not MPCUSTOMERINVOICE_OVERRIDE_ORDERS %} checked="checked" {% endif %}>
+									<label for="MPCUSTOMERINVOICE_OVERRIDE_ORDERS_off">No</label>
+									<a class="slide-button btn"></a>
+								</span>
+							</div>
+							<div class="form-group">
+								<label>Reindirizza Pagina Clienti</label>
+								<span class="prestashop-switch">
+									<input type="radio" name="MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS" id="MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS_on" value="1" {% if MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS %} checked="checked" {% endif %}>
+									<label for="MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS_on">Sì</label>
+									<input type="radio" name="MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS" id="MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS_off" value="0" {% if not MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS %} checked="checked" {% endif %}>
+									<label for="MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS_off">No</label>
+									<a class="slide-button btn"></a>
+								</span>
+							</div>
+						</fieldset>
+						<fieldset class="mb-4">
+							<legend class="legend">Generazione Automatica Documenti</legend>
+							<div class="form-group">
+								<label for="MPCUSTOMERINVOICE_ORDER_STATE_TRIGGER">Stati ordine per la creazione di Fattura o Nota di Consegna</label>
+								<select id="MPCUSTOMERINVOICE_ORDER_STATE_TRIGGER" name="MPCUSTOMERINVOICE_ORDER_STATE_TRIGGER[]" class="form-control chosen" multiple data-placeholder="Seleziona uno o più stati ordine">
+									{% for state in orderStates %}
+										<option value="{{ state.id_order_state }}" {% if state.id_order_state in MPCUSTOMERINVOICE_ORDER_STATE_TRIGGER %} selected="selected" {% endif %}>{{ state.name }}</option>
+									{% endfor %}
+								</select>
+							</div>
+							<div class="form-group">
+								<label>Crea sia Fattura che Nota di Consegna</label>
+								<span class="prestashop-switch">
+									<input type="radio" name="MPCUSTOMERINVOICE_CREATE_BOTH" id="MPCUSTOMERINVOICE_CREATE_BOTH_on" value="1" {% if MPCUSTOMERINVOICE_CREATE_BOTH %} checked="checked" {% endif %}>
+									<label for="MPCUSTOMERINVOICE_CREATE_BOTH_on">Sì</label>
+									<input type="radio" name="MPCUSTOMERINVOICE_CREATE_BOTH" id="MPCUSTOMERINVOICE_CREATE_BOTH_off" value="0" {% if not MPCUSTOMERINVOICE_CREATE_BOTH %} checked="checked" {% endif %}>
+									<label for="MPCUSTOMERINVOICE_CREATE_BOTH_off">No</label>
+									<a class="slide-button btn"></a>
+								</span>
+							</div>
+						</fieldset>
+						<fieldset class="mb-4">
+							<legend class="legend">Esportazione Documenti</legend>
+							<div class="form-group">
+								<label for="MPCUSTOMERINVOICE_VAT_RATE">Aliquota IVA Arrotondamento (%)</label>
+								<div class="input-group">
+									<span class="input-group-addon">
+										<i class="icon icon-chevron-right"></i>
+									</span>
+									<input type="number" step="0.01" min="0" max="100" id="MPCUSTOMERINVOICE_VAT_RATE" name="MPCUSTOMERINVOICE_VAT_RATE" class="form-control" value="{{ MPCUSTOMERINVOICE_VAT_RATE }}">
+									<span class="input-group-addon">%</span>
+								</div>
+							</div>
+						</fieldset>
+						<fieldset class="mb-4">
+							<legend class="legend">Dimensioni Etichetta (Stampa PDF)</legend>
+							<div class="row">
+								<div class="col-md-6">
+									<div class="form-group">
+										<label for="MPCUSTOMERINVOICE_LABEL_WIDTH">Larghezza etichetta (mm)</label>
+										<div class="input-group">
+											<span class="input-group-addon">
+												<i class="icon icon-arrows-h"></i>
+											</span>
+											<input type="number" step="1" min="10" max="500" id="MPCUSTOMERINVOICE_LABEL_WIDTH" name="MPCUSTOMERINVOICE_LABEL_WIDTH" class="form-control" value="{{ MPCUSTOMERINVOICE_LABEL_WIDTH }}">
+											<span class="input-group-addon">mm</span>
+										</div>
+									</div>
+								</div>
+								<div class="col-md-6">
+									<div class="form-group">
+										<label for="MPCUSTOMERINVOICE_LABEL_HEIGHT">Altezza etichetta (mm)</label>
+										<div class="input-group">
+											<span class="input-group-addon">
+												<i class="icon icon-arrows-v"></i>
+											</span>
+											<input type="number" step="1" min="10" max="500" id="MPCUSTOMERINVOICE_LABEL_HEIGHT" name="MPCUSTOMERINVOICE_LABEL_HEIGHT" class="form-control" value="{{ MPCUSTOMERINVOICE_LABEL_HEIGHT }}">
+											<span class="input-group-addon">mm</span>
+										</div>
+									</div>
+								</div>
+							</div>
+						</fieldset>
+						<fieldset class="mb-4">
+							<legend class="legend">Tipo di documento</legend>
+							{% set documentTypes = {
                                 'TYPE_ORDER': 'Ordine',
                                 'TYPE_INVOICE': 'Fattura',
                                 'TYPE_RETURN': 'Reso da cliente',
                                 'TYPE_SLIP': 'Reso da fornitore',
                                 'TYPE_DELIVERY': 'Nota Ordine'
                             } %}
-                            {% for field, label in documentTypes %}
-                                <div class="form-group">
-                                    <label for="{{ field }}">{{ label }}</label>
-                                    <div class="input-group">
-                                        <span class="input-group-addon"><i class="icon icon-chevron-right"></i></span>
-                                        <input type="text" id="{{ field }}" name="{{ field }}" class="form-control" value="{{ attribute(_context, field) }}">
-                                        <span class="input-group-addon">[0-9]</span>
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        </fieldset>
-                    </div>
-                    <div class="col-md-6">
-                    <fieldset class="mb-4">
-                            <legend class="legend">Modulo di pagamento in contanti</legend>
-                            <div class="form-group">
-                                <label for="PAYMENT_SELECTED">Seleziona i moduli di pagamento in contanti</label>
-                                <div class="input-group">
-                                    <span class="input-group-addon"><i class="icon icon-chevron-right"></i></span>
-                                    <select id="PAYMENT_SELECTED" name="PAYMENT_SELECTED[]" class="form-control chosen" multiple>
-                                        {% for payment in PAYMENT_MODULES %}
-                                            <option value="{{ payment.id_module }}"{% if payment.id_module in PAYMENT_SELECTED %} selected{% endif %}>{{ payment.name }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                            </div>
-                        </fieldset>
-                        <fieldset class="mb-4">
-                            <legend class="legend">Numerazione riferimento ordine</legend>
-                            <div class="form-group">
-                                <label for="REFERENCE_RENUMBER">Formato riferimento</label>
-                                <div class="input-group">
-                                    <span class="input-group-addon"><i class="icon icon-chevron-right"></i></span>
-                                    <input type="text" id="REFERENCE_RENUMBER" name="REFERENCE_RENUMBER" class="form-control" value="{{ REFERENCE_RENUMBER }}">
-                                    <span class="input-group-addon">es. {% verbatim %}{$year}[{$id_order}|6]{% endverbatim %}</span>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label>Lunghezza campi riferimento</label>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <label for="orders-reference-length">orders.reference</label>
-                                        <input type="text" id="orders-reference-length" class="form-control" value="{{ orderReferenceLengths.orders|default('--') }}" readonly>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="order-payment-reference-length">order_payment.order_reference</label>
-                                        <input type="text" id="order-payment-reference-length" class="form-control" value="{{ orderReferenceLengths.order_payment|default('--') }}" readonly>
-                                    </div>
-                                </div>
-                            </div>
-                            <button type="button" id="update-order-reference-lengths" class="btn btn-warning">Imposta entrambi i campi a 32 caratteri</button>
-                            <span id="order-reference-lengths-result" class="m-l-1"></span>
-                        </fieldset>
-                    </div>
-                </div>
-            </div>
-            <div class="panel-footer">
-                <button type="button" id="btnSaveConfig" class="btn btn-primary pull-right">Salva</button>
-            </div>
-        </div>
-    </form>
+							{% for field, label in documentTypes %}
+								<div class="form-group">
+									<label for="{{ field }}">{{ label }}</label>
+									<div class="input-group">
+										<span class="input-group-addon">
+											<i class="icon icon-chevron-right"></i>
+										</span>
+										<input type="text" id="{{ field }}" name="{{ field }}" class="form-control" value="{{ attribute(_context, field) }}">
+										<span class="input-group-addon">[0-9]</span>
+									</div>
+								</div>
+							{% endfor %}
+						</fieldset>
+					</div>
+					<div class="col-md-6">
+						<fieldset class="mb-4">
+							<legend class="legend">Modulo di pagamento in contanti</legend>
+							<div class="form-group">
+								<label for="PAYMENT_SELECTED">Seleziona i moduli di pagamento in contanti</label>
+								<div class="input-group">
+									<span class="input-group-addon">
+										<i class="icon icon-chevron-right"></i>
+									</span>
+									<select id="PAYMENT_SELECTED" name="PAYMENT_SELECTED[]" class="form-control chosen" multiple>
+										{% for payment in PAYMENT_MODULES %}
+											<option value="{{ payment.id_module }}" {% if payment.id_module in PAYMENT_SELECTED %} selected {% endif %}>{{ payment.name }}</option>
+										{% endfor %}
+									</select>
+								</div>
+							</div>
+						</fieldset>
+						<fieldset class="mb-4">
+							<legend class="legend">Numerazione riferimento ordine</legend>
+							<div class="form-group">
+								<label for="REFERENCE_RENUMBER">Formato riferimento</label>
+								<div class="input-group">
+									<span class="input-group-addon">
+										<i class="icon icon-chevron-right"></i>
+									</span>
+									<input type="text" id="REFERENCE_RENUMBER" name="REFERENCE_RENUMBER" class="form-control" value="{{ REFERENCE_RENUMBER }}">
+									<span class="input-group-addon">es.
+										{% verbatim %}{$year}[{$id_order}|6]
+										{% endverbatim %}
+									</span>
+								</div>
+							</div>
+							<div class="form-group">
+								<label>Lunghezza campi riferimento</label>
+								<div class="row">
+									<div class="col-md-3">
+										<label for="orders-reference-length">orders.reference</label>
+										<input type="text" id="orders-reference-length" class="form-control" value="{{ orderReferenceLengths.orders|default('--') }}" readonly>
+									</div>
+									<div class="col-md-3">
+										<label for="order-payment-reference-length">order_payment.order_reference</label>
+										<input type="text" id="order-payment-reference-length" class="form-control" value="{{ orderReferenceLengths.order_payment|default('--') }}" readonly>
+									</div>
+									<div class="col-md-6">
+										<button type="button" id="update-order-reference-lengths" class="btn btn-warning mt-4">Imposta entrambi i campi a 32 caratteri</button>
+										<div id="order-reference-lengths-result" class="m-l-1"></div>
+									</div>
+								</div>
+							</div>
+						</fieldset>
+						<fieldset class="mb-4">
+							<legend class="legend">Stampa e Template PDF</legend>
+							<div class="form-group">
+								<label class="control-label col-lg-3">Mostra bottoni di stampa separati</label>
+								<div class="col-lg-9">
+									<span class="switch prestashop-switch fixed-width-lg">
+										<input type="radio" name="MPCUSTOMERINVOICE_SHOW_SEPARATE_PRINT_BUTTONS" id="MPCUSTOMERINVOICE_SHOW_SEPARATE_PRINT_BUTTONS_on" value="1" {% if MPCUSTOMERINVOICE_SHOW_SEPARATE_PRINT_BUTTONS == 1 %} checked="checked" {% endif %}>
+										<label for="MPCUSTOMERINVOICE_SHOW_SEPARATE_PRINT_BUTTONS_on">Sì</label>
+										<input type="radio" name="MPCUSTOMERINVOICE_SHOW_SEPARATE_PRINT_BUTTONS" id="MPCUSTOMERINVOICE_SHOW_SEPARATE_PRINT_BUTTONS_off" value="0" {% if MPCUSTOMERINVOICE_SHOW_SEPARATE_PRINT_BUTTONS == 0 %} checked="checked" {% endif %}>
+										<label for="MPCUSTOMERINVOICE_SHOW_SEPARATE_PRINT_BUTTONS_off">No</label>
+										<a class="slide-button btn"></a>
+									</span>
+									<p class="help-block">Se attivo, inserisce nella pagina dell'ordine (container .order-actions) i bottoni separati per la stampa diretta di Ordine, Fattura, Spedizione e Indirizzo.</p>
+								</div>
+							</div>
+							<div class="form-group">
+								<label for="MPCUSTOMERINVOICE_TEMPLATE_ORDERS">Template Ordini</label>
+								<select id="MPCUSTOMERINVOICE_TEMPLATE_ORDERS" name="MPCUSTOMERINVOICE_TEMPLATE_ORDERS" class="form-control chosen">
+									{% for tplName, tplLabel in availableOrderTemplates %}
+										<option value="{{ tplName }}" {% if MPCUSTOMERINVOICE_TEMPLATE_ORDERS == tplName %} selected {% endif %}>{{ tplLabel }}</option>
+									{% endfor %}
+								</select>
+							</div>
+							<div class="form-group">
+								<label for="MPCUSTOMERINVOICE_TEMPLATE_INVOICES">Template Fatture</label>
+								<select id="MPCUSTOMERINVOICE_TEMPLATE_INVOICES" name="MPCUSTOMERINVOICE_TEMPLATE_INVOICES" class="form-control chosen">
+									{% for tplName, tplLabel in availableInvoiceTemplates %}
+										<option value="{{ tplName }}" {% if MPCUSTOMERINVOICE_TEMPLATE_INVOICES == tplName %} selected {% endif %}>{{ tplLabel }}</option>
+									{% endfor %}
+								</select>
+							</div>
+							<div class="form-group">
+								<label for="MPCUSTOMERINVOICE_TEMPLATE_DELIVERIES">Template Consegne / Bolle</label>
+								<select id="MPCUSTOMERINVOICE_TEMPLATE_DELIVERIES" name="MPCUSTOMERINVOICE_TEMPLATE_DELIVERIES" class="form-control chosen">
+									{% for tplName, tplLabel in availableDeliveryTemplates %}
+										<option value="{{ tplName }}" {% if MPCUSTOMERINVOICE_TEMPLATE_DELIVERIES == tplName %} selected {% endif %}>{{ tplLabel }}</option>
+									{% endfor %}
+								</select>
+							</div>
+							<div class="form-group">
+								<label for="MPCUSTOMERINVOICE_TEMPLATE_ADDRESSES">Template Etichette Indirizzo</label>
+								<select id="MPCUSTOMERINVOICE_TEMPLATE_ADDRESSES" name="MPCUSTOMERINVOICE_TEMPLATE_ADDRESSES" class="form-control chosen">
+									{% for tplName, tplLabel in availableAddressTemplates %}
+										<option value="{{ tplName }}" {% if MPCUSTOMERINVOICE_TEMPLATE_ADDRESSES == tplName %} selected {% endif %}>{{ tplLabel }}</option>
+									{% endfor %}
+								</select>
+							</div>
+						</fieldset>
+						<fieldset class="mb-4">
+							<legend class="legend">Stampa Diretta tramite WebPrint (micwallace/WebPrint)</legend>
+							<div class="form-group">
+								<label class="control-label col-lg-3">Stampa diretta tramite WebPrint</label>
+								<div class="col-lg-9">
+									<span class="switch prestashop-switch fixed-width-lg">
+										<input type="radio" name="MPCUSTOMERINVOICE_WEBPRINT_ENABLE" id="MPCUSTOMERINVOICE_WEBPRINT_ENABLE_on" value="1" {% if MPCUSTOMERINVOICE_WEBPRINT_ENABLE == 1 %} checked="checked" {% endif %}>
+										<label for="MPCUSTOMERINVOICE_WEBPRINT_ENABLE_on">Sì</label>
+										<input type="radio" name="MPCUSTOMERINVOICE_WEBPRINT_ENABLE" id="MPCUSTOMERINVOICE_WEBPRINT_ENABLE_off" value="0" {% if MPCUSTOMERINVOICE_WEBPRINT_ENABLE == 0 %} checked="checked" {% endif %}>
+										<label for="MPCUSTOMERINVOICE_WEBPRINT_ENABLE_off">No</label>
+										<a class="slide-button btn"></a>
+									</span>
+									<p class="help-block">Abilita l'invio diretto del flusso di stampa al servizio relè WebPrint senza aprire finestre o anteprime browser.</p>
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-md-6">
+									<div class="form-group">
+										<label for="MPCUSTOMERINVOICE_WEBPRINT_HOST">Host Servizio WebPrint</label>
+										<input type="text" id="MPCUSTOMERINVOICE_WEBPRINT_HOST" name="MPCUSTOMERINVOICE_WEBPRINT_HOST" class="form-control" value="{{ MPCUSTOMERINVOICE_WEBPRINT_HOST|default('127.0.0.1') }}">
+									</div>
+								</div>
+								<div class="col-md-6">
+									<div class="form-group">
+										<label for="MPCUSTOMERINVOICE_WEBPRINT_PORT">Porta Servizio WebPrint</label>
+										<input type="text" id="MPCUSTOMERINVOICE_WEBPRINT_PORT" name="MPCUSTOMERINVOICE_WEBPRINT_PORT" class="form-control" value="{{ MPCUSTOMERINVOICE_WEBPRINT_PORT|default('8080') }}">
+									</div>
+								</div>
+							</div>
+							<div class="form-group mt-2 mb-3">
+								<a href="{{ webPrintDownloadUrl }}" class="btn btn-default" download="WebPrint.jar" style="margin-right:10px;">
+									<i class="icon icon-download"></i> Scarica Servizio WebPrint (.jar)
+								</a>
+								<button type="button" id="btn-webprint-detect-printers" class="btn btn-info">
+									<i class="icon icon-refresh"></i> Rileva Stampanti Collegate
+								</button>
+								<span id="webprint-detect-status" class="ml-2 font-weight-bold" style="margin-left:10px;"></span>
+							</div>
+
+							<div class="form-group">
+								<label for="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER">Stampante Ordine</label>
+								<input type="text" id="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER" name="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER" class="form-control webprint-printer-input" value="{{ MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER }}">
+							</div>
+							<div class="form-group">
+								<label for="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE">Stampante Fattura</label>
+								<input type="text" id="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE" name="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE" class="form-control webprint-printer-input" value="{{ MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE }}">
+							</div>
+							<div class="form-group">
+								<label for="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY">Stampante Spedizione / Consegna</label>
+								<input type="text" id="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY" name="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY" class="form-control webprint-printer-input" value="{{ MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY }}">
+							</div>
+							<div class="form-group">
+								<label for="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS">Stampante Indirizzo</label>
+								<input type="text" id="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS" name="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS" class="form-control webprint-printer-input" value="{{ MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS }}">
+							</div>
+							<div class="form-group">
+								<label for="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT">Stampante Segnacollo BRT</label>
+								<input type="text" id="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT" name="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT" class="form-control webprint-printer-input" value="{{ MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT }}">
+							</div>
+						</fieldset>
+					</div>
+				</div>
+			</div>
+			<div class="panel-footer">
+				<button type="button" id="btnSaveConfig" class="btn btn-primary pull-right">Salva</button>
+			</div>
+		</div>
+	</form>
 </section>
 
 {# ---- Modale di attesa / risultato salvataggio ---- #}
 <div id="savingOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;justify-content:center;align-items:center;">
-    <div id="savingOverlayBox" style="background:#fff;border-radius:8px;padding:32px 48px;box-shadow:0 8px 32px rgba(0,0,0,.3);text-align:center;max-width:400px;min-width:300px;">
-        {# Stato: spinner #}
-        <div id="savingStateLoading">
-            <div style="margin:0 auto 18px;width:44px;height:44px;border:4px solid #e0e0e0;border-top-color:#25b9d7;border-radius:50%;animation:spin .7s linear infinite;"></div>
-            <p style="margin:0;font-size:15px;font-weight:600;color:#363a41;">Salvataggio in corso&hellip;</p>
-            <p style="margin:6px 0 0;font-size:12px;color:#6c868e;">Attendere prego, non chiudere la pagina.</p>
-        </div>
-        {# Stato: risultato #}
-        <div id="savingStateResult" style="display:none;">
-            <div id="savingResultIcon" style="margin:0 auto 14px;width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;"></div>
-            <p id="savingResultMessage" style="margin:0;font-size:15px;font-weight:600;color:#363a41;"></p>
-            <button type="button" id="savingResultClose" class="btn btn-default" style="margin-top:18px;">Chiudi</button>
-        </div>
-    </div>
+	<div
+		id="savingOverlayBox" style="background:#fff;border-radius:8px;padding:32px 48px;box-shadow:0 8px 32px rgba(0,0,0,.3);text-align:center;max-width:400px;min-width:300px;">
+		{# Stato: spinner #}
+		<div id="savingStateLoading">
+			<div style="margin:0 auto 18px;width:44px;height:44px;border:4px solid #e0e0e0;border-top-color:#25b9d7;border-radius:50%;animation:spin .7s linear infinite;"></div>
+			<p style="margin:0;font-size:15px;font-weight:600;color:#363a41;">Salvataggio in corso&hellip;</p>
+			<p style="margin:6px 0 0;font-size:12px;color:#6c868e;">Attendere prego, non chiudere la pagina.</p>
+		</div>
+		{# Stato: risultato #}
+		<div id="savingStateResult" style="display:none;">
+			<div id="savingResultIcon" style="margin:0 auto 14px;width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;"></div>
+			<p id="savingResultMessage" style="margin:0;font-size:15px;font-weight:600;color:#363a41;"></p>
+			<button type="button" id="savingResultClose" class="btn btn-default" style="margin-top:18px;">Chiudi</button>
+		</div>
+	</div>
 </div>
-<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+<style>
+	@keyframes spin {
+		to {
+			transform: rotate(360deg)
+		}
+	}
+</style>
 
 <script>
-    document.getElementById('update-order-reference-lengths').addEventListener('click', async () => {
-        const button = document.getElementById('update-order-reference-lengths');
-        const result = document.getElementById('order-reference-lengths-result');
-        button.disabled = true;
-        result.textContent = 'Aggiornamento in corso...';
+	document.getElementById('update-order-reference-lengths').addEventListener('click', async () => {
+const button = document.getElementById('update-order-reference-lengths');
+const result = document.getElementById('order-reference-lengths-result');
+button.disabled = true;
+result.textContent = 'Aggiornamento in corso...';
 
-        try {
-            const response = await fetch('{{ adminControllerUrl|raw }}', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-                body: new URLSearchParams({ ajax: '1', action: 'updateOrderReferenceLengths' }),
-            });
-            const data = await response.json();
-            if (!response.ok || !data.success) {
-                throw new Error(data.error || 'Aggiornamento non riuscito.');
+try {
+const response = await fetch('{{ adminControllerUrl|raw }}', {
+method: 'POST',
+headers: {
+'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+},
+body: new URLSearchParams(
+{ajax: '1', action: 'updateOrderReferenceLengths'}
+)
+});
+const data = await response.json();
+if (! response.ok || ! data.success) {
+throw new Error(data.error || 'Aggiornamento non riuscito.');
+}
+
+document.getElementById('orders-reference-length').value = data.lengths.orders ?? '--';
+document.getElementById('order-payment-reference-length').value = data.lengths.order_payment ?? '--';
+result.textContent = 'Campi aggiornati.';
+} catch (error) {
+result.textContent = error.message;
+} finally {
+button.disabled = false;
+}
+});
+
+// Funzione principale di salvataggio via AJAX alla classe Admin
+async function performSaveConfiguration(event) {
+if (event) {
+event.preventDefault();
+event.stopPropagation();
+}
+
+const form = document.getElementById('configForm') || document.querySelector('form');
+const overlay = document.getElementById('savingOverlay');
+const stateLoading = document.getElementById('savingStateLoading');
+const stateResult = document.getElementById('savingStateResult');
+const resultIcon = document.getElementById('savingResultIcon');
+const resultMessage = document.getElementById('savingResultMessage');
+
+// Mostra modale overlay con spinner
+stateLoading.style.display = '';
+stateResult.style.display = 'none';
+overlay.style.display = 'flex';
+
+try { // 2) Inserimento form in FormData
+const formData = new FormData(form);
+formData.append('ajax', '1');
+formData.append('action', 'saveSetupConfiguration');
+
+const params = new URLSearchParams(formData);
+
+// 3) Invio dati al controller admin
+const response = await fetch('{{ adminControllerUrl|raw }}', {
+method: 'POST',
+headers: {
+'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+},
+body: params
+});
+
+const data = await response.json();
+
+// Mostra esito dal JSON di risposta
+stateLoading.style.display = 'none';
+stateResult.style.display = '';
+
+if (data.success) {
+resultIcon.style.background = '#d4edda';
+resultIcon.style.color = '#155724';
+resultIcon.textContent = '✓';
+resultMessage.style.color = '#155724';
+} else {
+resultIcon.style.background = '#f8d7da';
+resultIcon.style.color = '#721c24';
+resultIcon.textContent = '✗';
+resultMessage.style.color = '#721c24';
+} resultMessage.textContent = data.message || 'Operazione completata.';
+} catch (error) {
+stateLoading.style.display = 'none';
+stateResult.style.display = '';
+resultIcon.style.background = '#f8d7da';
+resultIcon.style.color = '#721c24';
+resultIcon.textContent = '✗';
+resultMessage.style.color = '#721c24';
+resultMessage.textContent = error.message || 'Errore di comunicazione con il server.';
+}
+
+return false;
+}
+
+// 1) Intercetta il submit del form e il click del pulsante blocchi l'esecuzione nativa
+const formElement = document.getElementById('configForm') || document.querySelector('form');
+if (formElement) {
+formElement.addEventListener('submit', performSaveConfiguration);
+}
+const btnSave = document.getElementById('btnSaveConfig');
+if (btnSave) {
+btnSave.addEventListener('click', performSaveConfiguration);
+}
+
+// Chiudi overlay al click sul pulsante Chiudi
+document.getElementById('savingResultClose').addEventListener('click', function () {
+document.getElementById('savingOverlay').style.display = 'none';
+});
+
+// Rilevamento stampanti collegate via WebPrint JS
+document.getElementById('btn-webprint-detect-printers')?.addEventListener('click', function() {
+    const statusEl = document.getElementById('webprint-detect-status');
+    const host = document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_HOST').value || '127.0.0.1';
+    const port = document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_PORT').value || '8085';
+
+    if (statusEl) {
+        statusEl.style.color = '#17a2b8';
+        statusEl.textContent = 'Connessione a WebPrint su ' + host + ':' + port + ' in corso...';
+    }
+
+    if (typeof WebPrint === 'undefined') {
+        if (statusEl) {
+            statusEl.style.color = '#dc3545';
+            statusEl.textContent = 'Libreria WebPrint JS non trovata nella pagina.';
+        }
+        return;
+    }
+
+    window.webprintInstance = new WebPrint(false, {
+        relayHost: host,
+        relayPort: port,
+        listPrinterCallback: function(printers) {
+            if (!printers || !Array.isArray(printers) || printers.length === 0) {
+                if (statusEl) {
+                    statusEl.style.color = '#ffc107';
+                    statusEl.textContent = 'Nessuna stampante rilevata dal relè WebPrint.';
+                }
+                return;
             }
+            if (statusEl) {
+                statusEl.style.color = '#28a745';
+                statusEl.textContent = '✓ Rilevate ' + printers.length + ' stampanti!';
+            }
+            const printerInputs = document.querySelectorAll('.webprint-printer-input');
+            printerInputs.forEach(input => {
+                const currentVal = input.value;
+                const select = document.createElement('select');
+                select.name = input.name;
+                select.id = input.id;
+                select.className = 'form-control webprint-printer-input';
 
-            document.getElementById('orders-reference-length').value = data.lengths.orders ?? '--';
-            document.getElementById('order-payment-reference-length').value = data.lengths.order_payment ?? '--';
-            result.textContent = 'Campi aggiornati.';
-        } catch (error) {
-            result.textContent = error.message;
-        } finally {
-            button.disabled = false;
+                let html = '<option value="">-- Seleziona Stampante --</option>';
+                printers.forEach(p => {
+                    const sel = (p === currentVal) ? ' selected="selected"' : '';
+                    html += '<option value="' + p + '"' + sel + '>' + p + '</option>';
+                });
+                select.innerHTML = html;
+                input.parentNode.replaceChild(select, input);
+            });
+        },
+        errorCallback: function(err) {
+            if (statusEl) {
+                statusEl.style.color = '#dc3545';
+                statusEl.textContent = (typeof err === 'string' && err) ? err : ('Impossibile connettersi a WebPrint su http://' + host + ':' + port);
+            }
         }
     });
 
-    // Funzione principale di salvataggio via AJAX alla classe Admin
-    async function performSaveConfiguration(event) {
-        if (event) {
-            event.preventDefault();
-            event.stopPropagation();
-        }
-
-        const form = document.getElementById('configForm') || document.querySelector('form');
-        const overlay = document.getElementById('savingOverlay');
-        const stateLoading = document.getElementById('savingStateLoading');
-        const stateResult = document.getElementById('savingStateResult');
-        const resultIcon = document.getElementById('savingResultIcon');
-        const resultMessage = document.getElementById('savingResultMessage');
-
-        // Mostra modale overlay con spinner
-        stateLoading.style.display = '';
-        stateResult.style.display = 'none';
-        overlay.style.display = 'flex';
-
-        try {
-            // 2) Inserimento form in FormData
-            const formData = new FormData(form);
-            formData.append('ajax', '1');
-            formData.append('action', 'saveSetupConfiguration');
-
-            const params = new URLSearchParams(formData);
-
-            // 3) Invio dati al controller admin
-            const response = await fetch('{{ adminControllerUrl|raw }}', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-                body: params,
-            });
-
-            const data = await response.json();
-
-            // Mostra esito dal JSON di risposta
-            stateLoading.style.display = 'none';
-            stateResult.style.display = '';
-
-            if (data.success) {
-                resultIcon.style.background = '#d4edda';
-                resultIcon.style.color = '#155724';
-                resultIcon.textContent = '✓';
-                resultMessage.style.color = '#155724';
-            } else {
-                resultIcon.style.background = '#f8d7da';
-                resultIcon.style.color = '#721c24';
-                resultIcon.textContent = '✗';
-                resultMessage.style.color = '#721c24';
-            }
-            resultMessage.textContent = data.message || 'Operazione completata.';
-        } catch (error) {
-            stateLoading.style.display = 'none';
-            stateResult.style.display = '';
-            resultIcon.style.background = '#f8d7da';
-            resultIcon.style.color = '#721c24';
-            resultIcon.textContent = '✗';
-            resultMessage.style.color = '#721c24';
-            resultMessage.textContent = error.message || 'Errore di comunicazione con il server.';
-        }
-
-        return false;
-    }
-
-    // 1) Intercetta il submit del form e il click del pulsante blocchi l'esecuzione nativa
-    const formElement = document.getElementById('configForm') || document.querySelector('form');
-    if (formElement) {
-        formElement.addEventListener('submit', performSaveConfiguration);
-    }
-    const btnSave = document.getElementById('btnSaveConfig');
-    if (btnSave) {
-        btnSave.addEventListener('click', performSaveConfiguration);
-    }
-
-    // Chiudi overlay al click sul pulsante Chiudi
-    document.getElementById('savingResultClose').addEventListener('click', function () {
-        document.getElementById('savingOverlay').style.display = 'none';
-    });
+    window.webprintInstance.requestPrinters();
+});
 </script>
-
-

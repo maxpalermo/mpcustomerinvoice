@@ -131,6 +131,9 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
                     $this->errors[] = $e->getMessage();
                 }
                 break;
+            case 'showFixOrderAddressPage':
+                $this->content = $this->renderFixOrderAddressPage();
+                break;
             case 'showImportPage':
                 $this->content = $this->renderImportPage();
                 break;
@@ -162,6 +165,85 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
             'adminControllerUrl' => $this->ajaxController,
             'id_order' => (int) Tools::getValue('id_order'),
             'document_type' => Tools::getValue('document_type'),
+        ]);
+    }
+
+    public function renderFixOrderAddressPage()
+    {
+        $idOrder = (int) Tools::getValue('id_order');
+        $order = new \Order($idOrder);
+        if (!\Validate::isLoadedObject($order)) {
+            $this->errors[] = $this->module->l('Ordine non trovato o non valido.');
+            return $this->renderOrdersPage();
+        }
+
+        // Handle POST save
+        if (\Tools::isSubmit('submitFixOrderAddress')) {
+            $newDeliveryId = (int) \Tools::getValue('id_address_delivery');
+            $newInvoiceId = (int) \Tools::getValue('id_address_invoice');
+
+            $delValid = \MpSoft\MpCustomerInvoice\Helpers\OrderAddressValidator::isOrderAddressValid($newDeliveryId, (int) $order->id_lang);
+            $invValid = \MpSoft\MpCustomerInvoice\Helpers\OrderAddressValidator::isOrderAddressValid($newInvoiceId, (int) $order->id_lang);
+
+            if (!$delValid || !$invValid) {
+                $this->errors[] = $this->module->l('Seleziona un indirizzo di spedizione ed un indirizzo di fatturazione validi.');
+            } else {
+                \Db::getInstance()->execute(
+                    'UPDATE `' . _DB_PREFIX_ . 'orders` SET `id_address_delivery` = ' . (int) $newDeliveryId . ', `id_address_invoice` = ' . (int) $newInvoiceId . ' WHERE `id_order` = ' . (int) $order->id
+                );
+
+                \PrestaShopLogger::addLog(
+                    "MpCustomerInvoice: Corretti indirizzi ordine #{$order->id} (Spedizione: {$newDeliveryId}, Fatturazione: {$newInvoiceId}).",
+                    1,
+                    null,
+                    'Order',
+                    (int) $order->id
+                );
+
+                $targetUrl = $this->context->link->getAdminLink('AdminOrders', true, ['route' => 'admin_orders_view', 'orderId' => (int) $order->id]);
+                \Tools::redirectAdmin($targetUrl);
+            }
+        }
+
+        $customer = new \Customer((int) $order->id_customer);
+        $customerName = \Validate::isLoadedObject($customer) ? trim($customer->firstname . ' ' . $customer->lastname) : 'Cliente sconosciuto';
+        $customerEmail = \Validate::isLoadedObject($customer) ? $customer->email : '';
+
+        $deliveryInfo = \MpSoft\MpCustomerInvoice\Helpers\OrderAddressValidator::getAddressDisplayInfo((int) $order->id_address_delivery, (int) $order->id_lang);
+        $invoiceInfo = \MpSoft\MpCustomerInvoice\Helpers\OrderAddressValidator::getAddressDisplayInfo((int) $order->id_address_invoice, (int) $order->id_lang);
+
+        $validAddresses = \MpSoft\MpCustomerInvoice\Helpers\OrderAddressValidator::getCustomerValidAddresses((int) $order->id_customer, (int) $order->id_lang);
+
+        $createAddressUrl = $this->context->link->getAdminLink('AdminAddresses', true, [], [
+            'addaddress' => 1,
+            'id_customer' => (int) $order->id_customer,
+            'back' => urlencode($this->context->link->getAdminLink('AdminMpCustomerInvoice', true, [], ['action' => 'showFixOrderAddressPage', 'id_order' => (int) $order->id])),
+        ]);
+
+        $customerEditUrl = $this->context->link->getAdminLink('AdminCustomers', true, ['route' => 'admin_customers_view', 'customerId' => (int) $order->id_customer]);
+
+        $viewOrderUrl = $this->context->link->getAdminLink('AdminOrders', true, ['route' => 'admin_orders_view', 'orderId' => (int) $order->id]);
+
+        $twig = new GetTwigEnvironment($this->module->name);
+        $template = $twig->load('@ModuleTwig/admin/fix_order_address.html.twig');
+
+        return $template->render([
+            'order' => [
+                'id' => (int) $order->id,
+                'reference' => $order->reference,
+                'id_customer' => (int) $order->id_customer,
+                'customer_name' => $customerName,
+                'customer_email' => $customerEmail,
+                'date_add' => $order->date_add,
+                'total' => number_format((float) $order->total_paid_tax_incl, 2, ',', '.'),
+            ],
+            'delivery_info' => $deliveryInfo,
+            'invoice_info' => $invoiceInfo,
+            'valid_addresses' => $validAddresses,
+            'create_address_url' => $createAddressUrl,
+            'customer_edit_url' => $customerEditUrl,
+            'view_order_url' => $viewOrderUrl,
+            'form_action_url' => $this->context->link->getAdminLink('AdminMpCustomerInvoice', true, [], ['action' => 'showFixOrderAddressPage', 'id_order' => (int) $order->id]),
         ]);
     }
 
@@ -206,8 +288,27 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
             'MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS' => (int) Configuration::get('MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS'),
             'MPCUSTOMERINVOICE_ORDER_STATE_TRIGGER' => $this->getOrderStateTriggers(),
             'MPCUSTOMERINVOICE_CREATE_BOTH' => (int) Configuration::get('MPCUSTOMERINVOICE_CREATE_BOTH'),
+            'MPCUSTOMERINVOICE_SHOW_CUSTOMIZATIONS' => (int) Configuration::get('MPCUSTOMERINVOICE_SHOW_CUSTOMIZATIONS'),
             'MPCUSTOMERINVOICE_LABEL_WIDTH' => (int) $this->getSetupConfig('MPCUSTOMERINVOICE_LABEL_WIDTH', 100),
             'MPCUSTOMERINVOICE_LABEL_HEIGHT' => (int) $this->getSetupConfig('MPCUSTOMERINVOICE_LABEL_HEIGHT', 50),
+            'availableOrderTemplates' => \MpSoft\MpCustomerInvoice\PrintPdf\Templates\PrintTemplateFactory::getAvailableTemplates('Orders'),
+            'availableInvoiceTemplates' => \MpSoft\MpCustomerInvoice\PrintPdf\Templates\PrintTemplateFactory::getAvailableTemplates('Invoices'),
+            'availableDeliveryTemplates' => \MpSoft\MpCustomerInvoice\PrintPdf\Templates\PrintTemplateFactory::getAvailableTemplates('Deliveries'),
+            'availableAddressTemplates' => \MpSoft\MpCustomerInvoice\PrintPdf\Templates\PrintTemplateFactory::getAvailableTemplates('Addresses'),
+            'MPCUSTOMERINVOICE_TEMPLATE_ORDERS' => $this->getSetupConfig('MPCUSTOMERINVOICE_TEMPLATE_ORDERS', 'Default'),
+            'MPCUSTOMERINVOICE_TEMPLATE_INVOICES' => $this->getSetupConfig('MPCUSTOMERINVOICE_TEMPLATE_INVOICES', 'Default'),
+            'MPCUSTOMERINVOICE_TEMPLATE_DELIVERIES' => $this->getSetupConfig('MPCUSTOMERINVOICE_TEMPLATE_DELIVERIES', 'Default'),
+            'MPCUSTOMERINVOICE_TEMPLATE_ADDRESSES' => $this->getSetupConfig('MPCUSTOMERINVOICE_TEMPLATE_ADDRESSES', 'Default'),
+            'MPCUSTOMERINVOICE_SHOW_SEPARATE_PRINT_BUTTONS' => (int) $this->getSetupConfig('MPCUSTOMERINVOICE_SHOW_SEPARATE_PRINT_BUTTONS', 1),
+            'MPCUSTOMERINVOICE_WEBPRINT_ENABLE' => (int) $this->getSetupConfig('MPCUSTOMERINVOICE_WEBPRINT_ENABLE', 0),
+            'MPCUSTOMERINVOICE_WEBPRINT_HOST' => $this->getSetupConfig('MPCUSTOMERINVOICE_WEBPRINT_HOST', '127.0.0.1'),
+            'MPCUSTOMERINVOICE_WEBPRINT_PORT' => $this->getSetupConfig('MPCUSTOMERINVOICE_WEBPRINT_PORT', '8080'),
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER' => $this->getSetupConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER', ''),
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE' => $this->getSetupConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE', ''),
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY' => $this->getSetupConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY', ''),
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS' => $this->getSetupConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS', ''),
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT' => $this->getSetupConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT', ''),
+            'webPrintDownloadUrl' => $this->context->link->getBaseLink() . 'modules/mpcustomerinvoice/views/assets/download/WebPrint.jar',
             'orderStates' => OrderState::getOrderStates($this->context->language->id),
             'adminControllerUrl' => $this->ajaxController,
             'orderReferenceLengths' => $this->getOrderReferenceLengths(),
@@ -402,11 +503,28 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
         }
 
         $hasInvoice = false;
-        if ($order->hasInvoice() || (int) $order->invoice_number > 0) {
+        if ($order->hasInvoice() || (int) $order->invoice_number > 0 || (!empty($order->invoice_date) && $order->invoice_date !== '0000-00-00 00:00:00')) {
             $hasInvoice = true;
         } else {
-            if (class_exists('\MpSoft\MpCustomerInvoice\Helpers\GenerateDocumentRestrictions')) {
-                $hasInvoice = \MpSoft\MpCustomerInvoice\Helpers\GenerateDocumentRestrictions::isInvoiceRequired($order->id_customer);
+            $sqlInvoice = 'SELECT COUNT(*) FROM `' . _DB_PREFIX_ . 'order_invoice` WHERE `id_order` = ' . (int) $idOrder;
+            if ((int) \Db::getInstance()->getValue($sqlInvoice) > 0) {
+                $hasInvoice = true;
+            } else {
+                if (class_exists('\MpSoft\MpCustomerInvoice\Helpers\GenerateDocumentRestrictions')) {
+                    $hasInvoice = \MpSoft\MpCustomerInvoice\Helpers\GenerateDocumentRestrictions::isInvoiceRequired($order->id_customer);
+                }
+            }
+        }
+
+        $hasDelivery = false;
+        if ((int) $order->delivery_number > 0 || (!empty($order->delivery_date) && $order->delivery_date !== '0000-00-00 00:00:00')) {
+            $hasDelivery = true;
+        } else {
+            $sqlDelivery = 'SELECT COUNT(*) FROM `' . _DB_PREFIX_ . 'order_carrier` WHERE `id_order` = ' . (int) $idOrder;
+            if ((int) \Db::getInstance()->getValue($sqlDelivery) > 0) {
+                $hasDelivery = true;
+            } elseif (!$hasInvoice) {
+                $hasDelivery = true;
             }
         }
 
@@ -438,6 +556,7 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
             'id_order' => $idOrder,
             'reference' => $order->reference,
             'has_invoice' => $hasInvoice,
+            'has_delivery' => $hasDelivery,
             'is_brt_active' => $isBrtActive,
             'has_brt_label' => $hasBrtLabel,
         ]);
@@ -527,6 +646,93 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
         ]);
     }
 
+    public function ajaxProcessRenderBatchPdfDocuments()
+    {
+        $idOrdersRaw = Tools::getValue('id_orders', '');
+        $documentType = (string) Tools::getValue('document_type', 'order');
+
+        if (is_array($idOrdersRaw)) {
+            $idOrders = array_values(array_map('intval', $idOrdersRaw));
+        } else {
+            $idOrders = array_values(array_filter(array_map('intval', explode(',', (string) $idOrdersRaw))));
+        }
+
+        if (empty($idOrders)) {
+            $this->response([
+                'success' => false,
+                'message' => 'Nessun ordine selezionato per la stampa massiva.',
+            ]);
+        }
+
+        $printerMap = [
+            'order' => \MpSoft\MpCustomerInvoice\PrintPdf\PrintPdfOrder::class,
+            'invoice' => \MpSoft\MpCustomerInvoice\PrintPdf\PrintPdfInvoice::class,
+            'delivery' => \MpSoft\MpCustomerInvoice\PrintPdf\PrintPdfDelivery::class,
+            'return' => \MpSoft\MpCustomerInvoice\PrintPdf\PrintPdfReturn::class,
+        ];
+
+        if (!isset($printerMap[$documentType])) {
+            $this->response([
+                'success' => false,
+                'message' => 'Tipo documento non valido per la stampa massiva.',
+            ]);
+        }
+
+        $className = $printerMap[$documentType];
+        $pdfStreams = [];
+        $successCount = 0;
+
+        foreach ($idOrders as $idOrder) {
+            if ($idOrder <= 0) {
+                continue;
+            }
+            try {
+                /** @var \MpSoft\MpCustomerInvoice\PrintPdf\PrintManager $printer */
+                $printer = new $className($idOrder, 1, false, 'S');
+                $pdfData = $printer->renderPdf();
+                if (!empty($pdfData)) {
+                    $pdfStreams[] = $pdfData;
+                    $successCount++;
+                }
+            } catch (\Throwable $e) {
+                \PrestaShopLogger::addLog(
+                    "MpCustomerInvoice: Errore durante la stampa massiva dell'ordine #{$idOrder}: " . $e->getMessage(),
+                    3,
+                    null,
+                    'Order',
+                    (int) $idOrder
+                );
+            }
+        }
+
+        if (empty($pdfStreams)) {
+            $this->response([
+                'success' => false,
+                'message' => 'Impossibile generare i documenti PDF per gli ordini selezionati.',
+            ]);
+        }
+
+        try {
+            $mergedPdf = \MpSoft\MpCustomerInvoice\Helpers\PdfMerger::mergePdfs($pdfStreams);
+            $this->response([
+                'success' => true,
+                'message' => sprintf('Stampa massiva di %d documenti (%s) generata con successo.', $successCount, $documentType),
+                'count' => $successCount,
+                'document_type' => $documentType,
+                'pdf' => base64_encode($mergedPdf),
+            ]);
+        } catch (\Throwable $e) {
+            \PrestaShopLogger::addLog(
+                "MpCustomerInvoice: Errore durante l'unione dei PDF della stampa massiva: " . $e->getMessage(),
+                3
+            );
+            $this->response([
+                'success' => false,
+                'message' => 'Errore durante l\'unione dei PDF: ' . $e->getMessage(),
+            ]);
+        }
+    }
+
     private function getOrderReferenceLengths(): array
     {
         return [
@@ -580,8 +786,22 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
             'MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS' => 0,
             'MPCUSTOMERINVOICE_ORDER_STATE_TRIGGER' => json_encode([]),
             'MPCUSTOMERINVOICE_CREATE_BOTH' => 0,
+            'MPCUSTOMERINVOICE_SHOW_CUSTOMIZATIONS' => 0,
             'MPCUSTOMERINVOICE_LABEL_WIDTH' => 100,
             'MPCUSTOMERINVOICE_LABEL_HEIGHT' => 50,
+            'MPCUSTOMERINVOICE_TEMPLATE_ORDERS' => 'Default',
+            'MPCUSTOMERINVOICE_TEMPLATE_INVOICES' => 'Default',
+            'MPCUSTOMERINVOICE_TEMPLATE_DELIVERIES' => 'Default',
+            'MPCUSTOMERINVOICE_TEMPLATE_ADDRESSES' => 'Default',
+            'MPCUSTOMERINVOICE_SHOW_SEPARATE_PRINT_BUTTONS' => 1,
+            'MPCUSTOMERINVOICE_WEBPRINT_ENABLE' => 0,
+            'MPCUSTOMERINVOICE_WEBPRINT_HOST' => '127.0.0.1',
+            'MPCUSTOMERINVOICE_WEBPRINT_PORT' => '8080',
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER' => '',
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE' => '',
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY' => '',
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS' => '',
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT' => '',
         ];
 
         $keys = [
@@ -599,8 +819,22 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
             'MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS' => (int) Tools::getValue('MPCUSTOMERINVOICE_OVERRIDE_CUSTOMERS', 0),
             'MPCUSTOMERINVOICE_ORDER_STATE_TRIGGER' => json_encode($orderStateTriggers),
             'MPCUSTOMERINVOICE_CREATE_BOTH' => (int) Tools::getValue('MPCUSTOMERINVOICE_CREATE_BOTH', 0),
-            'MPCUSTOMERINVOICE_LABEL_WIDTH' => (int) Tools::getValue('MPCUSTOMERINVOICE_LABEL_WIDTH', 100),
-            'MPCUSTOMERINVOICE_LABEL_HEIGHT' => (int) Tools::getValue('MPCUSTOMERINVOICE_LABEL_HEIGHT', 50),
+            'MPCUSTOMERINVOICE_SHOW_CUSTOMIZATIONS' => (int) Tools::getValue('MPCUSTOMERINVOICE_SHOW_CUSTOMIZATIONS', 0),
+            'MPCUSTOMERINVOICE_LABEL_WIDTH' => (int) Tools::getValue('MPCUSTOMERINVOICE_LABEL_WIDTH', $defaults['MPCUSTOMERINVOICE_LABEL_WIDTH']),
+            'MPCUSTOMERINVOICE_LABEL_HEIGHT' => (int) Tools::getValue('MPCUSTOMERINVOICE_LABEL_HEIGHT', $defaults['MPCUSTOMERINVOICE_LABEL_HEIGHT']),
+            'MPCUSTOMERINVOICE_TEMPLATE_ORDERS' => Tools::getValue('MPCUSTOMERINVOICE_TEMPLATE_ORDERS', $defaults['MPCUSTOMERINVOICE_TEMPLATE_ORDERS']),
+            'MPCUSTOMERINVOICE_TEMPLATE_INVOICES' => Tools::getValue('MPCUSTOMERINVOICE_TEMPLATE_INVOICES', $defaults['MPCUSTOMERINVOICE_TEMPLATE_INVOICES']),
+            'MPCUSTOMERINVOICE_TEMPLATE_DELIVERIES' => Tools::getValue('MPCUSTOMERINVOICE_TEMPLATE_DELIVERIES', $defaults['MPCUSTOMERINVOICE_TEMPLATE_DELIVERIES']),
+            'MPCUSTOMERINVOICE_TEMPLATE_ADDRESSES' => Tools::getValue('MPCUSTOMERINVOICE_TEMPLATE_ADDRESSES', $defaults['MPCUSTOMERINVOICE_TEMPLATE_ADDRESSES']),
+            'MPCUSTOMERINVOICE_SHOW_SEPARATE_PRINT_BUTTONS' => (int) Tools::getValue('MPCUSTOMERINVOICE_SHOW_SEPARATE_PRINT_BUTTONS', 0),
+            'MPCUSTOMERINVOICE_WEBPRINT_ENABLE' => (int) Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_ENABLE', 0),
+            'MPCUSTOMERINVOICE_WEBPRINT_HOST' => Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_HOST', $defaults['MPCUSTOMERINVOICE_WEBPRINT_HOST']),
+            'MPCUSTOMERINVOICE_WEBPRINT_PORT' => Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PORT', $defaults['MPCUSTOMERINVOICE_WEBPRINT_PORT']),
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER' => Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER', ''),
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE' => Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE', ''),
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY' => Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY', ''),
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS' => Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS', ''),
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT' => Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT', ''),
         ];
 
         foreach ($keys as $key => $value) {
@@ -708,6 +942,7 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
             'orderStateColors' => $orderStateColors,
             'orderCountries' => $orderCountries,
             'cancelledStateIds' => array_values(array_unique($cancelledStateIds)),
+            'showCustomizationsColumn' => (int) Configuration::get('MPCUSTOMERINVOICE_SHOW_CUSTOMIZATIONS'),
             'orderFlagItems' => $this->getOrderFlagItems(),
             'orderPageLink' => $this->context->link->getAdminLink(
                 'AdminOrders',
@@ -1320,6 +1555,7 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
         $order = Tools::strtoupper(Tools::getValue('order', 'DESC')) === 'ASC' ? 'ASC' : 'DESC';
         $sortableFields = [
             'id_order' => 'o.id_order',
+            'has_customization' => 'has_customization',
             'reference' => 'o.reference',
             'email' => 'c.email',
             'customer' => 'customer',
@@ -1336,6 +1572,7 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
         $query = new DbQuery();
         $query
             ->select('o.id_order, o.id_customer, o.reference, o.total_paid_tax_incl, o.payment, o.date_add, o.current_state')
+            ->select('COALESCE((SELECT 1 FROM `' . _DB_PREFIX_ . 'order_detail` od INNER JOIN `' . _DB_PREFIX_ . 'product` p ON (p.id_product = od.product_id) WHERE od.id_order = o.id_order AND p.customizable > 0 LIMIT 1), (SELECT 1 FROM `' . _DB_PREFIX_ . 'customization` cu WHERE cu.id_cart = o.id_cart LIMIT 1), 0) AS has_customization')
             ->select('c.email')
             ->select("CONCAT(c.firstname, ' ', c.lastname) AS customer")
             ->select('ci.id_eurosolution, ci.invoice_requested, ci.vat_number, ci.dni, osl.name AS status, os.color AS status_color')
@@ -1386,6 +1623,7 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
 
         $filterFields = [
             'id_order' => 'o.id_order',
+            'has_customization' => 'has_customization',
             'order_flag_item' => 'of.id_order_flag_item',
             'delivery_country' => 'ad.id_country',
             'reference' => 'o.reference',
@@ -1404,6 +1642,15 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
             }
 
             switch ($field) {
+                case 'has_customization':
+                    if ((string) $value === '1') {
+                        $condition = '(EXISTS (SELECT 1 FROM `' . _DB_PREFIX_ . 'order_detail` od INNER JOIN `' . _DB_PREFIX_ . 'product` p ON (p.id_product = od.product_id) WHERE od.id_order = o.id_order AND p.customizable > 0) OR EXISTS (SELECT 1 FROM `' . _DB_PREFIX_ . 'customization` cu WHERE cu.id_cart = o.id_cart))';
+                    } elseif ((string) $value === '0') {
+                        $condition = '(NOT EXISTS (SELECT 1 FROM `' . _DB_PREFIX_ . 'order_detail` od INNER JOIN `' . _DB_PREFIX_ . 'product` p ON (p.id_product = od.product_id) WHERE od.id_order = o.id_order AND p.customizable > 0) AND NOT EXISTS (SELECT 1 FROM `' . _DB_PREFIX_ . 'customization` cu WHERE cu.id_cart = o.id_cart))';
+                    } else {
+                        continue 2;
+                    }
+                    break;
                 case 'status':
                     $condition = 'o.current_state = ' . (int) $value;
                     break;

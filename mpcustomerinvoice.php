@@ -43,7 +43,7 @@ class MpCustomerInvoice extends Module implements WidgetInterface
     {
         $this->name = 'mpcustomerinvoice';
         $this->tab = 'administration';
-        $this->version = '1.4.113';
+        $this->version = '1.4.118';
         $this->author = 'Massimiliano Palermo';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -236,6 +236,32 @@ class MpCustomerInvoice extends Module implements WidgetInterface
         // Intercettazione Menu Ordini e Clienti in Backoffice
         if ($controller !== 'AdminMpCustomerInvoice' && strpos((string) $controller, 'AdminMpCustomerInvoice') === false) {
             $path = parse_url($requestUri, PHP_URL_PATH) ?? '';
+
+            // Check validità indirizzi ordine prima dell'apertura della scheda ordine
+            $idOrderToVerify = 0;
+            if (preg_match('#sell/orders/(\d+)(/view)?#i', $requestUri, $mOrder)) {
+                if (strpos($requestUri, 'generate-') === false && strpos($requestUri, 'edit') === false) {
+                    $idOrderToVerify = (int) $mOrder[1];
+                }
+            } elseif (($controller === 'AdminOrders' || $controller === 'adminorders') && Tools::getValue('id_order') && (Tools::getValue('vieworder') || !Tools::getValue('submitFilter'))) {
+                $idOrderToVerify = (int) Tools::getValue('id_order');
+            }
+
+            if ($idOrderToVerify > 0) {
+                $check = \MpSoft\MpCustomerInvoice\Helpers\OrderAddressValidator::verifyOrderAddresses($idOrderToVerify);
+                if ($check['valid'] === false) {
+                    $url = $this->context->link->getAdminLink(
+                        'AdminMpCustomerInvoice',
+                        true,
+                        [],
+                        [
+                            'action' => 'showFixOrderAddressPage',
+                            'id_order' => $idOrderToVerify,
+                        ]
+                    );
+                    Tools::redirectAdmin($url);
+                }
+            }
 
             // Check Ordini override
             if ((int) Configuration::get('MPCUSTOMERINVOICE_OVERRIDE_ORDERS') === 1) {
@@ -823,10 +849,27 @@ class MpCustomerInvoice extends Module implements WidgetInterface
         $isBrtModuleActive = (bool) (Module::isInstalled('mpbrtrestapishipments') && Module::isEnabled('mpbrtrestapishipments'));
         $brtAdminUrl = $isBrtModuleActive ? $this->context->link->getAdminLink('AdminMpBrtRestApiShipments') : '';
 
+        $showSeparatePrintButtons = (bool) Configuration::get('MPCUSTOMERINVOICE_SHOW_SEPARATE_PRINT_BUTTONS', 1);
+        $webPrintEnable = (bool) Configuration::get('MPCUSTOMERINVOICE_WEBPRINT_ENABLE', 0);
+        $webPrintHost = (string) Configuration::get('MPCUSTOMERINVOICE_WEBPRINT_HOST', '127.0.0.1');
+        $webPrintPort = (string) Configuration::get('MPCUSTOMERINVOICE_WEBPRINT_PORT', '8080');
+        $webPrintPrinters = [
+            'order' => (string) Configuration::get('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER', ''),
+            'invoice' => (string) Configuration::get('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE', ''),
+            'delivery' => (string) Configuration::get('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY', ''),
+            'address' => (string) Configuration::get('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS', ''),
+            'brt' => (string) Configuration::get('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT', ''),
+        ];
+
         Media::addJsDef([
             'mpCustomerInvoiceAdminUrl' => $adminControllerUrl,
             'isBrtModuleActive' => $isBrtModuleActive,
             'brtAdminUrl' => $brtAdminUrl,
+            'mpShowSeparatePrintButtons' => $showSeparatePrintButtons,
+            'mpWebPrintEnable' => $webPrintEnable,
+            'mpWebPrintHost' => $webPrintHost,
+            'mpWebPrintPort' => $webPrintPort,
+            'mpWebPrintPrinters' => $webPrintPrinters,
         ]);
 
         $isAdminCustomerPage = (
@@ -854,6 +897,7 @@ class MpCustomerInvoice extends Module implements WidgetInterface
         );
 
         if ($isAdminOrderPage) {
+            $this->context->controller->addJS("{$baseJs}admin/webprint.js");
             $this->context->controller->addJS("{$baseJs}admin/MpPrintDialog.js");
             $this->context->controller->addJS("{$baseJs}admin/adminOrderExportHelper.js");
             $this->context->controller->addCSS("{$baseCss}/theme-override.css");
