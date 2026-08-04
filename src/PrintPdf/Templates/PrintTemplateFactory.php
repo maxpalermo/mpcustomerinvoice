@@ -75,6 +75,11 @@ class PrintTemplateFactory
         }
 
         $singularType = rtrim($docTypeDir, 's'); // Orders -> Order
+        if ($docTypeDir === 'Deliveries') {
+            $singularType = 'Delivery';
+        } elseif ($docTypeDir === 'Addresses') {
+            $singularType = 'Address';
+        }
 
         // Candidate class names to check:
         // 1. MpSoft\MpCustomerInvoice\PrintPdf\Templates\Orders\Default\DefaultOrderTemplate

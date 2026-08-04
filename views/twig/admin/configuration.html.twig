@@ -249,6 +249,21 @@
 						</fieldset>
 						<fieldset class="mb-4">
 							<legend class="legend">Stampa Diretta tramite WebPrint (micwallace/WebPrint)</legend>
+							<div class="form-group alert alert-info p-3 mb-4" style="background:#eef6ff;border:1px solid #b6d4fe;border-radius:6px;">
+								<label for="id_employee_webprint" class="font-weight-bold text-primary mb-2 d-block" style="font-weight:bold;font-size:14px;color:#1e40af;">
+									<i class="icon icon-user" style="margin-right:5px;"></i> Configurazione per l'operatore:
+								</label>
+								<select id="id_employee_webprint" name="id_employee_webprint" class="form-control" style="max-width:350px;font-weight:600;">
+									{% for emp in employeesList %}
+										<option value="{{ emp.id_employee }}" {% if emp.id_employee == selectedEmployeeId %} selected="selected" {% endif %}>
+											{{ emp.firstname }} {{ emp.lastname }} (#{{ emp.id_employee }})
+										</option>
+									{% endfor %}
+								</select>
+								<p class="help-block mb-0 mt-2" style="font-size:12px;color:#495057;">
+									Seleziona l'operatore di cui desideri personalizzare l'attivazione della stampa diretta, l'host/porta del relè locale ed le stampanti collegate.
+								</p>
+							</div>
 							<div class="form-group">
 								<label class="control-label col-lg-3">Stampa diretta tramite WebPrint</label>
 								<div class="col-lg-9">
@@ -259,7 +274,7 @@
 										<label for="MPCUSTOMERINVOICE_WEBPRINT_ENABLE_off">No</label>
 										<a class="slide-button btn"></a>
 									</span>
-									<p class="help-block">Abilita l'invio diretto del flusso di stampa al servizio relè WebPrint senza aprire finestre o anteprime browser.</p>
+									<p class="help-block">Abilita l'invio diretto del flusso di stampa al servizio relè WebPrint senza aprire finestre o anteprime browser per l'operatore selezionato.</p>
 								</div>
 							</div>
 							<div class="row">
@@ -515,5 +530,50 @@ document.getElementById('btn-webprint-detect-printers')?.addEventListener('click
     });
 
     window.webprintInstance.requestPrinters();
+});
+
+// Cambio operatore: ricarica configurazione WebPrint dell'operatore selezionato
+document.getElementById('id_employee_webprint')?.addEventListener('change', async function() {
+    const selectedEmpId = this.value;
+    if (!selectedEmpId) return;
+
+    try {
+        const response = await fetch('{{ adminControllerUrl|raw }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+            },
+            body: new URLSearchParams({
+                ajax: '1',
+                action: 'getEmployeeWebPrintConfig',
+                id_employee_webprint: selectedEmpId
+            })
+        });
+        const data = await response.json();
+        if (data && data.success) {
+            const enableOn = document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_ENABLE_on');
+            const enableOff = document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_ENABLE_off');
+            if (data.enable == 1) {
+                if (enableOn) enableOn.checked = true;
+            } else {
+                if (enableOff) enableOff.checked = true;
+            }
+
+            document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_HOST').value = data.host || '127.0.0.1';
+            document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_PORT').value = data.port || '8085';
+            document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER').value = data.printer_order || '';
+            document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE').value = data.printer_invoice || '';
+            document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY').value = data.printer_delivery || '';
+            document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS').value = data.printer_address || '';
+            document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT').value = data.printer_brt || '';
+
+            const statusEl = document.getElementById('webprint-detect-status');
+            if (statusEl) {
+                statusEl.textContent = '';
+            }
+        }
+    } catch(err) {
+        console.error('Errore nel recupero della configurazione operatore:', err);
+    }
 });
 </script>

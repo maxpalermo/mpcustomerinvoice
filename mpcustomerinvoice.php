@@ -43,7 +43,7 @@ class MpCustomerInvoice extends Module implements WidgetInterface
     {
         $this->name = 'mpcustomerinvoice';
         $this->tab = 'administration';
-        $this->version = '1.4.118';
+        $this->version = '1.5.120';
         $this->author = 'Massimiliano Palermo';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -849,16 +849,21 @@ class MpCustomerInvoice extends Module implements WidgetInterface
         $isBrtModuleActive = (bool) (Module::isInstalled('mpbrtrestapishipments') && Module::isEnabled('mpbrtrestapishipments'));
         $brtAdminUrl = $isBrtModuleActive ? $this->context->link->getAdminLink('AdminMpBrtRestApiShipments') : '';
 
+        $idEmployee = (isset($this->context->employee) && $this->context->employee->id) ? (int) $this->context->employee->id : 0;
+        if (!class_exists('AdminMpCustomerInvoiceController')) {
+            require_once _PS_MODULE_DIR_ . 'mpcustomerinvoice/controllers/admin/AdminMpCustomerInvoice.php';
+        }
+
         $showSeparatePrintButtons = (bool) Configuration::get('MPCUSTOMERINVOICE_SHOW_SEPARATE_PRINT_BUTTONS', 1);
-        $webPrintEnable = (bool) Configuration::get('MPCUSTOMERINVOICE_WEBPRINT_ENABLE', 0);
-        $webPrintHost = (string) Configuration::get('MPCUSTOMERINVOICE_WEBPRINT_HOST', '127.0.0.1');
-        $webPrintPort = (string) Configuration::get('MPCUSTOMERINVOICE_WEBPRINT_PORT', '8080');
+        $webPrintEnable = (bool) AdminMpCustomerInvoiceController::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_ENABLE', $idEmployee, 0);
+        $webPrintHost = (string) AdminMpCustomerInvoiceController::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_HOST', $idEmployee, '127.0.0.1');
+        $webPrintPort = (string) AdminMpCustomerInvoiceController::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PORT', $idEmployee, '8085');
         $webPrintPrinters = [
-            'order' => (string) Configuration::get('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER', ''),
-            'invoice' => (string) Configuration::get('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE', ''),
-            'delivery' => (string) Configuration::get('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY', ''),
-            'address' => (string) Configuration::get('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS', ''),
-            'brt' => (string) Configuration::get('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT', ''),
+            'order' => (string) AdminMpCustomerInvoiceController::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER', $idEmployee, ''),
+            'invoice' => (string) AdminMpCustomerInvoiceController::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE', $idEmployee, ''),
+            'delivery' => (string) AdminMpCustomerInvoiceController::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY', $idEmployee, ''),
+            'address' => (string) AdminMpCustomerInvoiceController::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS', $idEmployee, ''),
+            'brt' => (string) AdminMpCustomerInvoiceController::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT', $idEmployee, ''),
         ];
 
         Media::addJsDef([

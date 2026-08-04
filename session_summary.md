@@ -288,12 +288,21 @@ This document summarizes the changes, logic, and configurations implemented for 
 
 - Updated [theme-override.css](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/css/theme-override.css) and [MpPrintDialog.js](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/MpPrintDialog.js) to hide `[data-role="view-invoice"]` alongside `.js-print-order-view-page`.
 
-### PP. Hide Native View Delivery Slip Button (`[data-role="view-delivery-slip"]`) (v1.4.109)
+### QQ. Dalavoro Print Templates (Fattura & Nota di Vendita) (v1.5.120)
 
-- Updated [theme-override.css](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/css/theme-override.css) and [MpPrintDialog.js](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/MpPrintDialog.js) to hide `[data-role="view-delivery-slip"]` alongside `[data-role="view-invoice"]` and `.js-print-order-view-page`.
+- Implemented native TCPDF PDF print templates for **Fattura** (`FATTURA WEB/D`) in `src/PrintPdf/Templates/Invoices/Dalavoro/` and **Nota di Vendita** (`NOTA VENDITA WEB`) in `src/PrintPdf/Templates/Deliveries/Dalavoro/`.
+- **Risoluzione Pagina Bianca Iniziale**: Eliminata la chiamata ridondante a `AddPage()` in `drawDocument()` quando la pagina 1 è già aperta da `PrintManager`, garantendo che il documento inizi direttamente a pagina 1 senza pagine bianche preliminari.
+- **Gestione Commissioni Pagamento (`mp_payment_fee_order`)**:
+  - Intercettazione della commissione di pagamento per l'ordine interrogando la tabella `ps_mp_payment_fee_order` dove `id_order = <id_order>`.
+  - Lettura dei campi `total_order`, `fee_amount` e `tax_included`. Nella tabella ordini del backoffice, l'importo base dell'ordine viene estratto direttamente da `mp_payment_fee_order.total_order` poiché il totale in `orders` comprende già la commissione.
+  - Se `tax_included = 1`, viene eseguito prima lo **scorporo dell'IVA** dalla commissione: `fee_excl = round(fee_amount / (1 + vat_rate / 100), 6)`.
+  - La commissione al netto d'IVA (`fee_excl`) viene sommata al totale imponibile senza IVA (`imponibile` prodotti + spedizione/imballaggio).
+  - Successivamente si procede al calcolo dell'IVA sull'imponibile totale ed alla determinazione dell'eventuale `ARROTONDAMENTO` rispetto all'importo totale pagato dal cliente (`total_paid_tax_incl`).
+- **Esenzione IVA & Clienti Esteri**: Gestione automatica esenzione per fatture estere/NI7 con dicitura **`Cessioni CEE art.41 DL.331/93`** nel riquadro IVA e colonna IVA `NI7`.
+- Updated `PrintTemplateFactory.php` singular type mapping for `Deliveries` -> `Delivery`.
 
 ## 3. Module Version Tracking
-* **Latest Stable Version**: `1.4.109`
+* **Latest Stable Version**: `1.5.120`
 - Files updated with version bump:
     - `mpcustomerinvoice.php`
     - `composer.json`

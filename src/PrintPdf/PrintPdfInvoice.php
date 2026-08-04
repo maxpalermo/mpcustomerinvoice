@@ -28,13 +28,16 @@ class PrintPdfInvoice extends PrintManager
     {
         $templateName = (string) Configuration::get('MPCUSTOMERINVOICE_TEMPLATE_INVOICES');
         if (empty($templateName)) {
-            $templateName = 'Default';
+            $templateName = 'Dalavoro';
         }
 
         $template = PrintTemplateFactory::createTemplate('Invoices', $templateName, $this->idOrder);
 
+        if (!$template && $templateName !== 'Dalavoro') {
+            $template = PrintTemplateFactory::createTemplate('Invoices', 'Dalavoro', $this->idOrder);
+        }
+
         if (!$template) {
-            // Fallback to Orders template if Invoices folder does not have dedicated template yet
             $template = PrintTemplateFactory::createTemplate('Orders', $templateName, $this->idOrder);
         }
 

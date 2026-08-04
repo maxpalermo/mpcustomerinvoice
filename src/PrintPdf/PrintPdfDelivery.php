@@ -28,10 +28,14 @@ class PrintPdfDelivery extends PrintManager
     {
         $templateName = (string) Configuration::get('MPCUSTOMERINVOICE_TEMPLATE_DELIVERIES');
         if (empty($templateName)) {
-            $templateName = 'Default';
+            $templateName = 'Dalavoro';
         }
 
         $template = PrintTemplateFactory::createTemplate('Deliveries', $templateName, $this->idOrder);
+
+        if (!$template && $templateName !== 'Dalavoro') {
+            $template = PrintTemplateFactory::createTemplate('Deliveries', 'Dalavoro', $this->idOrder);
+        }
 
         if (!$template) {
             $template = PrintTemplateFactory::createTemplate('Orders', $templateName, $this->idOrder);

@@ -265,6 +265,12 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
             ]));
         }
 
+        $selectedEmployeeId = (int) Tools::getValue('id_employee_webprint', $this->context->employee->id);
+        if ($selectedEmployeeId <= 0) {
+            $selectedEmployeeId = (int) $this->context->employee->id;
+        }
+        $employeesList = Employee::getEmployees(true) ?: [];
+
         $twig = new GetTwigEnvironment($this->module->name);
         $template = $twig->load('@ModuleTwig/admin/configuration.html.twig');
 
@@ -300,14 +306,16 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
             'MPCUSTOMERINVOICE_TEMPLATE_DELIVERIES' => $this->getSetupConfig('MPCUSTOMERINVOICE_TEMPLATE_DELIVERIES', 'Default'),
             'MPCUSTOMERINVOICE_TEMPLATE_ADDRESSES' => $this->getSetupConfig('MPCUSTOMERINVOICE_TEMPLATE_ADDRESSES', 'Default'),
             'MPCUSTOMERINVOICE_SHOW_SEPARATE_PRINT_BUTTONS' => (int) $this->getSetupConfig('MPCUSTOMERINVOICE_SHOW_SEPARATE_PRINT_BUTTONS', 1),
-            'MPCUSTOMERINVOICE_WEBPRINT_ENABLE' => (int) $this->getSetupConfig('MPCUSTOMERINVOICE_WEBPRINT_ENABLE', 0),
-            'MPCUSTOMERINVOICE_WEBPRINT_HOST' => $this->getSetupConfig('MPCUSTOMERINVOICE_WEBPRINT_HOST', '127.0.0.1'),
-            'MPCUSTOMERINVOICE_WEBPRINT_PORT' => $this->getSetupConfig('MPCUSTOMERINVOICE_WEBPRINT_PORT', '8080'),
-            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER' => $this->getSetupConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER', ''),
-            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE' => $this->getSetupConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE', ''),
-            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY' => $this->getSetupConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY', ''),
-            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS' => $this->getSetupConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS', ''),
-            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT' => $this->getSetupConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT', ''),
+            'employeesList' => $employeesList,
+            'selectedEmployeeId' => $selectedEmployeeId,
+            'MPCUSTOMERINVOICE_WEBPRINT_ENABLE' => (int) self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_ENABLE', $selectedEmployeeId, 0),
+            'MPCUSTOMERINVOICE_WEBPRINT_HOST' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_HOST', $selectedEmployeeId, '127.0.0.1'),
+            'MPCUSTOMERINVOICE_WEBPRINT_PORT' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PORT', $selectedEmployeeId, '8085'),
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER', $selectedEmployeeId, ''),
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE', $selectedEmployeeId, ''),
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY', $selectedEmployeeId, ''),
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS', $selectedEmployeeId, ''),
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT', $selectedEmployeeId, ''),
             'webPrintDownloadUrl' => $this->context->link->getBaseLink() . 'modules/mpcustomerinvoice/views/assets/download/WebPrint.jar',
             'orderStates' => OrderState::getOrderStates($this->context->language->id),
             'adminControllerUrl' => $this->ajaxController,
@@ -843,6 +851,20 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
             }
             Configuration::updateValue($key, $value);
         }
+
+        $idEmployeeWebPrint = (int) Tools::getValue('id_employee_webprint', $this->context->employee->id);
+        if ($idEmployeeWebPrint <= 0) {
+            $idEmployeeWebPrint = (int) $this->context->employee->id;
+        }
+
+        Configuration::updateValue('MPCUSTOMERINVOICE_WEBPRINT_ENABLE_EMP_' . $idEmployeeWebPrint, (int) Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_ENABLE', 0));
+        Configuration::updateValue('MPCUSTOMERINVOICE_WEBPRINT_HOST_EMP_' . $idEmployeeWebPrint, Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_HOST', '127.0.0.1'));
+        Configuration::updateValue('MPCUSTOMERINVOICE_WEBPRINT_PORT_EMP_' . $idEmployeeWebPrint, Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PORT', '8085'));
+        Configuration::updateValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER_EMP_' . $idEmployeeWebPrint, Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER', ''));
+        Configuration::updateValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE_EMP_' . $idEmployeeWebPrint, Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE', ''));
+        Configuration::updateValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY_EMP_' . $idEmployeeWebPrint, Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY', ''));
+        Configuration::updateValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS_EMP_' . $idEmployeeWebPrint, Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS', ''));
+        Configuration::updateValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT_EMP_' . $idEmployeeWebPrint, Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT', ''));
     }
 
     public function ajaxProcessSaveSetupConfiguration()
@@ -860,6 +882,50 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
                 'message' => $e->getMessage(),
             ];
         }
+    }
+
+    public function ajaxProcessGetEmployeeWebPrintConfig()
+    {
+        $idEmployee = (int) Tools::getValue('id_employee_webprint', $this->context->employee->id);
+        if ($idEmployee <= 0) {
+            $idEmployee = (int) $this->context->employee->id;
+        }
+
+        $this->response([
+            'success' => true,
+            'id_employee' => $idEmployee,
+            'enable' => (int) self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_ENABLE', $idEmployee, 0),
+            'host' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_HOST', $idEmployee, '127.0.0.1'),
+            'port' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PORT', $idEmployee, '8085'),
+            'printer_order' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER', $idEmployee, ''),
+            'printer_invoice' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE', $idEmployee, ''),
+            'printer_delivery' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY', $idEmployee, ''),
+            'printer_address' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS', $idEmployee, ''),
+            'printer_brt' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT', $idEmployee, ''),
+        ]);
+    }
+
+    public static function getEmployeeWebPrintConfig(string $key, int $idEmployee, $default = null)
+    {
+        if ($idEmployee <= 0) {
+            $idEmployee = (int) Context::getContext()->employee->id;
+        }
+
+        $empKey = $key . '_EMP_' . $idEmployee;
+        $val = Configuration::get($empKey);
+
+        if ($val === false || $val === null) {
+            if ($key === 'MPCUSTOMERINVOICE_WEBPRINT_ENABLE') {
+                return $default !== null ? (int) $default : 0;
+            }
+            $globalVal = Configuration::get($key);
+            if ($globalVal !== false && $globalVal !== null) {
+                return $globalVal;
+            }
+            return $default;
+        }
+
+        return $val;
     }
 
     private function getSetupConfig(string $key, $default = null)
@@ -1588,6 +1654,7 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
         if ($hasFeesModule) {
             $query
                 ->select('COALESCE(pfo.fee_amount, 0) AS payment_fee_amount')
+                ->select('COALESCE(pfo.total_order, 0) AS payment_fee_total_order')
                 ->leftJoin('mp_payment_fee_order', 'pfo', 'pfo.id_order = o.id_order');
         }
 
@@ -1693,12 +1760,13 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
 
         foreach ($rows as &$row) {
             $feeAmount = (float) ($row['payment_fee_amount'] ?? 0);
+            $feeTotalOrder = (float) ($row['payment_fee_total_order'] ?? 0);
             $totalPaid = (float) $row['total_paid_tax_incl'];
 
             if ($feeAmount > 0) {
-                $row['order_base_total'] = $totalPaid;
+                $row['order_base_total'] = $feeTotalOrder > 0 ? $feeTotalOrder : ($totalPaid - $feeAmount);
                 $row['payment_fee_amount'] = $feeAmount;
-                $row['real_total'] = $totalPaid + $feeAmount;
+                $row['real_total'] = $totalPaid;
             } else {
                 $row['order_base_total'] = $totalPaid;
                 $row['payment_fee_amount'] = 0;

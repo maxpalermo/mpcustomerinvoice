@@ -738,26 +738,49 @@ class MpPrintDialog {
                 const targetPrinter = (window.mpWebPrintPrinters && window.mpWebPrintPrinters[documentType]) || "";
                 const isWebPrintActive = !!(window.mpWebPrintEnable && typeof WebPrint !== "undefined");
 
-                if (isWebPrintActive && targetPrinter && res.pdf) {
-                    if (printWindow && !printWindow.closed) {
-                        try { printWindow.close(); } catch(e) {}
+                if (isWebPrintActive) {
+                    if (!targetPrinter) {
+                        if (printWindow && !printWindow.closed) {
+                            try { printWindow.close(); } catch(e) {}
+                        }
+                        const docLabels = {
+                            order: 'Ordine',
+                            invoice: 'Fattura',
+                            delivery: 'Spedizione / Consegna',
+                            address: 'Etichetta Indirizzo',
+                            brt: 'Segnacollo BRT'
+                        };
+                        const docLabel = docLabels[documentType] || documentType;
+                        const msg = `Impossibile completare l'operazione: la stampa diretta WebPrint è attiva per l'operatore corrente, ma non è stata configurata la stampante per "${docLabel}". Configura la stampante nelle impostazioni del modulo.`;
+                        if (typeof showErrorMessage === "function") {
+                            showErrorMessage(msg);
+                        } else {
+                            alert(msg);
+                        }
+                        return;
                     }
-                    const host = window.mpWebPrintHost || "127.0.0.1";
-                    const port = window.mpWebPrintPort || "8080";
-                    const wp = new WebPrint(true, {
-                        relayHost: host,
-                        relayPort: port
-                    });
-                    for (let c = 0; c < copies; c++) {
-                        wp.printRaw(res.pdf, targetPrinter);
+
+                    if (res.pdf) {
+                        if (printWindow && !printWindow.closed) {
+                            try { printWindow.close(); } catch(e) {}
+                        }
+                        const host = window.mpWebPrintHost || "127.0.0.1";
+                        const port = window.mpWebPrintPort || "8085";
+                        const wp = new WebPrint(true, {
+                            relayHost: host,
+                            relayPort: port
+                        });
+                        for (let c = 0; c < copies; c++) {
+                            wp.printRaw(res.pdf, targetPrinter);
+                        }
+                        const msg = `Stampa inviata direttamente a "${targetPrinter}" tramite WebPrint (${copies} copia/e).`;
+                        if (typeof showSuccessMessage === "function") {
+                            showSuccessMessage(msg);
+                        } else {
+                            alert(msg);
+                        }
+                        return;
                     }
-                    const msg = `Stampa inviata direttamente a "${targetPrinter}" tramite WebPrint (${copies} copia/e).`;
-                    if (typeof showSuccessMessage === "function") {
-                        showSuccessMessage(msg);
-                    } else {
-                        alert(msg);
-                    }
-                    return;
                 }
 
                 if (typeof showSuccessMessage === "function") {
@@ -984,25 +1007,48 @@ class MpPrintDialog {
                 const targetPrinter = (window.mpWebPrintPrinters && window.mpWebPrintPrinters[documentType]) || "";
                 const isWebPrintActive = !!(window.mpWebPrintEnable && typeof WebPrint !== "undefined");
 
-                if (isWebPrintActive && targetPrinter && res.pdf) {
-                    if (printWindow && !printWindow.closed) {
-                        try { printWindow.close(); } catch(e) {}
+                if (isWebPrintActive) {
+                    if (!targetPrinter) {
+                        if (printWindow && !printWindow.closed) {
+                            try { printWindow.close(); } catch(e) {}
+                        }
+                        const docLabels = {
+                            order: 'Ordine',
+                            invoice: 'Fattura',
+                            delivery: 'Spedizione / Consegna',
+                            address: 'Etichetta Indirizzo',
+                            brt: 'Segnacollo BRT'
+                        };
+                        const docLabel = docLabels[documentType] || documentType;
+                        const msg = `Impossibile completare l'operazione: la stampa diretta WebPrint è attiva per l'operatore corrente, ma non è stata configurata la stampante per "${docLabel}". Configura la stampante nelle impostazioni del modulo.`;
+                        if (typeof showErrorMessage === "function") {
+                            showErrorMessage(msg);
+                        } else {
+                            alert(msg);
+                        }
+                        return;
                     }
-                    const host = window.mpWebPrintHost || "127.0.0.1";
-                    const port = window.mpWebPrintPort || "8080";
-                    const wp = new WebPrint(true, {
-                        relayHost: host,
-                        relayPort: port
-                    });
-                    wp.printRaw(res.pdf, targetPrinter);
 
-                    const msg = `Stampa massiva (${orderIds.length} ordini) inviata direttamente a "${targetPrinter}" tramite WebPrint.`;
-                    if (typeof showSuccessMessage === "function") {
-                        showSuccessMessage(msg);
-                    } else {
-                        alert(msg);
+                    if (res.pdf) {
+                        if (printWindow && !printWindow.closed) {
+                            try { printWindow.close(); } catch(e) {}
+                        }
+                        const host = window.mpWebPrintHost || "127.0.0.1";
+                        const port = window.mpWebPrintPort || "8085";
+                        const wp = new WebPrint(true, {
+                            relayHost: host,
+                            relayPort: port
+                        });
+                        wp.printRaw(res.pdf, targetPrinter);
+
+                        const msg = `Stampa massiva (${orderIds.length} ordini) inviata direttamente a "${targetPrinter}" tramite WebPrint.`;
+                        if (typeof showSuccessMessage === "function") {
+                            showSuccessMessage(msg);
+                        } else {
+                            alert(msg);
+                        }
+                        return;
                     }
-                    return;
                 }
 
                 if (typeof showSuccessMessage === "function") {
