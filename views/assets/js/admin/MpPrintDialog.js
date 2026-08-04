@@ -1156,10 +1156,7 @@ class MpPrintDialog {
         }
 
         const hasDomInvoice = !!document.querySelector('[data-role="view-invoice"], a[href*="generateInvoicePDF"], a[href*="generateInvoice"], .btn-print-invoice');
-        const hasDomDelivery = !!document.querySelector('[data-role="view-delivery-slip"], a[href*="generateDeliverySlipPDF"], a[href*="generateDelivery"], .btn-print-delivery');
-
         const showInvoice = orderInfo.has_invoice || hasDomInvoice;
-        const showDelivery = orderInfo.has_delivery || hasDomDelivery;
 
         if (document.querySelector(".mp-separate-print-btn-group")) {
             return;
@@ -1182,9 +1179,7 @@ class MpPrintDialog {
                     <i class="material-icons" style="font-size:16px;vertical-align:middle;margin-right:3px;color:#059669;">receipt_long</i> Fattura
                 </button>
             `;
-        }
-
-        if (showDelivery) {
+        } else {
             html += `
                 <button type="button" class="btn btn-outline-secondary js-mp-direct-print" data-doc-type="delivery" data-order-id="${idOrder}" title="Stampa Spedizione">
                     <i class="material-icons" style="font-size:16px;vertical-align:middle;margin-right:3px;color:#7c3aed;">print</i> Spedizione
@@ -1199,6 +1194,14 @@ class MpPrintDialog {
                 <input type="number" name="copies" id="mp-print-copies-input-address" value="1" min="1" max="99" class="mp-copies-input">
             </button>
         `;
+
+        if (orderInfo.is_brt_active && orderInfo.has_brt_label) {
+            html += `
+                <button type="button" class="btn btn-outline-secondary js-mp-direct-print" data-doc-type="brt" data-order-id="${idOrder}" title="Stampa Segnacollo BRT">
+                    <i class="material-icons" style="font-size:16px;vertical-align:middle;margin-right:3px;color:#dc2626;">qr_code_2</i> Segnacollo BRT
+                </button>
+            `;
+        }
 
         btnGroup.innerHTML = html;
         actionsContainer.prepend(btnGroup);
