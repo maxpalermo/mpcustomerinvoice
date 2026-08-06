@@ -41,56 +41,26 @@ class GenerateDocumentRestrictions
         if (empty($idCustomer)) {
             return false;
         }
-        $table = _DB_PREFIX_ . 'customer_invoice';
+
+        $table = Db::getFullTableName('customer_invoice');
         $idCustomer = (int) $idCustomer;
 
         $sql = "
             SELECT
-                `company`, 
-                `type`, 
-                `invoice_requested`, 
-                `vat_number`, 
-                `dni`,
-                `id_address_invoice`
+                `invoice_requested`
             FROM 
                 {$table} 
             WHERE 
                 `id_customer` = {$idCustomer}
         ";
 
-        $row = Db::getInstance()->getRow($sql);
+        $invoiceRequested = (int) Db::getInstance()->getValue($sql);
 
-        if (!$row) {
-            return false;
-        }
-
-        if ($row['type'] === 'PRIVATO' && $row['invoice_requested']) {
-            $hasCompany = !empty($row['company']) && trim((string) $row['company']) !== '';
-            $hasDni = !empty($row['dni']) && trim((string) $row['dni']) !== '';
-            $hasIdAddressInvoice = (int) $row['id_address_invoice'];
-            return $hasCompany && $hasDni && $hasIdAddressInvoice;
-        }
-
-        if ($row['type'] === 'PARTITA_IVA' && $row['invoice_requested']) {
-            $hasCompany = !empty($row['company']) && trim((string) $row['company']) !== '';
-            $hasVat = !empty($row['vat_number']) && trim((string) $row['vat_number']) !== '';
-            $hasIdAddressInvoice = (int) $row['id_address_invoice'];
-            return $hasCompany && $hasVat && $hasIdAddressInvoice;
-        }
-
-        if ($row['type'] === 'ENTE' && $row['invoice_requested']) {
-            $hasCompany = !empty($row['company']) && trim((string) $row['company']) !== '';
-            $hasDni = !empty($row['dni']) && trim((string) $row['dni']) !== '';
-            $hasIdAddressInvoice = (int) $row['id_address_invoice'];
-            return $hasCompany && $hasDni && $hasIdAddressInvoice;
-        }
-
-        return false;
+        return (bool) $invoiceRequested;
     }
 
     public static function handleAutomaticDocumentGeneration(array $params)
     {
-        $createBoth = (int) Configuration::get('MPCUSTOMERINVOICE_CREATE_BOTH') === 1;
         $newOrderStatus = $params['newOrderStatus'] ?? null;
         $idOrderState = (int) ($newOrderStatus->id ?? $params['id_order_state'] ?? 0);
         $idOrder = (int) ($params['id_order'] ?? 0);
@@ -117,89 +87,146 @@ class GenerateDocumentRestrictions
             return;
         }
 
+        self::processDocumentGenerationForOrder($idOrder);
+    }
+
+    /**
+     * Procedure for manual document generation (bypasses order state trigger check).
+     */
+    public static function handleManualDocumentGeneration(int $idOrder): bool
+    {
+        PrestaShopLogger::addLog("handleManualDocumentGeneration: Generazione manuale documento per l'ordine {$idOrder}.");
+        return self::processDocumentGenerationForOrder($idOrder);
+    }
+
+    /**
+     * Shared procedure for document generation & restrictions enforcement.
+     */
+    public static function processDocumentGenerationForOrder(int $idOrder): bool
+    {
         if ($idOrder <= 0) {
-            PrestaShopLogger::addLog("hookActionOrderStatusPostUpdate: id_order non valido {$idOrder}", 3, 0, 'Mpcustomerinvoice');
-            return;
+            PrestaShopLogger::addLog("processDocumentGenerationForOrder: id_order non valido {$idOrder}", 3, 0, 'Mpcustomerinvoice');
+            return false;
         }
 
         $order = new Order($idOrder);
         if (!Validate::isLoadedObject($order)) {
-            PrestaShopLogger::addLog("hookActionOrderStatusPostUpdate: Ordine {$idOrder} non validato", 3, 0, 'Mpcustomerinvoice');
-            return;
+            PrestaShopLogger::addLog("processDocumentGenerationForOrder: Ordine {$idOrder} non validato", 3, 0, 'Mpcustomerinvoice');
+            return false;
         }
+
+        $createBoth = (int) Configuration::get('MPCUSTOMERINVOICE_CREATE_BOTH') === 1;
         $isInvoiceRequired = self::isInvoiceRequired($order->id_customer);
 
-        if (!$order->hasInvoice()) {
+        if (!$createBoth && $isInvoiceRequired) {
             $order->setInvoice(true);
-            PrestaShopLogger::addLog("Fattura per l'ordine {$idOrder} creata.");
-        }
-        if (empty($order->delivery_number)) {
-            $order->setDeliverySlip();
-            PrestaShopLogger::addLog("DDT per l'ordine {$idOrder} creato.");
+            self::removeDeliverySlip($idOrder);
         }
 
-        if (!$createBoth) {
-            if ($isInvoiceRequired) {
-                PrestaShopLogger::addLog("Bisogna generare solo la fattura per l'ordine {$idOrder}. Semplice correzione del documento.");
-            } else {
-                PrestaShopLogger::addLog("Bisogna generare solo il DDT per l'ordine {$idOrder}. Semplice correzione del documento.");
-            }
-
-            $orderTable = Db::getFullTableName('orders');
-            $orderInvoiceTable = Db::getFullTableName('order_invoice');
-            if (!$createBoth && $isInvoiceRequired) {
-                PrestaShopLogger::addLog("Rimozione DDT per l'ordine {$idOrder}.");
-
-                $query = "
-                    UPDATE 
-                        {$orderTable} o
-                        INNER JOIN {$orderInvoiceTable} oi ON o.id_order = oi.id_order
-                    SET 
-                        o.delivery_number = 0, 
-                        o.delivery_date = null,
-                        oi.delivery_number=0,
-                        oi.delivery_date=null
-                    WHERE 
-                        o.id_order = {$idOrder}
-                ";
-                try {
-                    $result = Db::getInstance()->execute($query);
-                } catch (\Throwable $th) {
-                    PrestaShopLogger::addLog("Errore rimozione DDT per l'ordine {$idOrder}. Errore: {$th->getMessage()}");
-                    PrestaShopLogger::addLog("QUERY: {$query}");
-                    $result = false;
-                }
-                if ($result) {
-                    PrestaShopLogger::addLog("DDT per l'ordine {$idOrder} rimosso.");
-                }
-            }
-
-            if (!$createBoth && !$isInvoiceRequired) {
-                PrestaShopLogger::addLog("Rimozione fattura per l'ordine {$idOrder}.");
-
-                $query = "
-                    UPDATE 
-                        {$orderTable} o
-                        INNER JOIN {$orderInvoiceTable} oi ON o.id_order = oi.id_order
-                    SET 
-                        o.invoice_number = 0, 
-                        o.invoice_date = null,
-                        oi.number=0
-                    WHERE 
-                        o.id_order = {$idOrder}
-                ";
-                try {
-                    $result = Db::getInstance()->execute($query);
-                } catch (\Throwable $th) {
-                    PrestaShopLogger::addLog("Errore rimozione fattura per l'ordine {$idOrder}. Errore: {$th->getMessage()}");
-                    PrestaShopLogger::addLog("QUERY: {$query}");
-                    $result = false;
-                }
-                if ($result) {
-                    PrestaShopLogger::addLog("Fattura per l'ordine {$idOrder} rimossa.");
-                }
-            }
+        if (!$createBoth && !$isInvoiceRequired) {
+            $order->setInvoice(true);
+            self::setDeliverySlip($idOrder);
+            self::removeInvoice($idOrder);
         }
+
+        if ($createBoth) {
+            $order->setInvoice(true);
+            self::setDeliverySlip($idOrder);
+        }
+
+        return true;
+    }
+
+    public static function removeInvoice($idOrder)
+    {
+        $orderInvoiceTable = Db::getFullTableName('order_invoice');
+        $orderTable = Db::getFullTableName('orders');
+
+        $query = "
+            UPDATE 
+                {$orderTable} o
+                INNER JOIN {$orderInvoiceTable} oi ON o.id_order = oi.id_order
+            SET 
+                o.invoice_number = 0, 
+                o.invoice_date = null,
+                oi.number=0
+            WHERE 
+                o.id_order = {$idOrder}
+        ";
+        try {
+            $result = Db::getInstance()->execute($query);
+        } catch (\Throwable $th) {
+            PrestaShopLogger::addLog("Errore rimozione fattura per l'ordine {$idOrder}. Errore: {$th->getMessage()}", 1, 0, "order", $idOrder);
+            PrestaShopLogger::addLog("QUERY: {$query}", 1, 0, "order", $idOrder);
+            return false;
+        }
+        return $result;
+    }
+
+    public static function removeDeliverySlip($idOrder)
+    {
+        $orderInvoiceTable = Db::getFullTableName('order_invoice');
+        $orderTable = Db::getFullTableName('orders');
+
+        $query = "
+            UPDATE 
+                {$orderTable} o
+                INNER JOIN {$orderInvoiceTable} oi ON o.id_order = oi.id_order
+            SET 
+                o.delivery_number = 0, 
+                o.delivery_date = null,
+                oi.delivery_number=0,
+                oi.delivery_date=null
+            WHERE 
+                o.id_order = {$idOrder}
+        ";
+        try {
+            $result = Db::getInstance()->execute($query);
+        } catch (\Throwable $th) {
+            PrestaShopLogger::addLog("Errore rimozione DDT per l'ordine {$idOrder}. Errore: {$th->getMessage()}", 1, 0, "order", $idOrder);
+            PrestaShopLogger::addLog("QUERY: {$query}", 1, 0, "order", $idOrder);
+            return false;
+        }
+        return $result;
+    }
+
+    public static function setDeliverySlip($id_order)
+    {
+        $order = new Order($id_order);
+        $orderTable = Db::getFullTableName('orders');
+        $orderInvoiceTable = Db::getFullTableName('order_invoice');
+        $lastInvoiceNumberQuery = "
+            SELECT
+                MAX(oi.`delivery_number`) AS last_invoice_number
+            FROM
+                {$orderInvoiceTable} oi
+            WHERE
+                oi.`delivery_number` > 0
+        ";
+        $lastInvoiceNumber = (int) Db::getInstance()->getValue($lastInvoiceNumberQuery) + 1;
+        $setDeliveryQuery = "
+            UPDATE 
+                {$orderInvoiceTable} oi,
+                {$orderTable} o
+            SET 
+                oi.`delivery_number` = {$lastInvoiceNumber},
+                oi.`delivery_date` = CURDATE(),
+                o.`delivery_number` = {$lastInvoiceNumber},
+                o.`delivery_date` = CURDATE()
+            WHERE 
+                oi.`id_order` = {$id_order}
+                AND o.`id_order` = {$id_order}
+        ";
+        try {
+            $result = (int) Db::getInstance()->execute($setDeliveryQuery);
+        } catch (\Throwable $th) {
+            PrestaShopLogger::addLog("Errore DDT per l'ordine {$order->id}. Errore: {$th->getMessage()}", 1, 0, "order", $order->id);
+            PrestaShopLogger::addLog("QUERY: {$setDeliveryQuery}", 1, 0, "order", $order->id);
+            return false;
+        }
+
+
+        return $result;
     }
 
     public static function checkCustomerInvoiceFields($id_customer)

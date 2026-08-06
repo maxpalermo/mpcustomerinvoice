@@ -297,6 +297,7 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
             'MPCUSTOMERINVOICE_SHOW_CUSTOMIZATIONS' => (int) Configuration::get('MPCUSTOMERINVOICE_SHOW_CUSTOMIZATIONS'),
             'MPCUSTOMERINVOICE_LABEL_WIDTH' => (int) $this->getSetupConfig('MPCUSTOMERINVOICE_LABEL_WIDTH', 100),
             'MPCUSTOMERINVOICE_LABEL_HEIGHT' => (int) $this->getSetupConfig('MPCUSTOMERINVOICE_LABEL_HEIGHT', 50),
+            'MPCUSTOMERINVOICE_NOTES_HOVER_DELAY' => (int) $this->getSetupConfig('MPCUSTOMERINVOICE_NOTES_HOVER_DELAY', 1),
             'availableOrderTemplates' => \MpSoft\MpCustomerInvoice\PrintPdf\Templates\PrintTemplateFactory::getAvailableTemplates('Orders'),
             'availableInvoiceTemplates' => \MpSoft\MpCustomerInvoice\PrintPdf\Templates\PrintTemplateFactory::getAvailableTemplates('Invoices'),
             'availableDeliveryTemplates' => \MpSoft\MpCustomerInvoice\PrintPdf\Templates\PrintTemplateFactory::getAvailableTemplates('Deliveries'),
@@ -511,17 +512,10 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
         }
 
         $hasInvoice = false;
-        if ($order->hasInvoice() || (int) $order->invoice_number > 0 || (!empty($order->invoice_date) && $order->invoice_date !== '0000-00-00 00:00:00')) {
+        if ((int) $order->invoice_number > 0) {
             $hasInvoice = true;
-        } else {
-            $sqlInvoice = 'SELECT COUNT(*) FROM `' . _DB_PREFIX_ . 'order_invoice` WHERE `id_order` = ' . (int) $idOrder;
-            if ((int) \Db::getInstance()->getValue($sqlInvoice) > 0) {
-                $hasInvoice = true;
-            } else {
-                if (class_exists('\MpSoft\MpCustomerInvoice\Helpers\GenerateDocumentRestrictions')) {
-                    $hasInvoice = \MpSoft\MpCustomerInvoice\Helpers\GenerateDocumentRestrictions::isInvoiceRequired($order->id_customer);
-                }
-            }
+        } elseif (class_exists('\MpSoft\MpCustomerInvoice\Helpers\GenerateDocumentRestrictions')) {
+            $hasInvoice = \MpSoft\MpCustomerInvoice\Helpers\GenerateDocumentRestrictions::isInvoiceRequired($order->id_customer);
         }
 
         $hasDelivery = false;
@@ -690,33 +684,98 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
         $pdfStreams = [];
         $successCount = 0;
 
+        $db = \Db::getInstance();
+
         foreach ($idOrders as $idOrder) {
             if ($idOrder <= 0) {
                 continue;
             }
-            try {
-                /** @var \MpSoft\MpCustomerInvoice\PrintPdf\PrintManager $printer */
-                $printer = new $className($idOrder, 1, false, 'S');
-                $pdfData = $printer->renderPdf();
-                if (!empty($pdfData)) {
-                    $pdfStreams[] = $pdfData;
-                    $successCount++;
+
+            $order = new \Order($idOrder);
+            if (!\Validate::isLoadedObject($order)) {
+                continue;
+            }
+
+            if ($documentType === 'invoice') {
+                $sql = 'SELECT `id_order_invoice`, `number` FROM `' . _DB_PREFIX_ . 'order_invoice` WHERE `id_order` = ' . (int) $idOrder . ' AND `number` > 0 ORDER BY `id_order_invoice` ASC';
+                $invoices = $db->executeS($sql);
+
+                if (empty($invoices)) {
+                    continue;
                 }
-            } catch (\Throwable $e) {
-                \PrestaShopLogger::addLog(
-                    "MpCustomerInvoice: Errore durante la stampa massiva dell'ordine #{$idOrder}: " . $e->getMessage(),
-                    3,
-                    null,
-                    'Order',
-                    (int) $idOrder
-                );
+
+                foreach ($invoices as $inv) {
+                    try {
+                        /** @var \MpSoft\MpCustomerInvoice\PrintPdf\PrintManager $printer */
+                        $printer = new $className($idOrder, 1, false, 'S');
+                        $pdfData = $printer->renderPdf();
+                        if (!empty($pdfData)) {
+                            $pdfStreams[] = $pdfData;
+                            $successCount++;
+                        }
+                    } catch (\Throwable $e) {
+                        \PrestaShopLogger::addLog(
+                            "MpCustomerInvoice: Errore durante la stampa massiva fattura dell'ordine #{$idOrder}: " . $e->getMessage(),
+                            3,
+                            null,
+                            'Order',
+                            (int) $idOrder
+                        );
+                    }
+                }
+            } elseif ($documentType === 'delivery') {
+                $sql = 'SELECT `id_order_invoice`, `delivery_number` FROM `' . _DB_PREFIX_ . 'order_invoice` WHERE `id_order` = ' . (int) $idOrder . ' AND `delivery_number` > 0 ORDER BY `id_order_invoice` ASC';
+                $deliveries = $db->executeS($sql);
+
+                if (empty($deliveries)) {
+                    continue;
+                }
+
+                foreach ($deliveries as $del) {
+                    try {
+                        /** @var \MpSoft\MpCustomerInvoice\PrintPdf\PrintManager $printer */
+                        $printer = new $className($idOrder, 1, false, 'S');
+                        $pdfData = $printer->renderPdf();
+                        if (!empty($pdfData)) {
+                            $pdfStreams[] = $pdfData;
+                            $successCount++;
+                        }
+                    } catch (\Throwable $e) {
+                        \PrestaShopLogger::addLog(
+                            "MpCustomerInvoice: Errore durante la stampa massiva nota vendita dell'ordine #{$idOrder}: " . $e->getMessage(),
+                            3,
+                            null,
+                            'Order',
+                            (int) $idOrder
+                        );
+                    }
+                }
+            } else {
+                try {
+                    /** @var \MpSoft\MpCustomerInvoice\PrintPdf\PrintManager $printer */
+                    $printer = new $className($idOrder, 1, false, 'S');
+                    $pdfData = $printer->renderPdf();
+                    if (!empty($pdfData)) {
+                        $pdfStreams[] = $pdfData;
+                        $successCount++;
+                    }
+                } catch (\Throwable $e) {
+                    \PrestaShopLogger::addLog(
+                        "MpCustomerInvoice: Errore durante la stampa massiva dell'ordine #{$idOrder}: " . $e->getMessage(),
+                        3,
+                        null,
+                        'Order',
+                        (int) $idOrder
+                    );
+                }
             }
         }
 
         if (empty($pdfStreams)) {
+            $docName = $documentType === 'invoice' ? 'fattura' : ($documentType === 'delivery' ? 'nota di vendita' : 'richiesto');
             $this->response([
                 'success' => false,
-                'message' => 'Impossibile generare i documenti PDF per gli ordini selezionati.',
+                'message' => sprintf('Nessun documento di tipo "%s" trovato per gli ordini selezionati.', $docName),
             ]);
         }
 
@@ -797,6 +856,7 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
             'MPCUSTOMERINVOICE_SHOW_CUSTOMIZATIONS' => 0,
             'MPCUSTOMERINVOICE_LABEL_WIDTH' => 100,
             'MPCUSTOMERINVOICE_LABEL_HEIGHT' => 50,
+            'MPCUSTOMERINVOICE_NOTES_HOVER_DELAY' => 1,
             'MPCUSTOMERINVOICE_TEMPLATE_ORDERS' => 'Default',
             'MPCUSTOMERINVOICE_TEMPLATE_INVOICES' => 'Default',
             'MPCUSTOMERINVOICE_TEMPLATE_DELIVERIES' => 'Default',
@@ -830,6 +890,7 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
             'MPCUSTOMERINVOICE_SHOW_CUSTOMIZATIONS' => (int) Tools::getValue('MPCUSTOMERINVOICE_SHOW_CUSTOMIZATIONS', 0),
             'MPCUSTOMERINVOICE_LABEL_WIDTH' => (int) Tools::getValue('MPCUSTOMERINVOICE_LABEL_WIDTH', $defaults['MPCUSTOMERINVOICE_LABEL_WIDTH']),
             'MPCUSTOMERINVOICE_LABEL_HEIGHT' => (int) Tools::getValue('MPCUSTOMERINVOICE_LABEL_HEIGHT', $defaults['MPCUSTOMERINVOICE_LABEL_HEIGHT']),
+            'MPCUSTOMERINVOICE_NOTES_HOVER_DELAY' => (int) Tools::getValue('MPCUSTOMERINVOICE_NOTES_HOVER_DELAY', $defaults['MPCUSTOMERINVOICE_NOTES_HOVER_DELAY']),
             'MPCUSTOMERINVOICE_TEMPLATE_ORDERS' => Tools::getValue('MPCUSTOMERINVOICE_TEMPLATE_ORDERS', $defaults['MPCUSTOMERINVOICE_TEMPLATE_ORDERS']),
             'MPCUSTOMERINVOICE_TEMPLATE_INVOICES' => Tools::getValue('MPCUSTOMERINVOICE_TEMPLATE_INVOICES', $defaults['MPCUSTOMERINVOICE_TEMPLATE_INVOICES']),
             'MPCUSTOMERINVOICE_TEMPLATE_DELIVERIES' => Tools::getValue('MPCUSTOMERINVOICE_TEMPLATE_DELIVERIES', $defaults['MPCUSTOMERINVOICE_TEMPLATE_DELIVERIES']),
@@ -1009,6 +1070,7 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
             'orderCountries' => $orderCountries,
             'cancelledStateIds' => array_values(array_unique($cancelledStateIds)),
             'showCustomizationsColumn' => (int) Configuration::get('MPCUSTOMERINVOICE_SHOW_CUSTOMIZATIONS'),
+            'notesHoverDelay' => (int) $this->getSetupConfig('MPCUSTOMERINVOICE_NOTES_HOVER_DELAY', 1),
             'orderFlagItems' => $this->getOrderFlagItems(),
             'orderPageLink' => $this->context->link->getAdminLink(
                 'AdminOrders',
@@ -1637,7 +1699,7 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
         $hasNotes = Module::getInstanceByName('mpnotes');
         $query = new DbQuery();
         $query
-            ->select('o.id_order, o.id_customer, o.reference, o.total_paid_tax_incl, o.payment, o.date_add, o.current_state')
+            ->select('o.id_order, o.id_customer, o.reference, o.total_paid_tax_incl, o.payment, o.date_add, o.current_state, o.invoice_number, o.delivery_number')
             ->select('COALESCE((SELECT 1 FROM `' . _DB_PREFIX_ . 'order_detail` od INNER JOIN `' . _DB_PREFIX_ . 'product` p ON (p.id_product = od.product_id) WHERE od.id_order = o.id_order AND p.customizable > 0 LIMIT 1), (SELECT 1 FROM `' . _DB_PREFIX_ . 'customization` cu WHERE cu.id_cart = o.id_cart LIMIT 1), 0) AS has_customization')
             ->select('c.email')
             ->select("CONCAT(c.firstname, ' ', c.lastname) AS customer")
@@ -1669,6 +1731,13 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
                 ->select("(SELECT COUNT(*) FROM `" . _DB_PREFIX_ . "mpnote` mn WHERE mn.id_customer = o.id_customer AND mn.type = 'customer' AND mn.deleted = 0) AS notes_customer")
                 ->select("(SELECT COUNT(*) FROM `" . _DB_PREFIX_ . "mpnote` mn WHERE mn.id_order = o.id_order AND mn.type = 'order' AND mn.deleted = 0) AS notes_order")
                 ->select("(SELECT COUNT(*) FROM `" . _DB_PREFIX_ . "mpnote` mn WHERE mn.id_customer = o.id_customer AND mn.type = 'embroidery' AND mn.deleted = 0) AS notes_embroidery");
+        }
+
+        $hasBrtTable = (bool) Db::getInstance()->executeS("SHOW TABLES LIKE '" . _DB_PREFIX_ . "brt_restapi_shipment_response'");
+        if ($hasBrtTable) {
+            $query->select('COALESCE((SELECT 1 FROM `' . _DB_PREFIX_ . 'brt_restapi_shipment_response` brt WHERE brt.id_order = o.id_order LIMIT 1), 0) AS has_brt');
+        } else {
+            $query->select('0 AS has_brt');
         }
 
         $query
@@ -1758,6 +1827,7 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
         $total = (int) $db->getValue($queryCount);
         $rows = $db->executeS($query) ?: [];
 
+        $createBoth = (int) Configuration::get('MPCUSTOMERINVOICE_CREATE_BOTH') === 1;
         foreach ($rows as &$row) {
             $feeAmount = (float) ($row['payment_fee_amount'] ?? 0);
             $feeTotalOrder = (float) ($row['payment_fee_total_order'] ?? 0);
@@ -1772,6 +1842,23 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
                 $row['payment_fee_amount'] = 0;
                 $row['real_total'] = $totalPaid;
             }
+
+            $invoiceRequested = (int) ($row['invoice_requested'] ?? 0);
+            $hasInvoiceDoc = (int) ($row['invoice_number'] ?? 0) > 0;
+            $hasDeliveryDoc = (int) ($row['delivery_number'] ?? 0) > 0;
+
+            $isInvalidDocument = false;
+            if (!$createBoth) {
+                if ($invoiceRequested == 1 && $hasDeliveryDoc && !$hasInvoiceDoc) {
+                    $isInvalidDocument = true;
+                } elseif ($invoiceRequested == 0 && $hasInvoiceDoc) {
+                    $isInvalidDocument = true;
+                }
+            }
+            $row['is_invalid_document'] = $isInvalidDocument;
+            $row['has_invoice'] = $hasInvoiceDoc ? 1 : 0;
+            $row['has_delivery'] = $hasDeliveryDoc ? 1 : 0;
+            $row['has_brt'] = (int) ($row['has_brt'] ?? 0) > 0 ? 1 : 0;
         }
 
         return [
@@ -1905,6 +1992,90 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
         }
 
         return number_format((float) $value, 6, '.', '');
+    }
+
+    public function ajaxProcessGetOrderLatestNotes()
+    {
+        $idOrder = (int) \Tools::getValue('id_order');
+        $idCustomer = (int) \Tools::getValue('id_customer');
+
+        if (!$idOrder) {
+            header('Content-Type: application/json');
+            die(json_encode(['success' => false, 'message' => 'ID Ordine non valido', 'notes' => []]));
+        }
+
+        if (!$idCustomer) {
+            $order = new \Order($idOrder);
+            if (\Validate::isLoadedObject($order)) {
+                $idCustomer = (int) $order->id_customer;
+            }
+        }
+
+        $db = \Db::getInstance();
+        $notes = [];
+
+        $types = [
+            'order' => [
+                'label' => 'Nota Ordine',
+                'icon' => 'shopping_cart',
+                'badge_class' => 'note-badge-order',
+                'color' => '#10b981',
+                'where' => 'mn.id_order = ' . (int) $idOrder . " AND mn.type = 'order'"
+            ],
+            'customer' => [
+                'label' => 'Nota Cliente',
+                'icon' => 'person',
+                'badge_class' => 'note-badge-customer',
+                'color' => '#3b82f6',
+                'where' => 'mn.id_customer = ' . (int) $idCustomer . " AND mn.type = 'customer'"
+            ],
+            'embroidery' => [
+                'label' => 'Nota Ricamo',
+                'icon' => 'content_cut',
+                'badge_class' => 'note-badge-embroidery',
+                'color' => '#f43f5e',
+                'where' => 'mn.id_customer = ' . (int) $idCustomer . " AND mn.type = 'embroidery'"
+            ],
+        ];
+
+        foreach ($types as $typeKey => $config) {
+            $sql = 'SELECT mn.id_mpnote, mn.type, mn.content, mn.date_add, mn.id_employee, mn.id_customer,
+                           CONCAT(e.firstname, " ", e.lastname) AS employee_name,
+                           CONCAT(c.firstname, " ", c.lastname) AS customer_name
+                    FROM `' . _DB_PREFIX_ . 'mpnote` mn
+                    LEFT JOIN `' . _DB_PREFIX_ . 'employee` e ON (e.id_employee = mn.id_employee)
+                    LEFT JOIN `' . _DB_PREFIX_ . 'customer` c ON (c.id_customer = mn.id_customer)
+                    WHERE ' . $config['where'] . ' AND mn.deleted = 0
+                    ORDER BY mn.date_add DESC, mn.id_mpnote DESC';
+
+            $row = $db->getRow($sql);
+            if ($row && !empty($row['content'])) {
+                $employeeName = trim((string) ($row['employee_name'] ?? ''));
+                $customerName = trim((string) ($row['customer_name'] ?? ''));
+                $author = !empty($employeeName) ? $employeeName : (!empty($customerName) ? $customerName : 'Sistema');
+
+                $notes[] = [
+                    'type' => $typeKey,
+                    'type_label' => $config['label'],
+                    'icon' => $config['icon'],
+                    'color' => $config['color'],
+                    'badge_class' => $config['badge_class'],
+                    'content' => stripslashes((string) $row['content']),
+                    'date_add' => date('d/m/Y H:i', strtotime($row['date_add'])),
+                    'author' => $author
+                ];
+            }
+        }
+
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
+        header('Content-Type: application/json');
+        die(json_encode([
+            'success' => true,
+            'id_order' => $idOrder,
+            'notes' => $notes
+        ]));
     }
 
     public function ajaxProcessGetCustomerAddresses()
@@ -2205,6 +2376,24 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
         $this->response([
             'success' => true,
             'jobPositions' => $jobPositions,
+        ]);
+    }
+
+    public function ajaxProcessHandleGenerateInvoice(): void
+    {
+        $idOrder = (int) Tools::getValue('id_order');
+        if ($idOrder > 0) {
+            \MpSoft\MpCustomerInvoice\Helpers\GenerateDocumentRestrictions::handleManualDocumentGeneration($idOrder);
+            $this->response([
+                'success' => true,
+                'id_order' => $idOrder,
+                'message' => 'Generazione documento elaborata.',
+            ]);
+        }
+
+        $this->response([
+            'success' => false,
+            'message' => 'ID ordine non valido.',
         ]);
     }
 }

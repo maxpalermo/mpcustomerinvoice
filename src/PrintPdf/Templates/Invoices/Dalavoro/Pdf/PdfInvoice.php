@@ -211,6 +211,9 @@ class PdfInvoice
                     if (isset($feeRes['has_fee']) && $feeRes['has_fee']) {
                         $feeExcl = (float) ($feeRes['fee_tax_excl'] ?? 0);
                         $feeIncl = (float) ($feeRes['fee_with_tax'] ?? 0);
+                        if ($feeIncl > 0 && abs($feeExcl - $feeIncl) < 0.001 && $vatRate > 0) {
+                            $feeExcl = $feeIncl / (1 + $vatRate / 100);
+                        }
                     }
                 }
             } catch (\Throwable $e) {

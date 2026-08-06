@@ -43,7 +43,7 @@ class MpCustomerInvoice extends Module implements WidgetInterface
     {
         $this->name = 'mpcustomerinvoice';
         $this->tab = 'administration';
-        $this->version = '1.5.120';
+        $this->version = '1.5.127';
         $this->author = 'Massimiliano Palermo';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -222,16 +222,51 @@ class MpCustomerInvoice extends Module implements WidgetInterface
 
     public function hookActionDispatcherAfter($params)
     {
-        $controller = Tools::getValue('controller');
-        if ($controller !== 'order') {
-            return;
-        }
+        // Reserved for future post-dispatch actions
     }
 
     public function hookActionDispatcherBefore($params)
     {
         $requestUri = $_SERVER['REQUEST_URI'] ?? '';
         $controller = Tools::getValue('controller');
+        $allValues = Tools::getAllValues();
+
+        if (isset($allValues['action']) && $allValues['action'] === 'HandleGenerateInvoice') {
+            $idOrderGenerate = (int) ($allValues['id_order'] ?? 0);
+            if ($idOrderGenerate > 0) {
+                \MpSoft\MpCustomerInvoice\Helpers\GenerateDocumentRestrictions::handleManualDocumentGeneration($idOrderGenerate);
+            }
+            // Aggiorna la pagina dell'ordine
+            Tools::redirectAdmin($this->context->link->getAdminLink('AdminOrders', true, [], ['id_order' => $idOrderGenerate, 'vieworder' => 1]));
+            exit;
+        }
+
+        // Intercetta la richiesta di generazione manuale fattura/documento per un ordine
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' || Tools::isSubmit('generateInvoice')) {
+            $idOrderGenerate = 0;
+            $isSymfonyInvoiceRoute = false;
+            if (preg_match('#/sell/orders/(\d+)/invoice#i', $requestUri, $mGen)) {
+                $idOrderGenerate = (int) $mGen[1];
+                $isSymfonyInvoiceRoute = true;
+            } elseif (Tools::isSubmit('generateInvoice') && Tools::getValue('id_order')) {
+                $idOrderGenerate = (int) Tools::getValue('id_order');
+            }
+
+            if ($idOrderGenerate > 0) {
+                \MpSoft\MpCustomerInvoice\Helpers\GenerateDocumentRestrictions::handleManualDocumentGeneration($idOrderGenerate);
+
+                if ($isSymfonyInvoiceRoute) {
+                    $referer = $_SERVER['HTTP_REFERER'] ?? '';
+                    if (!empty($referer) && strpos($referer, '/orders/') !== false) {
+                        header('Location: ' . $referer);
+                    } else {
+                        $redirectUrl = preg_replace('#/invoice(\?.*)?$#i', '$1', $requestUri);
+                        header('Location: ' . $redirectUrl);
+                    }
+                    exit;
+                }
+            }
+        }
 
         // Intercettazione Menu Ordini e Clienti in Backoffice
         if ($controller !== 'AdminMpCustomerInvoice' && strpos((string) $controller, 'AdminMpCustomerInvoice') === false) {
@@ -1013,5 +1048,18 @@ class MpCustomerInvoice extends Module implements WidgetInterface
     public function hookActionOrderStatusPostUpdate($params)
     {
         \MpSoft\MpCustomerInvoice\Helpers\GenerateDocumentRestrictions::handleAutomaticDocumentGeneration($params);
+    }
+
+    public function hookActionOrderInvoiceAdd($params)
+    {
+        $orderInvoice = $params['object'] ?? null;
+        if ($orderInvoice && !empty($orderInvoice->id_order)) {
+            \MpSoft\MpCustomerInvoice\Helpers\GenerateDocumentRestrictions::handleManualDocumentGeneration((int) $orderInvoice->id_order);
+        }
+    }
+
+    public function hookActionObjectOrderInvoiceAddAfter($params)
+    {
+        $this->hookActionOrderInvoiceAdd($params);
     }
 }

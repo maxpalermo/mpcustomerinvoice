@@ -210,10 +210,10 @@ class PrintPdfAddress extends PrintManager
                 $this->SetLineWidth(0.3);
                 $this->Rect($barcodeX, $phoneBoxY, $phoneBoxW, $phoneBoxH);
 
-                $this->SetFont('helvetica', 'B', 11);
+                $this->SetFont('dejavusans', 'B', 9.5);
                 $this->SetTextColor(0, 0, 0);
                 $this->SetXY($barcodeX, $phoneBoxY + 0.5);
-                $this->Cell($phoneBoxW, $phoneBoxH - 1, $phone, 0, 0, 'C');
+                $this->Cell($phoneBoxW, $phoneBoxH - 1, '☎ ' . $phone, 0, 0, 'C');
             }
 
             // 6. RENDERING FOOTER RIGIDO IN BASSO ($footerY) (POSIZIONE FISSA)

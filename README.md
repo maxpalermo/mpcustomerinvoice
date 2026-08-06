@@ -4,6 +4,54 @@ Modulo per gestire i codici della fatturazione elettronica.
 
 ## Changelog
 
+### 1.5.127
+
+- **Fix Layout Intestazione Stampa Ordine (`PdfOrder.php`)**:
+  - Eliminata la funzione di stampa titolo a coordinate Y=2mm (`writeHeaderOrderNum`) che creava uno spazio bianco eccessivo ed una duplicazione del numero ordine.
+  - Posizionato il logo aziendale in alto a sinistra ($X=10, Y=10$) e il titolo **Ordine: NNNNN** in grassetto 18pt in alto a destra ($X=90, Y=10$), allineato con il logo.
+  - Raggruppati i dettagli dell'ordine (`del DD/MM/YYYY`, `Stato corrente`, `Data di stampa`, `Tipo di Pagamento`) direttamente sotto il titolo in alto a destra ed eliminato lo spazio vuoto in testa alla pagina.
+
+### 1.5.126
+
+- **Icona Cornetta Telefonica su Etichetta Indirizzo (`PrintPdfAddress.php`)**:
+  - Inserita l'icona della cornetta telefonica (☎) a sinistra del numero di telefono nel riquadro dell'etichetta indirizzo per rendere immediatamente identificabile il recapito telefonico.
+
+### 1.5.125
+
+- **Intercezione Pulsante "Genera documento" & Refactoring Restrizioni (`GenerateDocumentRestrictions.php`, `mpcustomerinvoice.php`, `adminOrderExportHelper.js`)**:
+  - **Ristrutturazione `GenerateDocumentRestrictions.php`**: Estratta la logica comune di creazione/restrizione documento in `processDocumentGenerationForOrder(int $idOrder)` con i metodi atomic `setDeliverySlip()`, `removeInvoice()` e `removeDeliverySlip()`. Mantenuto inalterato `handleAutomaticDocumentGeneration()` ed aggiunto `handleManualDocumentGeneration()`.
+  - **Intercezione Client-Side AJAX**: Inserito `bindGenerateDocumentFormSubmit()` in `adminOrderExportHelper.js` che intercetta l'invio del form dal pulsante "Genera documento", esegue la chiamata AJAX a `AdminMpCustomerInvoice::ajaxProcessHandleGenerateInvoice` ed effettua il `reload()` della pagina senza reindirizzamenti.
+  - **Cambio Dicitura Pulsante**: Modificata l'etichetta del pulsante nativo della scheda ordine da **"Genera fattura"** a **"Genera documento"**.
+
+### 1.5.123
+
+- **Refactoring Logica Stampa Massiva via `ps_order_invoice` (`AdminMpCustomerInvoice.php`)**:
+    - Aggiornata la logica di ricerca documenti per la stampa massiva (`ajaxProcessRenderBatchPdfDocuments`):
+    - **Stampa Fattura**: controlla la tabella `ps_order_invoice` per l'ordine interrogando le righe con `number > 0`. Se non ci sono righe con `number > 0`, l'ordine viene saltato. Se vi sono più documenti di fattura associati allo stesso `id_order`, vengono stampate tutte le fatture dell'ordine.
+    - **Stampa Nota di Vendita**: controlla la tabella `ps_order_invoice` per l'ordine interrogando le righe con `delivery_number > 0`. Se non ci sono righe con `delivery_number > 0`, l'ordine viene saltato. Se vi sono più documenti di spedizione associati allo stesso `id_order`, vengono stampate tutte le note di vendita dell'ordine.
+
+### 1.5.122
+
+- **Filtro Ordini Senza Documento nella Stampa Massiva (`AdminMpCustomerInvoice.php`)**:
+    - Nella funzione di stampa massiva (`ajaxProcessRenderBatchPdfDocuments`), se l'utente seleziona una lista di ordini ed opta per la stampa di Fattura o Nota di vendita, il sistema controlla singolarmente la presenza del documento per ciascun ordine.
+    - Gli ordini per cui il tipo di documento richiesto non esiste vengono automaticamente saltati (es. selezionando gli ordini 1, 2, 3, 4, 5, 6 con la stampa Fattura, se solo 2, 3, 4, 6 hanno la fattura generata, vengono stampati unicamente i documenti 2, 3, 4, 6).
+
+### 1.5.121
+
+- **Fix Scorporo IVA Sezione `<fees>` Esportazione XML e PDF (`ExportManager.php`, `PdfInvoice.php`, `PdfDelivery.php`)**:
+    - Risolto bug nell'esportazione dati dove `fee_tax_excl` e `fee_tax_incl` venivano esportati con lo stesso importo nonostante IVA al 22%.
+    - Inserito il controllo prioritario sulla tabella `ps_mp_payment_fee_order` ed esplicito scorporo IVA (`fee_tax_excl = fee_amount / (1 + vat_rate / 100)`).
+- **Popup Ultimi Messaggi Note (Stile Shadcn/UI)**:
+    - Inserito il popup dinamico per la colonna Note dell'elenco ordini con il conteggio e la visualizzazione degli ultimi messaggi per tipologia (`order`, `customer`, `embroidery`).
+    - Implementato l'hover timer dinamico con barra di avanzamento e conteggio del ritardo configurabile da backoffice (`MPCUSTOMERINVOICE_NOTES_HOVER_DELAY`, default 1 secondo).
+    - Corretto il posizionamento relativo al viewport fissa per eliminare problemi di visualizzazione fuoriscopo.
+- **ID Cliente nel Title Colonna Cliente**:
+    - Inserito l'ID del cliente nel `title` del link alla scheda cliente (`title="(<id>) Vedi scheda cliente"`).
+- **Fix Preselezione Documento (Fattura vs Nota di vendita)**:
+    - Corretto l'endpoint `ajaxProcessGetOrderPrintInfo` per dare priorità a `GenerateDocumentRestrictions::isInvoiceRequired($idCustomer)` quando `invoice_number = 0`, garantendo che ai clienti con `invoice_requested = 0` venga preselezionata la Nota di vendita.
+- **Avviso "Documento errato" in Elenco Ordini**:
+    - Aggiunto il controllo `is_invalid_document` in `ajaxProcessRenderOrdersData` ed il badge rosso **`Documento errato`** nella colonna Cliente dell'elenco ordini quando l'ordine ha generato un tipo di documento non conforme alla scelta del cliente (`invoice_requested`).
+
 ### 1.5.120
 
 - **Stampe Modulo Dalavoro: Fattura (`FATTURA WEB/D`) & Nota di Vendita (`NOTA VENDITA WEB`)**:

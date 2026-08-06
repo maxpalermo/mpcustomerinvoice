@@ -149,6 +149,7 @@
     <script id="order-countries" type="application/json">{{ orderCountries|json_encode|raw }}</script>
     <script id="order-flag-items" type="application/json">{{ orderFlagItems|json_encode|raw }}</script>
     <script id="show-customizations-column" type="application/json">{{ showCustomizationsColumn|json_encode|raw }}</script>
+    <script id="notes-hover-delay" type="application/json">{{ notesHoverDelay|default(1)|json_encode|raw }}</script>
     <script id="order-table-links" type="application/json">{{ {'orderPageLink': orderPageLink, 'customerPageLink': customerPageLink, 'invoicePdfLink': invoicePdfLink, 'deliveryPdfLink': deliveryPdfLink, 'labelPrintEndpoint': labelPrintEndpoint, 'brtShipmentsUrl': brtShipmentsUrl}|json_encode|raw }}</script>
     <script type="text/javascript">
         const orderStates = JSON.parse(document.getElementById("order-states").textContent);
@@ -156,6 +157,7 @@
         const orderCountries = JSON.parse(document.getElementById("order-countries").textContent);
         const orderFlagItems = JSON.parse(document.getElementById("order-flag-items").textContent);
         const orderTableLinks = JSON.parse(document.getElementById("order-table-links").textContent);
-        const adminTableOrders = new AdminTableOrders('table-orders', adminControllerUrl, orderTableLinks.orderPageLink, orderTableLinks.customerPageLink, orderStates, orderFlagItems, orderCountries, orderTableLinks.invoicePdfLink, orderTableLinks.deliveryPdfLink, orderTableLinks.labelPrintEndpoint, orderStateColors);
+        const notesHoverDelay = JSON.parse(document.getElementById("notes-hover-delay") ? document.getElementById("notes-hover-delay").textContent : "1");
+        const adminTableOrders = new AdminTableOrders('table-orders', adminControllerUrl, orderTableLinks.orderPageLink, orderTableLinks.customerPageLink, orderStates, orderFlagItems, orderCountries, orderTableLinks.invoicePdfLink, orderTableLinks.deliveryPdfLink, orderTableLinks.labelPrintEndpoint, orderStateColors, notesHoverDelay);
     </script>
 {% endblock %}

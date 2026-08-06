@@ -440,81 +440,62 @@ class PdfOrder
         ];
     }
 
-    protected function writeHeaderOrderNum(\TCPDF $pdf, $id_order)
-    {
-        $currentX = $pdf->getX();
-        $currentY = $pdf->getY();
-        $orderId = (int) $id_order;
-
-        // Riga 0: TITOLO ORDINE
-        $pdf->SetX(0);
-        $pdf->SetY(2);
-        $pdf->setFont('helvetica', 'B', 20);
-        $pdf->Cell($pdf->getPageWidth() - 20, 5.5, "Ordine: $orderId", 0, 0, 'R', 0);
-
-        $pdf->SetX($currentX);
-        $pdf->SetY($currentY);
-    }
-
     protected function writeHeader(\TCPDF $pdf, $data)
     {
-        // --- PRIMA RIGA: LOGO + DATI ORDINE ---
-        $cellH = 30;
-        $logoW = 80;
-        $logoH = 25;
-        $rightW = 120;
-        $startY = $pdf->GetY();
+        $startY = 10;
+        $logoX = 10;
+        $logoW = 75;
+        $logoH = 22;
+        $rightX = 90;
+        $rightY = 10;
+        $rightW = 100;
 
-        // Logo
+        // 1. Logo in alto a sinistra
         if (!empty($data['shop_logo']) && @file_exists(_PS_ROOT_DIR_ . $data['shop_logo'])) {
-            $pdf->Image(_PS_ROOT_DIR_ . $data['shop_logo'], $pdf->GetX() + 2, $startY + 2, $logoW - 8, $logoH, '', '', '', true, 300, '', false, false, 0, true, false, false);
+            $pdf->Image(_PS_ROOT_DIR_ . $data['shop_logo'], $logoX, $startY, $logoW, $logoH, '', '', '', true, 300, '', false, false, 0, true, false, false);
+        } else {
+            $pdf->SetFont('helvetica', 'B', 14);
+            $pdf->SetXY($logoX, $startY + 5);
+            $pdf->Cell($logoW, 10, 'DALAVORO', 0, 0, 'L');
         }
-        $pdf->SetXY($pdf->GetX(), $startY);
-        $pdf->Cell($logoW, $cellH, '', 0, 0, 'L', 0);
 
-        // Dati ordine (tre righe)
-        $pdf->SetFont('helvetica', '', 10);
-        $pdf->SetFillColor(255, 255, 255);
-        $pdf->SetTextColor(40, 40, 40);
-
+        // 2. Dati ordine in alto a destra
         $orderId = isset($data['order']['id_order']) ? $data['order']['id_order'] : '';
         $this->id_order = $orderId;
         $orderDate = isset($data['order']['date_add']) ? date('d/m/Y', strtotime($data['order']['date_add'])) : '';
         $stateName = isset($data['current_state']['name']) ? $data['current_state']['name'] : '';
-        $stateDate = isset($data['current_state']['date']) ? date('d/m/Y H:i', strtotime($data['current_state']['date'])) : '';
         $printedDate = date('d/m/Y H:i:s');
         $payment = isset($data['order']['payment']) ? $data['order']['payment'] : '';
 
-        $rightX = $pdf->GetX();
-        $rightY = $pdf->GetY();
-
-        $this->writeHeaderOrderNum($pdf, $this->id_order);
-
-        // Riga 1: Ordine
-        $fontsize = 11;
+        // Titolo Ordine in grassetto grande in alto a destra
         $pdf->SetXY($rightX, $rightY);
+        $pdf->SetTextColor(0, 0, 0);
+        $pdf->SetFont('helvetica', 'B', 18);
+        $pdf->Cell($rightW, 7, "Ordine: {$orderId}", 0, 1, 'L', 0);
 
-        $pdf->SetFont('helvetica', 'B', $fontsize);
-        $pdf->Cell($rightW, 5.5, "Ordine: $orderId del $orderDate", 0, 2, 'L', 0);
-        // Riga 2: Stato
-        $pdf->SetFont('helvetica', '', $fontsize);
-        $pdf->Cell($rightW, 5, "Stato corrente: $stateName", 0, 2, 'L', 0);
-        // Riga 3: Data di stampa
-        $pdf->SetFont('helvetica', '', $fontsize);
-        $pdf->Cell($rightW, 4, "Data di stampa: $printedDate", 0, 2, 'L', 0);
-        // Riga 4: Pagamento
+        // Data ordine
         $pdf->SetX($rightX);
-        $pdf->SetFont('helvetica', '', $fontsize);
-        $pdf->Cell($rightW, 5, "Tipo di Pagamento: $payment", 0, 2, 'L', 0);
+        $pdf->SetFont('helvetica', 'B', 10);
+        $pdf->Cell($rightW, 4.5, "del {$orderDate}", 0, 1, 'L', 0);
 
-        $pdf->Ln(2);
+        // Dettagli ordine
+        $pdf->SetFont('helvetica', '', 9.5);
+        $pdf->SetTextColor(40, 40, 40);
 
-        // --- LINEA DIVISORIA ---
+        $pdf->SetX($rightX);
+        $pdf->Cell($rightW, 4.5, "Stato corrente: {$stateName}", 0, 1, 'L', 0);
+
+        $pdf->SetX($rightX);
+        $pdf->Cell($rightW, 4.5, "Data di stampa: {$printedDate}", 0, 1, 'L', 0);
+
+        $pdf->SetX($rightX);
+        $pdf->Cell($rightW, 4.5, "Tipo di Pagamento: {$payment}", 0, 1, 'L', 0);
+
+        $lineY = max($startY + $logoH + 2, $pdf->GetY() + 2);
         $pdf->SetDrawColor(136, 136, 136);
         $pdf->SetLineWidth(0.4);
-        $pdf->SetY($pdf->GetY() + 2);
-        $pdf->Line($pdf->GetX(), $pdf->GetY(), 200, $pdf->GetY());
-        $pdf->Ln(3);
+        $pdf->Line(10, $lineY, 200, $lineY);
+        $pdf->SetY($lineY + 3);
 
         // --- SECONDA RIGA: INDIRIZZI E CLIENTE ---
         $boxH = 28;

@@ -246,3 +246,157 @@ a[data-role="view-delivery-slip"],
 button[data-role="view-delivery-slip"] {
     display: none !important;
 }
+
+/* ========================================
+   SHADCN NOTES POPOVER STYLES
+   ======================================== */
+.mp-notes-hover-trigger {
+    position: relative;
+    cursor: pointer;
+    border-radius: 6px;
+    padding: 2px 4px;
+    transition: background-color 0.2s ease;
+}
+
+.mp-notes-hover-trigger:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+}
+
+.mp-notes-hover-progress {
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #3b82f6, #10b981, #f43f5e);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 3s linear;
+    pointer-events: none;
+}
+
+@keyframes mpShadcnPopoverIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.mp-shadcn-popover {
+    position: fixed;
+    z-index: 100000;
+    width: 380px;
+    max-width: calc(100vw - 32px);
+    background: #ffffff;
+    border: 1px solid #e4e4e7;
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    padding: 16px;
+    color: #09090b;
+    font-size: 13px;
+    line-height: 1.5;
+    animation: mpShadcnPopoverIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mp-shadcn-popover-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #f4f4f5;
+}
+
+.mp-shadcn-popover-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: #18181b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mp-shadcn-popover-close {
+    background: transparent;
+    border: none;
+    color: #a1a1aa;
+    cursor: pointer;
+    border-radius: 6px;
+    padding: 2px 6px;
+    font-size: 16px;
+    line-height: 1;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.mp-shadcn-popover-close:hover {
+    color: #18181b;
+    background-color: #f4f4f5;
+}
+
+.mp-shadcn-notes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.mp-shadcn-note-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    background-color: #fafafa;
+    border: 1px solid #f4f4f5;
+    border-radius: 8px;
+}
+
+.mp-shadcn-note-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+}
+
+.mp-shadcn-note-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 11px;
+}
+
+.note-badge-order {
+    background-color: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+}
+
+.note-badge-customer {
+    background-color: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.note-badge-embroidery {
+    background-color: #fff1f2;
+    color: #be123c;
+    border: 1px solid #fecdd3;
+}
+
+.mp-shadcn-note-author {
+    color: #71717a;
+    font-weight: 500;
+}
+
+.mp-shadcn-note-content {
+    color: #27272a;
+    font-size: 12.5px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}

@@ -566,7 +566,7 @@ abstract class ExportManager
     }
 
     /**
-     * Calculate payment fees if mppaymentswithfees module is active.
+     * Calculate payment fees if mppaymentswithfees module is active or order has saved fee.
      *
      * @return array
      */
@@ -578,44 +578,69 @@ abstract class ExportManager
             'fee_tax_incl' => '0'
         ];
 
-        if (!\Module::isEnabled('mppaymentswithfees')) {
-            return $defaultFees;
-        }
-
-        if (!class_exists('MpSoft\MpPaymentsWithFees\Helpers\Fees') || !class_exists('MpSoft\MpPaymentsWithFees\Model\PaymentFeeModule')) {
-            return $defaultFees;
-        }
-
         try {
             $order = $this->getOrder();
-
-            $feeModule = \MpSoft\MpPaymentsWithFees\Model\PaymentFeeModule::getByModuleName($order->module);
-            if (!$feeModule || !(int) $feeModule->active) {
-                return $defaultFees;
-            }
 
             $vat_rate = (float) \Configuration::get('MPCUSTOMERINVOICE_VAT_RATE');
             if ($vat_rate <= 0) {
                 $vat_rate = 22.0;
             }
 
-            $orderTotal = (float) $order->total_products_wt
-                + (float) $order->total_shipping_tax_incl
-                + (float) $order->total_wrapping_tax_incl
-                - (float) $order->total_discounts_tax_incl;
-
-            $result = \MpSoft\MpPaymentsWithFees\Helpers\Fees::calculate(
-                $orderTotal,
-                (int) $feeModule->id,
-                $vat_rate
-            );
-
-            if (isset($result['has_fee']) && $result['has_fee']) {
+            // 1. Check mp_payment_fee_order table for this order ID first
+            $feeRow = \Db::getInstance()->getRow('SELECT fee_amount, tax_included FROM ' . _DB_PREFIX_ . 'mp_payment_fee_order WHERE id_order = ' . (int) $order->id);
+            if ($feeRow && !empty($feeRow['fee_amount']) && (float) $feeRow['fee_amount'] > 0) {
+                $feeAmount = (float) $feeRow['fee_amount'];
+                $taxIncluded = (int) $feeRow['tax_included'];
+                if ($taxIncluded == 1) {
+                    // fee_amount is tax included: calculate fee_tax_excl by separating VAT
+                    $feeIncl = $feeAmount;
+                    $feeExcl = $feeAmount / (1 + $vat_rate / 100);
+                } else {
+                    // fee_amount is tax excluded: calculate fee_tax_incl by adding VAT
+                    $feeExcl = $feeAmount;
+                    $feeIncl = $feeAmount * (1 + $vat_rate / 100);
+                }
                 return [
-                    'fee_tax_excl' => number_format((float) ($result['fee_tax_excl'] ?? 0), 2, '.', ''),
-                    'fee_tax_rate' => number_format((float) ($result['tax_rate'] ?? $vat_rate), 0, '.', ''),
-                    'fee_tax_incl' => number_format((float) ($result['fee_with_tax'] ?? 0), 2, '.', '')
+                    'fee_tax_excl' => number_format((float) $feeExcl, 2, '.', ''),
+                    'fee_tax_rate' => number_format((float) $vat_rate, 0, '.', ''),
+                    'fee_tax_incl' => number_format((float) $feeIncl, 2, '.', '')
                 ];
+            }
+
+            // 2. Fallback to dynamic calculation via mppaymentswithfees module if enabled
+            if (\Module::isEnabled('mppaymentswithfees')
+                && class_exists('MpSoft\MpPaymentsWithFees\Helpers\Fees')
+                && class_exists('MpSoft\MpPaymentsWithFees\Model\PaymentFeeModule')
+            ) {
+                $feeModule = \MpSoft\MpPaymentsWithFees\Model\PaymentFeeModule::getByModuleName($order->module);
+                if ($feeModule && (int) $feeModule->active) {
+                    $orderTotal = (float) $order->total_products_wt
+                        + (float) $order->total_shipping_tax_incl
+                        + (float) $order->total_wrapping_tax_incl
+                        - (float) $order->total_discounts_tax_incl;
+
+                    $result = \MpSoft\MpPaymentsWithFees\Helpers\Fees::calculate(
+                        $orderTotal,
+                        (int) $feeModule->id,
+                        $vat_rate
+                    );
+
+                    if (isset($result['has_fee']) && $result['has_fee']) {
+                        $feeIncl = (float) ($result['fee_with_tax'] ?? 0);
+                        $feeExcl = (float) ($result['fee_tax_excl'] ?? 0);
+                        $taxRate = (float) ($result['tax_rate'] ?? $vat_rate);
+
+                        if ($feeIncl > 0 && abs($feeExcl - $feeIncl) < 0.001 && $taxRate > 0) {
+                            $feeExcl = $feeIncl / (1 + $taxRate / 100);
+                        }
+
+                        return [
+                            'fee_tax_excl' => number_format((float) $feeExcl, 2, '.', ''),
+                            'fee_tax_rate' => number_format((float) $taxRate, 0, '.', ''),
+                            'fee_tax_incl' => number_format((float) $feeIncl, 2, '.', '')
+                        ];
+                    }
+                }
             }
         } catch (\Throwable $e) {
             // Fallback in case of any issues loading classes/database

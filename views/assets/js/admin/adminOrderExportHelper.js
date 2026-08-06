@@ -155,6 +155,63 @@ class AdminOrderExportHelper {
             console.error('Errore recupero dati fatturazione per il badge ordine:', err);
         }
     }
+
+    static updateGenerateInvoiceButtonLabel() {
+        const forms = document.querySelectorAll('form[action*="/sell/orders/"][action*="/invoice"], form[action*="generateInvoice"]');
+        forms.forEach((form) => {
+            const buttons = form.querySelectorAll('button');
+            buttons.forEach((btn) => {
+                btn.childNodes.forEach((node) => {
+                    if (node.nodeType === Node.TEXT_NODE && node.textContent.toLowerCase().includes('genera fattura')) {
+                        node.textContent = node.textContent.replace(/Genera fattura/gi, 'Genera documento');
+                    }
+                });
+            });
+        });
+    }
+
+    static bindGenerateDocumentFormSubmit() {
+        if (window.mpGenerateDocFormBound) return;
+        window.mpGenerateDocFormBound = true;
+
+        document.addEventListener('submit', (e) => {
+            const form = e.target;
+            if (!form || !form.action) return;
+
+            const match = form.action.match(/\/sell\/orders\/(\d+)\/invoice/i);
+            if (match) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const idOrder = match[1];
+                const btn = form.querySelector('button');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="material-icons spinning">autorenew</i> Elaborazione...';
+                }
+
+                const adminUrl = AdminOrderExportHelper.getAdminControllerUrl();
+                const params = new URLSearchParams();
+                params.append('ajax', '1');
+                params.append('action', 'HandleGenerateInvoice');
+                params.append('id_order', idOrder);
+
+                fetch(adminUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                    body: params.toString(),
+                })
+                    .then(r => r.json())
+                    .then(res => {
+                        window.location.reload();
+                    })
+                    .catch(err => {
+                        console.error('Errore generazione documento:', err);
+                        window.location.reload();
+                    });
+            }
+        }, true);
+    }
 }
 
 window.AdminOrderExportHelper = AdminOrderExportHelper;
@@ -171,7 +228,17 @@ window.openPrintDialog = openPrintDialog;
 
 document.addEventListener('DOMContentLoaded', () => {
     AdminOrderExportHelper.checkAndInjectInvoiceRequestedBadge();
+    AdminOrderExportHelper.updateGenerateInvoiceButtonLabel();
+    AdminOrderExportHelper.bindGenerateDocumentFormSubmit();
 });
-setTimeout(() => AdminOrderExportHelper.checkAndInjectInvoiceRequestedBadge(), 300);
-setTimeout(() => AdminOrderExportHelper.checkAndInjectInvoiceRequestedBadge(), 1200);
+setTimeout(() => {
+    AdminOrderExportHelper.checkAndInjectInvoiceRequestedBadge();
+    AdminOrderExportHelper.updateGenerateInvoiceButtonLabel();
+    AdminOrderExportHelper.bindGenerateDocumentFormSubmit();
+}, 300);
+setTimeout(() => {
+    AdminOrderExportHelper.checkAndInjectInvoiceRequestedBadge();
+    AdminOrderExportHelper.updateGenerateInvoiceButtonLabel();
+    AdminOrderExportHelper.bindGenerateDocumentFormSubmit();
+}, 1200);
 

@@ -99,6 +99,37 @@ This document summarizes the changes, logic, and configurations implemented for 
 - Made customer name in `adminTableOrders.js` a clickable link (`target="_blank"`) pointing to PrestaShop `AdminCustomers` view.
 - Added `<span class="badge badge-warning">Richiede Fattura</span>` under customer name in the table row when invoice is requested (`invoice_requested = 1` or fiscal info exists).
 
+### P. Document Status Indicators in Orders Table (v1.3.83)
+
+- Enhanced `ajaxProcessRenderOrdersData` in [AdminMpCustomerInvoice.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/controllers/admin/AdminMpCustomerInvoice.php) to query document presence flags (`has_invoice`, `has_delivery`, `has_brt` via `_DB_PREFIX_brt_restapi_shipment_response`).
+- Updated `formatCustomerColumn` in [adminTableOrders.js](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/adminTableOrders.js) to render modern Shadcn-style icon badges under customer name:
+  - **Nessuno**: grey `do_not_disturb_on` icon badge (`title="Nessun documento creato"`).
+  - **Fattura**: green `receipt_long` icon badge (`title="Fattura creata (N. X)"`).
+  - **Nota di Vendita**: blue `article` icon badge (`title="Nota di vendita creata (N. Y)"`).
+  - **Segnacollo BRT**: red `local_shipping` icon badge (`title="Segnacollo BRT creato"`).
+
+### S. Fix Layout Intestazione Stampa Ordine (v1.5.127)
+
+- In [PdfOrder.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/src/PrintPdf/Templates/Orders/Dalavoro/Pdf/PdfOrder.php#L443), rimossa la funzione `writeHeaderOrderNum` a coordinate Y=2mm che creava una duplicazione ed uno spazio bianco vuoto in testa alla pagina.
+- Riposizionato il logo in alto a sinistra ($X=10, Y=10$) e il titolo **Ordine: NNNNN** in grassetto 18pt in alto a destra ($X=90, Y=10$) con tutti i dettagli dell'ordine (`del DD/MM/YYYY`, `Stato corrente`, `Data di stampa`, `Tipo di Pagamento`) posizionati compattamente al di sotto.
+
+### R. Icona Cornetta Telefonica Etichetta Indirizzo (v1.5.126)
+
+- In [PrintPdfAddress.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/src/PrintPdf/PrintPdfAddress.php#L210), inserita l'icona della cornetta telefonica (`☎`) a sinistra del numero di telefono nel riquadro dell'etichetta indirizzo utilizzando il font Unicode `dejavusans` per un'identificazione visiva immediata.
+
+### Q. Intercezione Generazione Manuale Documento & Cambio Dicitura (v1.5.125)
+
+- **Ristrutturazione `GenerateDocumentRestrictions.php`:**
+  - Mantenuta intatta la firma ed il funzionamento di `handleAutomaticDocumentGeneration(array $params)` per le chiamate da hook di cambio stato ordine (`hookActionOrderStatusPostUpdate`).
+  - Estratta la logica comune di creazione/restrizione documento nel metodo helper `processDocumentGenerationForOrder(int $idOrder): bool`.
+  - Creato il metodo dedicato `handleManualDocumentGeneration(int $idOrder): bool` per la generazione manuale (bypassa i trigger di stato ordine).
+- **Intercezione via Frontend JS & Backend Fallback:**
+  - In [adminOrderExportHelper.js](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/adminOrderExportHelper.js#L173), implementato `bindGenerateDocumentFormSubmit()` che intercetta la submit del form "Genera documento" lato browser, invia la richiesta tramite chiamata AJAX a `AdminMpCustomerInvoice::ajaxProcessHandleGenerateInvoice` ed effettua il `reload()` della pagina senza mai reindirizzare alla dashboard.
+  - In [mpcustomerinvoice.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/mpcustomerinvoice.php#L236), mantenuta l'intercezione backend di fallback in `hookActionDispatcherBefore` usando `HTTP_REFERER` ed interruzione dell'esecuzione (`exit;`). Rimosso il blocco ridondante da `hookActionDispatcherAfter`.
+  - Registrati ed implementati gli hook `hookActionOrderInvoiceAdd` e `hookActionObjectOrderInvoiceAddAfter` per catturare ogni creazione di `OrderInvoice`.
+- **Cambio Dicitura Pulsante a "Genera documento":**
+  - Inserito in [adminOrderExportHelper.js](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/adminOrderExportHelper.js) il metodo `updateGenerateInvoiceButtonLabel()` per aggiornare automaticamente l'etichetta del pulsante della scheda ordine da **"Genera fattura"** a **"Genera documento"**.
+
 ### O. PrintPdf Architecture & Admin Toolbar Print Button (v1.3.82)
 
 - Created abstract parent class [PrintManager.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/src/PrintPdf/PrintManager.php) in `src/PrintPdf/` namespace `MpSoft\MpCustomerInvoice\PrintPdf`.
@@ -301,8 +332,37 @@ This document summarizes the changes, logic, and configurations implemented for 
 - **Esenzione IVA & Clienti Esteri**: Gestione automatica esenzione per fatture estere/NI7 con dicitura **`Cessioni CEE art.41 DL.331/93`** nel riquadro IVA e colonna IVA `NI7`.
 - Updated `PrintTemplateFactory.php` singular type mapping for `Deliveries` -> `Delivery`.
 
+### RR. Fees Fix, Shadcn Notes Popover, Document Selection & Wrong Document Warning (v1.5.121)
+
+- **Fix Sezione `<fees>` Esportazione Data (`ExportManager.php`, `PdfInvoice.php`, `PdfDelivery.php`)**:
+  - Risolto bug nell'esportazione dati XML e PDF dove `fee_tax_excl` e `fee_tax_incl` venivano estratti uguali anche in presenza di IVA al 22%.
+  - Lettura prioritaria da `ps_mp_payment_fee_order` ed applicazione dello scorporo IVA (`fee_tax_excl = fee_amount / (1 + vat_rate / 100)`).
+- **Popup Ultimi Messaggi Note (Shadcn/UI)**:
+  - Implementato l'endpoint AJAX `ajaxProcessGetOrderLatestNotes` per recuperare l'ultimo messaggio per ciascuna tipologia (`order`, `customer`, `embroidery`).
+  - Creata l'integrazione frontend in `adminTableOrders.js` con barra di avanzamento e popup fissa al viewport.
+  - Aggiunta la configurazione `MPCUSTOMERINVOICE_NOTES_HOVER_DELAY` per consentire all'amministratore di scegliere il ritardo dell'hover (default: 1 secondo).
+- **ID Cliente nel Title Colonna Cliente**:
+  - Aggiornato `formatCustomerColumn` in `adminTableOrders.js` per includere l'ID nel `title` (`title="(<id>) Vedi scheda cliente"`).
+- **Fix Preselezione Documento (Fattura vs Nota di vendita)**:
+  - Corretto `ajaxProcessGetOrderPrintInfo` per dare priorità a `GenerateDocumentRestrictions::isInvoiceRequired($idCustomer)` quando `invoice_number = 0`.
+- **Avviso "Documento errato" in Elenco Ordini**:
+  - Calcolo del flag `is_invalid_document` in `ajaxProcessRenderOrdersData` ed inserimento del badge rosso **`Documento errato`** nella colonna Cliente dell'elenco ordini quando l'ordine ha generato un documento non conforme alla scelta del cliente (`invoice_requested`).
+
+### SS. Skip Missing Documents in Batch Print (v1.5.122)
+
+- **Filtro Ordini Senza Documento nella Stampa Massiva**:
+  - In `ajaxProcessRenderBatchPdfDocuments()` ([AdminMpCustomerInvoice.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/controllers/admin/AdminMpCustomerInvoice.php#L687-L730)), la scansione degli ordini controlla l'effettiva presenza del documento richiesto (`invoice` o `delivery`).
+  - Se un ordine della selezione non possiede il documento scelto (es. cliente senza fattura o nota di vendita non generata), l'ordine viene saltato senza bloccare la stampa massiva per gli altri ordini validi.
+
+### TT. Order Invoice Direct Search in Batch Print (v1.5.123)
+
+- **Ricerca Diretta Tabelle `ps_order_invoice` per Stampa Massiva**:
+  - In `ajaxProcessRenderBatchPdfDocuments()` ([AdminMpCustomerInvoice.php](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/controllers/admin/AdminMpCustomerInvoice.php#L697-L745)):
+  - **Fatture**: interroga `ps_order_invoice` dove `id_order = <id_order>` e `number > 0`. Salta se non ce ne sono, oppure cicla e stampati tutti i documenti di fattura associati a quel numero d'ordine.
+  - **Note di vendita**: interroga `ps_order_invoice` dove `id_order = <id_order>` e `delivery_number > 0`. Salta se non ce ne sono, oppure cicla e stampa tutti i documenti di spedizione associati a quel numero d'ordine.
+
 ## 3. Module Version Tracking
-* **Latest Stable Version**: `1.5.120`
+* **Latest Stable Version**: `1.5.123`
 - Files updated with version bump:
     - `mpcustomerinvoice.php`
     - `composer.json`

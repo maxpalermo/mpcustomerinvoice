@@ -98,9 +98,9 @@
 							</div>
 						</fieldset>
 						<fieldset class="mb-4">
-							<legend class="legend">Dimensioni Etichetta (Stampa PDF)</legend>
+							<legend class="legend">Dimensioni Etichetta e Note Hover</legend>
 							<div class="row">
-								<div class="col-md-6">
+								<div class="col-md-4">
 									<div class="form-group">
 										<label for="MPCUSTOMERINVOICE_LABEL_WIDTH">Larghezza etichetta (mm)</label>
 										<div class="input-group">
@@ -112,7 +112,7 @@
 										</div>
 									</div>
 								</div>
-								<div class="col-md-6">
+								<div class="col-md-4">
 									<div class="form-group">
 										<label for="MPCUSTOMERINVOICE_LABEL_HEIGHT">Altezza etichetta (mm)</label>
 										<div class="input-group">
@@ -121,6 +121,18 @@
 											</span>
 											<input type="number" step="1" min="10" max="500" id="MPCUSTOMERINVOICE_LABEL_HEIGHT" name="MPCUSTOMERINVOICE_LABEL_HEIGHT" class="form-control" value="{{ MPCUSTOMERINVOICE_LABEL_HEIGHT }}">
 											<span class="input-group-addon">mm</span>
+										</div>
+									</div>
+								</div>
+								<div class="col-md-4">
+									<div class="form-group">
+										<label for="MPCUSTOMERINVOICE_NOTES_HOVER_DELAY">Tempo hover note (sec)</label>
+										<div class="input-group">
+											<span class="input-group-addon">
+												<i class="icon icon-clock-o"></i>
+											</span>
+											<input type="number" step="1" min="1" max="10" id="MPCUSTOMERINVOICE_NOTES_HOVER_DELAY" name="MPCUSTOMERINVOICE_NOTES_HOVER_DELAY" class="form-control" value="{{ MPCUSTOMERINVOICE_NOTES_HOVER_DELAY|default(1) }}">
+											<span class="input-group-addon">sec</span>
 										</div>
 									</div>
 								</div>

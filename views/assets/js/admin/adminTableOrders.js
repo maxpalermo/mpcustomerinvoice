@@ -1,5 +1,5 @@
 class AdminTableOrders {
-    constructor(tableId, adminControllerUrl, orderPageLink, customerPageLink, orderStates, orderFlagItems, orderCountries, invoicePdfLink, deliveryPdfLink, labelPrintEndpoint, orderStateColors) {
+    constructor(tableId, adminControllerUrl, orderPageLink, customerPageLink, orderStates, orderFlagItems, orderCountries, invoicePdfLink, deliveryPdfLink, labelPrintEndpoint, orderStateColors, notesHoverDelaySec) {
         this.table = document.getElementById(tableId);
         this.adminControllerUrl = adminControllerUrl;
         this.orderPageLink = orderPageLink;
@@ -21,6 +21,10 @@ class AdminTableOrders {
         this.brtShipmentsUrl = (typeof orderTableLinks !== 'undefined' && orderTableLinks.brtShipmentsUrl) ? orderTableLinks.brtShipmentsUrl : '';
         const showCustomizationsEl = document.getElementById("show-customizations-column");
         this.showCustomizationsColumn = showCustomizationsEl ? Boolean(Number(JSON.parse(showCustomizationsEl.textContent))) : false;
+
+        const delayEl = document.getElementById("notes-hover-delay");
+        const delaySec = notesHoverDelaySec !== undefined ? Number(notesHoverDelaySec) : (delayEl ? Number(JSON.parse(delayEl.textContent)) : 1);
+        this.notesHoverDelay = (delaySec > 0 ? delaySec : 1) * 1000;
 
         this.limit = 25;
         this.offset = 0;
@@ -130,6 +134,7 @@ class AdminTableOrders {
                     this.restoreFilterValues();
                     this.renderSearchActions();
                     this.bindRowActions();
+                    this.bindNotesHover();
                 }, 0);
             },
             columns: columns,
@@ -227,7 +232,7 @@ class AdminTableOrders {
 
         if (row && row.id_customer && this.customerPageLink) {
             const custUrl = this.customerPageLink.replace('999999999', row.id_customer);
-            customerHtml = `<a href="${custUrl}" target="_blank" style="font-weight:600;color:#007bff;text-decoration:none;" title="Vedi scheda cliente">${customerName}</a>`;
+            customerHtml = `<a href="${custUrl}" target="_blank" style="font-weight:600;color:#007bff;text-decoration:none;" title="(${row.id_customer}) Vedi scheda cliente">${customerName}</a>`;
         }
 
         const isInvoiceRequested = row && (
@@ -239,6 +244,34 @@ class AdminTableOrders {
         if (isInvoiceRequested) {
             customerHtml += `<br><span class="badge badge-warning" style="margin-top:3px;display:inline-block;">Richiede Fattura</span>`;
         }
+
+        if (row && (row.is_invalid_document || Boolean(row.is_invalid_document))) {
+            customerHtml += `<br><span class="badge badge-danger" style="margin-top:3px;display:inline-block;" title="Il documento generato non corrisponde alla richiesta del cliente">Documento errato</span>`;
+        }
+
+        // Render Shadcn Document Icons Bar (nessuno, fattura, nota di vendita, segnacollo brt)
+        const hasInvoice = row && (parseInt(row.has_invoice) === 1 || parseInt(row.invoice_number) > 0);
+        const hasDelivery = row && (parseInt(row.has_delivery) === 1 || parseInt(row.delivery_number) > 0);
+        const hasBrt = row && parseInt(row.has_brt) === 1;
+
+        let docIconsHtml = '';
+        if (!hasInvoice && !hasDelivery && !hasBrt) {
+            docIconsHtml = `<span class="mp-doc-badge mp-doc-none" title="Nessun documento creato" style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:#f1f5f9;color:#64748b;border:1px solid #cbd5e1;cursor:pointer;" data-toggle="tooltip"><i class="material-icons" style="font-size:15px;">do_not_disturb_on</i></span>`;
+        } else {
+            if (hasInvoice) {
+                const invText = row.invoice_number ? ` (N. ${row.invoice_number})` : '';
+                docIconsHtml += `<span class="mp-doc-badge mp-doc-invoice" title="Fattura creata${invText}" style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;cursor:pointer;" data-toggle="tooltip"><i class="material-icons" style="font-size:15px;">receipt_long</i></span>`;
+            }
+            if (hasDelivery) {
+                const delText = row.delivery_number ? ` (N. ${row.delivery_number})` : '';
+                docIconsHtml += `<span class="mp-doc-badge mp-doc-delivery" title="Nota di vendita creata${delText}" style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;cursor:pointer;" data-toggle="tooltip"><i class="material-icons" style="font-size:15px;">article</i></span>`;
+            }
+            if (hasBrt) {
+                docIconsHtml += `<span class="mp-doc-badge mp-doc-brt" title="Segnacollo BRT creato" style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:#fef2f2;color:#b91c1c;border:1px solid #fca5a5;cursor:pointer;" data-toggle="tooltip"><i class="material-icons" style="font-size:15px;">local_shipping</i></span>`;
+            }
+        }
+
+        customerHtml += `<div class="mp-doc-icons-bar" style="display:flex;align-items:center;gap:4px;margin-top:4px;">${docIconsHtml}</div>`;
 
         return customerHtml;
     }
@@ -278,11 +311,198 @@ class AdminTableOrders {
             return "--";
         }
 
-        return `<div style="display:flex;flex-direction:column;gap:4px;min-width:76px;">
+        return `<div class="js-notes-hover-trigger" data-order-id="${row.id_order}" data-customer-id="${row.id_customer || 0}" style="display:flex;flex-direction:column;gap:4px;min-width:76px;">
             <span class="text-info d-flex align-items-center justify-content-between" title="Note cliente"><i class="material-icons">person</i><span class="badge badge-info">${customer}</span></span>
             <span class="text-success d-flex align-items-center justify-content-between" title="Note ordine"><i class="material-icons">shopping_cart</i><span class="badge badge-success">${order}</span></span>
             <span class="text-danger d-flex align-items-center justify-content-between" title="Note ricamo"><i class="material-icons">content_cut</i><span class="badge badge-danger">${embroidery}</span></span>
+            <div class="mp-notes-hover-progress"></div>
         </div>`;
+    }
+
+    bindNotesHover() {
+        const $table = $(this.table);
+        $table.off("mouseenter.notesHover mouseleave.notesHover click.notesHover", ".js-notes-hover-trigger");
+
+        let hoverTimer = null;
+        let activeTrigger = null;
+
+        const closePopover = () => {
+            if (this.currentNotesPopover) {
+                this.currentNotesPopover.remove();
+                this.currentNotesPopover = null;
+            }
+            if (activeTrigger) {
+                $(activeTrigger).find(".mp-notes-hover-progress").css({ transition: "none", width: "0%" });
+                activeTrigger = null;
+            }
+        };
+
+        $(document).off("click.shadcnNotesClose").on("click.shadcnNotesClose", (e) => {
+            if (this.currentNotesPopover && !$(e.target).closest(".mp-shadcn-popover, .js-notes-hover-trigger").length) {
+                closePopover();
+            }
+        });
+
+        $table.on("mouseenter.notesHover", ".js-notes-hover-trigger", (event) => {
+            const trigger = event.currentTarget;
+            const $trigger = $(trigger);
+            const orderId = $trigger.data("order-id") || $trigger.attr("data-order-id");
+            const customerId = $trigger.data("customer-id") || $trigger.attr("data-customer-id");
+
+            if (!orderId) return;
+
+            activeTrigger = trigger;
+            const delayMs = this.notesHoverDelay || 1000;
+            const delaySec = delayMs / 1000;
+
+            const $progress = $trigger.find(".mp-notes-hover-progress");
+            $progress.css({ transition: "none", width: "0%" });
+            void $progress[0].offsetHeight;
+            $progress.css({ transition: `width ${delaySec}s linear`, width: "100%" });
+
+            clearTimeout(hoverTimer);
+            hoverTimer = setTimeout(() => {
+                this.fetchAndShowNotesPopover(orderId, customerId, trigger);
+            }, delayMs);
+        });
+
+        $table.on("mouseleave.notesHover", ".js-notes-hover-trigger", (event) => {
+            clearTimeout(hoverTimer);
+            const trigger = event.currentTarget;
+            $(trigger).find(".mp-notes-hover-progress").css({ transition: "none", width: "0%" });
+
+            setTimeout(() => {
+                if (this.currentNotesPopover && !this.currentNotesPopover.matches(":hover") && !$(trigger).is(":hover")) {
+                    closePopover();
+                }
+            }, 400);
+        });
+
+        $table.on("click.notesHover", ".js-notes-hover-trigger", (event) => {
+            event.stopPropagation();
+            const trigger = event.currentTarget;
+            const $trigger = $(trigger);
+            const orderId = $trigger.data("order-id") || $trigger.attr("data-order-id");
+            const customerId = $trigger.data("customer-id") || $trigger.attr("data-customer-id");
+
+            if (!orderId) return;
+
+            clearTimeout(hoverTimer);
+            $trigger.find(".mp-notes-hover-progress").css({ transition: "none", width: "0%" });
+            this.fetchAndShowNotesPopover(orderId, customerId, trigger);
+        });
+    }
+
+    async fetchAndShowNotesPopover(orderId, customerId, trigger) {
+        if (this.currentNotesPopover) {
+            this.currentNotesPopover.remove();
+            this.currentNotesPopover = null;
+        }
+
+        const payload = new URLSearchParams({
+            ajax: "1",
+            action: "getOrderLatestNotes",
+            id_order: String(orderId),
+            id_customer: String(customerId || 0),
+        });
+
+        try {
+            const response = await fetch(this.adminControllerUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+                body: payload,
+            });
+            const data = await response.json();
+
+            if (!data.success || !Array.isArray(data.notes) || data.notes.length === 0) {
+                console.warn("Nessuna nota trovata per ordine #", orderId, data);
+                return;
+            }
+
+            this.renderShadcnNotesPopover(data.notes, orderId, trigger);
+        } catch (err) {
+            console.error("Errore recupero ultime note ordine #", orderId, err);
+        }
+    }
+
+    renderShadcnNotesPopover(notes, orderId, trigger) {
+        if (this.currentNotesPopover) {
+            this.currentNotesPopover.remove();
+            this.currentNotesPopover = null;
+        }
+
+        const popover = document.createElement("div");
+        popover.className = "mp-shadcn-popover";
+
+        let notesHtml = notes
+            .map((note) => {
+                const iconName = note.icon || "chat";
+                return `<div class="mp-shadcn-note-item">
+                    <div class="mp-shadcn-note-meta">
+                        <span class="mp-shadcn-note-badge ${this.escape(note.badge_class || "")}">
+                            <i class="material-icons" style="font-size:13px;line-height:1;">${this.escape(iconName)}</i>
+                            ${this.escape(note.type_label)}
+                        </span>
+                        <span class="mp-shadcn-note-author">${this.escape(note.author)} • ${this.escape(note.date_add)}</span>
+                    </div>
+                    <div class="mp-shadcn-note-content">${this.escape(note.content)}</div>
+                </div>`;
+            })
+            .join("");
+
+        popover.innerHTML = `
+            <div class="mp-shadcn-popover-header">
+                <div class="mp-shadcn-popover-title">
+                    <i class="material-icons text-primary" style="font-size:18px;">subtitles</i>
+                    <span>Ultimi Messaggi (Ordine #${this.escape(orderId)})</span>
+                </div>
+                <button type="button" class="mp-shadcn-popover-close" title="Chiudi">&times;</button>
+            </div>
+            <div class="mp-shadcn-notes-list">
+                ${notesHtml}
+            </div>
+        `;
+
+        document.body.appendChild(popover);
+        this.currentNotesPopover = popover;
+
+        // Correct viewport calculation for position: fixed
+        const rect = trigger.getBoundingClientRect();
+        const popoverRect = popover.getBoundingClientRect();
+
+        let top = rect.top - 6;
+        let left = rect.right + 12;
+
+        if (left + popoverRect.width > window.innerWidth - 16) {
+            left = rect.left - popoverRect.width - 12;
+        }
+        if (left < 16) {
+            left = Math.max(16, (window.innerWidth - popoverRect.width) / 2);
+        }
+
+        if (top + popoverRect.height > window.innerHeight - 16) {
+            top = Math.max(16, window.innerHeight - popoverRect.height - 16);
+        }
+        if (top < 16) {
+            top = 16;
+        }
+
+        popover.style.top = `${top}px`;
+        popover.style.left = `${left}px`;
+
+        popover.querySelector(".mp-shadcn-popover-close").addEventListener("click", () => {
+            popover.remove();
+            this.currentNotesPopover = null;
+        });
+
+        popover.addEventListener("mouseleave", () => {
+            setTimeout(() => {
+                if (this.currentNotesPopover && !popover.matches(":hover") && !$(trigger).is(":hover")) {
+                    popover.remove();
+                    this.currentNotesPopover = null;
+                }
+            }, 400);
+        });
     }
 
     bindRowActions() {
