@@ -24,6 +24,12 @@
 !/download/.htaccess
 !/download/index.php
 
+# Views Assets Download (QZ Tray Installer binaries)
+/views/assets/download/*
+!/views/assets/download/.htaccess
+!/views/assets/download/index.php
+!/views/assets/download/.gitkeep
+
 # Images
 /img/*
 !/img/.htaccess

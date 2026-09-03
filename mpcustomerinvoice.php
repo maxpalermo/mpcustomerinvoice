@@ -43,7 +43,7 @@ class MpCustomerInvoice extends Module implements WidgetInterface
     {
         $this->name = 'mpcustomerinvoice';
         $this->tab = 'administration';
-        $this->version = '1.5.127';
+        $this->version = '1.6.9';
         $this->author = 'Massimiliano Palermo';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -890,26 +890,51 @@ class MpCustomerInvoice extends Module implements WidgetInterface
         }
 
         $showSeparatePrintButtons = (bool) Configuration::get('MPCUSTOMERINVOICE_SHOW_SEPARATE_PRINT_BUTTONS', 1);
-        $webPrintEnable = (bool) AdminMpCustomerInvoiceController::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_ENABLE', $idEmployee, 0);
-        $webPrintHost = (string) AdminMpCustomerInvoiceController::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_HOST', $idEmployee, '127.0.0.1');
-        $webPrintPort = (string) AdminMpCustomerInvoiceController::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PORT', $idEmployee, '8085');
-        $webPrintPrinters = [
-            'order' => (string) AdminMpCustomerInvoiceController::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER', $idEmployee, ''),
-            'invoice' => (string) AdminMpCustomerInvoiceController::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE', $idEmployee, ''),
-            'delivery' => (string) AdminMpCustomerInvoiceController::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY', $idEmployee, ''),
-            'address' => (string) AdminMpCustomerInvoiceController::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS', $idEmployee, ''),
-            'brt' => (string) AdminMpCustomerInvoiceController::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT', $idEmployee, ''),
-        ];
+        $qzTrayEnable = (bool) AdminMpCustomerInvoiceController::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_ENABLE', $idEmployee, 0);
+        $qzTrayHost = (string) AdminMpCustomerInvoiceController::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_HOST', $idEmployee, '127.0.0.1');
+        $qzTrayPort = (string) AdminMpCustomerInvoiceController::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PORT', $idEmployee, '8182');
+        $docs = ['order', 'invoice', 'delivery', 'address', 'brt'];
+        $defaultsPaper = ['order' => 'A4', 'invoice' => 'A4', 'delivery' => 'A4', 'address' => '100x50', 'brt' => '100x65'];
+        $defaultsW = ['order' => 210, 'invoice' => 210, 'delivery' => 210, 'address' => 100, 'brt' => 100];
+        $defaultsH = ['order' => 297, 'invoice' => 297, 'delivery' => 297, 'address' => 50, 'brt' => 65];
+
+        $qzTrayPrinters = [];
+        $qzTrayPrinterConfigs = [];
+        foreach ($docs as $doc) {
+            $d = strtoupper($doc);
+            $pName = (string) AdminMpCustomerInvoiceController::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PRINTER_' . $d, $idEmployee, '');
+            $qzTrayPrinters[$doc] = $pName;
+            $qzTrayPrinterConfigs[$doc] = [
+                'printer' => $pName,
+                'orientation' => (string) AdminMpCustomerInvoiceController::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_ORIENT_' . $d, $idEmployee, 'auto'),
+                'rotation' => (int) AdminMpCustomerInvoiceController::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_ROTATION_' . $d, $idEmployee, 0),
+                'rasterize' => (int) AdminMpCustomerInvoiceController::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_RASTER_' . $d, $idEmployee, 0),
+                'paper' => (string) AdminMpCustomerInvoiceController::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PAPER_' . $d, $idEmployee, $defaultsPaper[$doc]),
+                'paper_w' => (float) AdminMpCustomerInvoiceController::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PAPER_W_' . $d, $idEmployee, $defaultsW[$doc]),
+                'paper_h' => (float) AdminMpCustomerInvoiceController::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PAPER_H_' . $d, $idEmployee, $defaultsH[$doc]),
+            ];
+        }
+
+        $labelWidth = (float) Configuration::get('MPCUSTOMERINVOICE_LABEL_WIDTH', 100);
+        $labelHeight = (float) Configuration::get('MPCUSTOMERINVOICE_LABEL_HEIGHT', 50);
 
         Media::addJsDef([
             'mpCustomerInvoiceAdminUrl' => $adminControllerUrl,
             'isBrtModuleActive' => $isBrtModuleActive,
             'brtAdminUrl' => $brtAdminUrl,
             'mpShowSeparatePrintButtons' => $showSeparatePrintButtons,
-            'mpWebPrintEnable' => $webPrintEnable,
-            'mpWebPrintHost' => $webPrintHost,
-            'mpWebPrintPort' => $webPrintPort,
-            'mpWebPrintPrinters' => $webPrintPrinters,
+            'mpQzTrayEnable' => $qzTrayEnable,
+            'mpQzTrayHost' => $qzTrayHost,
+            'mpQzTrayPort' => $qzTrayPort,
+            'mpQzTrayPrinters' => $qzTrayPrinters,
+            'mpQzTrayPrinterConfigs' => $qzTrayPrinterConfigs,
+            'mpLabelWidth' => $labelWidth,
+            'mpLabelHeight' => $labelHeight,
+            // Fallback aliases for backward compatibility
+            'mpWebPrintEnable' => $qzTrayEnable,
+            'mpWebPrintHost' => $qzTrayHost,
+            'mpWebPrintPort' => $qzTrayPort,
+            'mpWebPrintPrinters' => $qzTrayPrinters,
         ]);
 
         $isAdminCustomerPage = (
@@ -937,7 +962,7 @@ class MpCustomerInvoice extends Module implements WidgetInterface
         );
 
         if ($isAdminOrderPage) {
-            $this->context->controller->addJS("{$baseJs}admin/webprint.js");
+            $this->context->controller->addJS("{$baseJs}admin/qz-tray.js");
             $this->context->controller->addJS("{$baseJs}admin/MpPrintDialog.js");
             $this->context->controller->addJS("{$baseJs}admin/adminOrderExportHelper.js");
             $this->context->controller->addCSS("{$baseCss}/theme-override.css");

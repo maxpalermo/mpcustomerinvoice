@@ -265,7 +265,7 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
             ]));
         }
 
-        $selectedEmployeeId = (int) Tools::getValue('id_employee_webprint', $this->context->employee->id);
+        $selectedEmployeeId = (int) Tools::getValue('id_employee_qztray', Tools::getValue('id_employee_webprint', $this->context->employee->id));
         if ($selectedEmployeeId <= 0) {
             $selectedEmployeeId = (int) $this->context->employee->id;
         }
@@ -309,15 +309,56 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
             'MPCUSTOMERINVOICE_SHOW_SEPARATE_PRINT_BUTTONS' => (int) $this->getSetupConfig('MPCUSTOMERINVOICE_SHOW_SEPARATE_PRINT_BUTTONS', 1),
             'employeesList' => $employeesList,
             'selectedEmployeeId' => $selectedEmployeeId,
-            'MPCUSTOMERINVOICE_WEBPRINT_ENABLE' => (int) self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_ENABLE', $selectedEmployeeId, 0),
-            'MPCUSTOMERINVOICE_WEBPRINT_HOST' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_HOST', $selectedEmployeeId, '127.0.0.1'),
-            'MPCUSTOMERINVOICE_WEBPRINT_PORT' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PORT', $selectedEmployeeId, '8085'),
-            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER', $selectedEmployeeId, ''),
-            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE', $selectedEmployeeId, ''),
-            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY', $selectedEmployeeId, ''),
-            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS', $selectedEmployeeId, ''),
-            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT', $selectedEmployeeId, ''),
-            'webPrintDownloadUrl' => $this->context->link->getBaseLink() . 'modules/mpcustomerinvoice/views/assets/download/WebPrint.jar',
+            'MPCUSTOMERINVOICE_QZTRAY_ENABLE' => (int) self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_ENABLE', $selectedEmployeeId, 0),
+            'MPCUSTOMERINVOICE_QZTRAY_HOST' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_HOST', $selectedEmployeeId, '127.0.0.1'),
+            'MPCUSTOMERINVOICE_QZTRAY_PORT' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PORT', $selectedEmployeeId, '8182'),
+            'MPCUSTOMERINVOICE_QZTRAY_PRINTER_ORDER' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PRINTER_ORDER', $selectedEmployeeId, ''),
+            'MPCUSTOMERINVOICE_QZTRAY_PRINTER_INVOICE' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PRINTER_INVOICE', $selectedEmployeeId, ''),
+            'MPCUSTOMERINVOICE_QZTRAY_PRINTER_DELIVERY' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PRINTER_DELIVERY', $selectedEmployeeId, ''),
+            'MPCUSTOMERINVOICE_QZTRAY_PRINTER_ADDRESS' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PRINTER_ADDRESS', $selectedEmployeeId, ''),
+            'MPCUSTOMERINVOICE_QZTRAY_PRINTER_BRT' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PRINTER_BRT', $selectedEmployeeId, ''),
+            'MPCUSTOMERINVOICE_QZTRAY_ORIENT_ORDER' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_ORIENT_ORDER', $selectedEmployeeId, 'auto'),
+            'MPCUSTOMERINVOICE_QZTRAY_ROTATION_ORDER' => (int) self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_ROTATION_ORDER', $selectedEmployeeId, 0),
+            'MPCUSTOMERINVOICE_QZTRAY_RASTER_ORDER' => (int) self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_RASTER_ORDER', $selectedEmployeeId, 0),
+            'MPCUSTOMERINVOICE_QZTRAY_PAPER_ORDER' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PAPER_ORDER', $selectedEmployeeId, 'A4'),
+            'MPCUSTOMERINVOICE_QZTRAY_PAPER_W_ORDER' => (float) self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PAPER_W_ORDER', $selectedEmployeeId, 210),
+            'MPCUSTOMERINVOICE_QZTRAY_PAPER_H_ORDER' => (float) self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PAPER_H_ORDER', $selectedEmployeeId, 297),
+            'MPCUSTOMERINVOICE_QZTRAY_ORIENT_INVOICE' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_ORIENT_INVOICE', $selectedEmployeeId, 'auto'),
+            'MPCUSTOMERINVOICE_QZTRAY_ROTATION_INVOICE' => (int) self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_ROTATION_INVOICE', $selectedEmployeeId, 0),
+            'MPCUSTOMERINVOICE_QZTRAY_RASTER_INVOICE' => (int) self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_RASTER_INVOICE', $selectedEmployeeId, 0),
+            'MPCUSTOMERINVOICE_QZTRAY_PAPER_INVOICE' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PAPER_INVOICE', $selectedEmployeeId, 'A4'),
+            'MPCUSTOMERINVOICE_QZTRAY_PAPER_W_INVOICE' => (float) self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PAPER_W_INVOICE', $selectedEmployeeId, 210),
+            'MPCUSTOMERINVOICE_QZTRAY_PAPER_H_INVOICE' => (float) self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PAPER_H_INVOICE', $selectedEmployeeId, 297),
+            'MPCUSTOMERINVOICE_QZTRAY_ORIENT_DELIVERY' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_ORIENT_DELIVERY', $selectedEmployeeId, 'auto'),
+            'MPCUSTOMERINVOICE_QZTRAY_ROTATION_DELIVERY' => (int) self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_ROTATION_DELIVERY', $selectedEmployeeId, 0),
+            'MPCUSTOMERINVOICE_QZTRAY_RASTER_DELIVERY' => (int) self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_RASTER_DELIVERY', $selectedEmployeeId, 0),
+            'MPCUSTOMERINVOICE_QZTRAY_PAPER_DELIVERY' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PAPER_DELIVERY', $selectedEmployeeId, 'A4'),
+            'MPCUSTOMERINVOICE_QZTRAY_PAPER_W_DELIVERY' => (float) self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PAPER_W_DELIVERY', $selectedEmployeeId, 210),
+            'MPCUSTOMERINVOICE_QZTRAY_PAPER_H_DELIVERY' => (float) self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PAPER_H_DELIVERY', $selectedEmployeeId, 297),
+            'MPCUSTOMERINVOICE_QZTRAY_ORIENT_ADDRESS' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_ORIENT_ADDRESS', $selectedEmployeeId, 'auto'),
+            'MPCUSTOMERINVOICE_QZTRAY_ROTATION_ADDRESS' => (int) self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_ROTATION_ADDRESS', $selectedEmployeeId, 0),
+            'MPCUSTOMERINVOICE_QZTRAY_RASTER_ADDRESS' => (int) self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_RASTER_ADDRESS', $selectedEmployeeId, 0),
+            'MPCUSTOMERINVOICE_QZTRAY_PAPER_ADDRESS' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PAPER_ADDRESS', $selectedEmployeeId, '100x50'),
+            'MPCUSTOMERINVOICE_QZTRAY_PAPER_W_ADDRESS' => (float) self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PAPER_W_ADDRESS', $selectedEmployeeId, 100),
+            'MPCUSTOMERINVOICE_QZTRAY_PAPER_H_ADDRESS' => (float) self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PAPER_H_ADDRESS', $selectedEmployeeId, 50),
+            'MPCUSTOMERINVOICE_QZTRAY_ORIENT_BRT' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_ORIENT_BRT', $selectedEmployeeId, 'auto'),
+            'MPCUSTOMERINVOICE_QZTRAY_ROTATION_BRT' => (int) self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_ROTATION_BRT', $selectedEmployeeId, 0),
+            'MPCUSTOMERINVOICE_QZTRAY_RASTER_BRT' => (int) self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_RASTER_BRT', $selectedEmployeeId, 0),
+            'MPCUSTOMERINVOICE_QZTRAY_PAPER_BRT' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PAPER_BRT', $selectedEmployeeId, '100x65'),
+            'MPCUSTOMERINVOICE_QZTRAY_PAPER_W_BRT' => (float) self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PAPER_W_BRT', $selectedEmployeeId, 100),
+            'MPCUSTOMERINVOICE_QZTRAY_PAPER_H_BRT' => (float) self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PAPER_H_BRT', $selectedEmployeeId, 65),
+            // Legacy aliases for template compatibility
+            'MPCUSTOMERINVOICE_WEBPRINT_ENABLE' => (int) self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_ENABLE', $selectedEmployeeId, 0),
+            'MPCUSTOMERINVOICE_WEBPRINT_HOST' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_HOST', $selectedEmployeeId, '127.0.0.1'),
+            'MPCUSTOMERINVOICE_WEBPRINT_PORT' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PORT', $selectedEmployeeId, '8182'),
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PRINTER_ORDER', $selectedEmployeeId, ''),
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PRINTER_INVOICE', $selectedEmployeeId, ''),
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PRINTER_DELIVERY', $selectedEmployeeId, ''),
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PRINTER_ADDRESS', $selectedEmployeeId, ''),
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PRINTER_BRT', $selectedEmployeeId, ''),
+            'qzTrayDownloadWinUrl' => $this->context->link->getBaseLink() . 'modules/mpcustomerinvoice/views/assets/download/qz-tray-2.2.6-x86_64.exe',
+            'qzTrayDownloadLinuxUrl' => $this->context->link->getBaseLink() . 'modules/mpcustomerinvoice/views/assets/download/qz-tray-2.2.6-x86_64.run',
+            'webPrintDownloadUrl' => $this->context->link->getBaseLink() . 'modules/mpcustomerinvoice/views/assets/download/qz-tray-2.2.6-x86_64.exe',
             'orderStates' => OrderState::getOrderStates($this->context->language->id),
             'adminControllerUrl' => $this->ajaxController,
             'orderReferenceLengths' => $this->getOrderReferenceLengths(),
@@ -862,15 +903,29 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
             'MPCUSTOMERINVOICE_TEMPLATE_DELIVERIES' => 'Default',
             'MPCUSTOMERINVOICE_TEMPLATE_ADDRESSES' => 'Default',
             'MPCUSTOMERINVOICE_SHOW_SEPARATE_PRINT_BUTTONS' => 1,
-            'MPCUSTOMERINVOICE_WEBPRINT_ENABLE' => 0,
-            'MPCUSTOMERINVOICE_WEBPRINT_HOST' => '127.0.0.1',
-            'MPCUSTOMERINVOICE_WEBPRINT_PORT' => '8080',
-            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER' => '',
-            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE' => '',
-            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY' => '',
-            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS' => '',
-            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT' => '',
+            'MPCUSTOMERINVOICE_QZTRAY_ENABLE' => 0,
+            'MPCUSTOMERINVOICE_QZTRAY_HOST' => '127.0.0.1',
+            'MPCUSTOMERINVOICE_QZTRAY_PORT' => '8182',
+            'MPCUSTOMERINVOICE_QZTRAY_PRINTER_ORDER' => '',
+            'MPCUSTOMERINVOICE_QZTRAY_PRINTER_INVOICE' => '',
+            'MPCUSTOMERINVOICE_QZTRAY_PRINTER_DELIVERY' => '',
+            'MPCUSTOMERINVOICE_QZTRAY_PRINTER_ADDRESS' => '',
+            'MPCUSTOMERINVOICE_QZTRAY_PRINTER_BRT' => '',
         ];
+
+        $docs = ['ORDER', 'INVOICE', 'DELIVERY', 'ADDRESS', 'BRT'];
+        $defaultsPaper = ['ORDER' => 'A4', 'INVOICE' => 'A4', 'DELIVERY' => 'A4', 'ADDRESS' => '100x50', 'BRT' => '100x65'];
+        $defaultsW = ['ORDER' => 210, 'INVOICE' => 210, 'DELIVERY' => 210, 'ADDRESS' => 100, 'BRT' => 100];
+        $defaultsH = ['ORDER' => 297, 'INVOICE' => 297, 'DELIVERY' => 297, 'ADDRESS' => 50, 'BRT' => 65];
+
+        $qzEnable = (int) Tools::getValue('MPCUSTOMERINVOICE_QZTRAY_ENABLE', Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_ENABLE', 0));
+        $qzHost = Tools::getValue('MPCUSTOMERINVOICE_QZTRAY_HOST', Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_HOST', '127.0.0.1'));
+        $qzPort = Tools::getValue('MPCUSTOMERINVOICE_QZTRAY_PORT', Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PORT', '8182'));
+        $qzPrinterOrder = Tools::getValue('MPCUSTOMERINVOICE_QZTRAY_PRINTER_ORDER', Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER', ''));
+        $qzPrinterInvoice = Tools::getValue('MPCUSTOMERINVOICE_QZTRAY_PRINTER_INVOICE', Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE', ''));
+        $qzPrinterDelivery = Tools::getValue('MPCUSTOMERINVOICE_QZTRAY_PRINTER_DELIVERY', Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY', ''));
+        $qzPrinterAddress = Tools::getValue('MPCUSTOMERINVOICE_QZTRAY_PRINTER_ADDRESS', Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS', ''));
+        $qzPrinterBrt = Tools::getValue('MPCUSTOMERINVOICE_QZTRAY_PRINTER_BRT', Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT', ''));
 
         $keys = [
             'PAYMENT_SELECTED' => $paymentSelected,
@@ -896,15 +951,41 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
             'MPCUSTOMERINVOICE_TEMPLATE_DELIVERIES' => Tools::getValue('MPCUSTOMERINVOICE_TEMPLATE_DELIVERIES', $defaults['MPCUSTOMERINVOICE_TEMPLATE_DELIVERIES']),
             'MPCUSTOMERINVOICE_TEMPLATE_ADDRESSES' => Tools::getValue('MPCUSTOMERINVOICE_TEMPLATE_ADDRESSES', $defaults['MPCUSTOMERINVOICE_TEMPLATE_ADDRESSES']),
             'MPCUSTOMERINVOICE_SHOW_SEPARATE_PRINT_BUTTONS' => (int) Tools::getValue('MPCUSTOMERINVOICE_SHOW_SEPARATE_PRINT_BUTTONS', 0),
-            'MPCUSTOMERINVOICE_WEBPRINT_ENABLE' => (int) Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_ENABLE', 0),
-            'MPCUSTOMERINVOICE_WEBPRINT_HOST' => Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_HOST', $defaults['MPCUSTOMERINVOICE_WEBPRINT_HOST']),
-            'MPCUSTOMERINVOICE_WEBPRINT_PORT' => Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PORT', $defaults['MPCUSTOMERINVOICE_WEBPRINT_PORT']),
-            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER' => Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER', ''),
-            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE' => Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE', ''),
-            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY' => Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY', ''),
-            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS' => Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS', ''),
-            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT' => Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT', ''),
+            'MPCUSTOMERINVOICE_QZTRAY_ENABLE' => $qzEnable,
+            'MPCUSTOMERINVOICE_QZTRAY_HOST' => $qzHost,
+            'MPCUSTOMERINVOICE_QZTRAY_PORT' => $qzPort,
+            'MPCUSTOMERINVOICE_QZTRAY_PRINTER_ORDER' => $qzPrinterOrder,
+            'MPCUSTOMERINVOICE_QZTRAY_PRINTER_INVOICE' => $qzPrinterInvoice,
+            'MPCUSTOMERINVOICE_QZTRAY_PRINTER_DELIVERY' => $qzPrinterDelivery,
+            'MPCUSTOMERINVOICE_QZTRAY_PRINTER_ADDRESS' => $qzPrinterAddress,
+            'MPCUSTOMERINVOICE_QZTRAY_PRINTER_BRT' => $qzPrinterBrt,
+            'MPCUSTOMERINVOICE_WEBPRINT_ENABLE' => $qzEnable,
+            'MPCUSTOMERINVOICE_WEBPRINT_HOST' => $qzHost,
+            'MPCUSTOMERINVOICE_WEBPRINT_PORT' => $qzPort,
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER' => $qzPrinterOrder,
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE' => $qzPrinterInvoice,
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY' => $qzPrinterDelivery,
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS' => $qzPrinterAddress,
+            'MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT' => $qzPrinterBrt,
         ];
+
+        foreach ($docs as $d) {
+            $pPrinter = Tools::getValue('MPCUSTOMERINVOICE_QZTRAY_PRINTER_' . $d, '');
+            $pOrient = Tools::getValue('MPCUSTOMERINVOICE_QZTRAY_ORIENT_' . $d, 'auto');
+            $pRot = (int) Tools::getValue('MPCUSTOMERINVOICE_QZTRAY_ROTATION_' . $d, 0);
+            $pRast = (int) Tools::getValue('MPCUSTOMERINVOICE_QZTRAY_RASTER_' . $d, 0);
+            $pPaper = Tools::getValue('MPCUSTOMERINVOICE_QZTRAY_PAPER_' . $d, $defaultsPaper[$d]);
+            $pW = (float) Tools::getValue('MPCUSTOMERINVOICE_QZTRAY_PAPER_W_' . $d, $defaultsW[$d]);
+            $pH = (float) Tools::getValue('MPCUSTOMERINVOICE_QZTRAY_PAPER_H_' . $d, $defaultsH[$d]);
+
+            $keys['MPCUSTOMERINVOICE_QZTRAY_PRINTER_' . $d] = $pPrinter;
+            $keys['MPCUSTOMERINVOICE_QZTRAY_ORIENT_' . $d] = $pOrient;
+            $keys['MPCUSTOMERINVOICE_QZTRAY_ROTATION_' . $d] = $pRot;
+            $keys['MPCUSTOMERINVOICE_QZTRAY_RASTER_' . $d] = $pRast;
+            $keys['MPCUSTOMERINVOICE_QZTRAY_PAPER_' . $d] = $pPaper;
+            $keys['MPCUSTOMERINVOICE_QZTRAY_PAPER_W_' . $d] = $pW;
+            $keys['MPCUSTOMERINVOICE_QZTRAY_PAPER_H_' . $d] = $pH;
+        }
 
         foreach ($keys as $key => $value) {
             if (is_array($value)) {
@@ -913,19 +994,42 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
             Configuration::updateValue($key, $value);
         }
 
-        $idEmployeeWebPrint = (int) Tools::getValue('id_employee_webprint', $this->context->employee->id);
-        if ($idEmployeeWebPrint <= 0) {
-            $idEmployeeWebPrint = (int) $this->context->employee->id;
+        $idEmployeeQzTray = (int) Tools::getValue('id_employee_qztray', Tools::getValue('id_employee_webprint', $this->context->employee->id));
+        if ($idEmployeeQzTray <= 0) {
+            $idEmployeeQzTray = (int) $this->context->employee->id;
         }
 
-        Configuration::updateValue('MPCUSTOMERINVOICE_WEBPRINT_ENABLE_EMP_' . $idEmployeeWebPrint, (int) Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_ENABLE', 0));
-        Configuration::updateValue('MPCUSTOMERINVOICE_WEBPRINT_HOST_EMP_' . $idEmployeeWebPrint, Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_HOST', '127.0.0.1'));
-        Configuration::updateValue('MPCUSTOMERINVOICE_WEBPRINT_PORT_EMP_' . $idEmployeeWebPrint, Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PORT', '8085'));
-        Configuration::updateValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER_EMP_' . $idEmployeeWebPrint, Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER', ''));
-        Configuration::updateValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE_EMP_' . $idEmployeeWebPrint, Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE', ''));
-        Configuration::updateValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY_EMP_' . $idEmployeeWebPrint, Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY', ''));
-        Configuration::updateValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS_EMP_' . $idEmployeeWebPrint, Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS', ''));
-        Configuration::updateValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT_EMP_' . $idEmployeeWebPrint, Tools::getValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT', ''));
+        Configuration::updateValue('MPCUSTOMERINVOICE_QZTRAY_ENABLE_EMP_' . $idEmployeeQzTray, $qzEnable);
+        Configuration::updateValue('MPCUSTOMERINVOICE_QZTRAY_HOST_EMP_' . $idEmployeeQzTray, $qzHost);
+        Configuration::updateValue('MPCUSTOMERINVOICE_QZTRAY_PORT_EMP_' . $idEmployeeQzTray, $qzPort);
+
+        foreach ($docs as $d) {
+            $pPrinter = Tools::getValue('MPCUSTOMERINVOICE_QZTRAY_PRINTER_' . $d, '');
+            $pOrient = Tools::getValue('MPCUSTOMERINVOICE_QZTRAY_ORIENT_' . $d, 'auto');
+            $pRot = (int) Tools::getValue('MPCUSTOMERINVOICE_QZTRAY_ROTATION_' . $d, 0);
+            $pRast = (int) Tools::getValue('MPCUSTOMERINVOICE_QZTRAY_RASTER_' . $d, 0);
+            $pPaper = Tools::getValue('MPCUSTOMERINVOICE_QZTRAY_PAPER_' . $d, $defaultsPaper[$d]);
+            $pW = (float) Tools::getValue('MPCUSTOMERINVOICE_QZTRAY_PAPER_W_' . $d, $defaultsW[$d]);
+            $pH = (float) Tools::getValue('MPCUSTOMERINVOICE_QZTRAY_PAPER_H_' . $d, $defaultsH[$d]);
+
+            Configuration::updateValue('MPCUSTOMERINVOICE_QZTRAY_PRINTER_' . $d . '_EMP_' . $idEmployeeQzTray, $pPrinter);
+            Configuration::updateValue('MPCUSTOMERINVOICE_QZTRAY_ORIENT_' . $d . '_EMP_' . $idEmployeeQzTray, $pOrient);
+            Configuration::updateValue('MPCUSTOMERINVOICE_QZTRAY_ROTATION_' . $d . '_EMP_' . $idEmployeeQzTray, $pRot);
+            Configuration::updateValue('MPCUSTOMERINVOICE_QZTRAY_RASTER_' . $d . '_EMP_' . $idEmployeeQzTray, $pRast);
+            Configuration::updateValue('MPCUSTOMERINVOICE_QZTRAY_PAPER_' . $d . '_EMP_' . $idEmployeeQzTray, $pPaper);
+            Configuration::updateValue('MPCUSTOMERINVOICE_QZTRAY_PAPER_W_' . $d . '_EMP_' . $idEmployeeQzTray, $pW);
+            Configuration::updateValue('MPCUSTOMERINVOICE_QZTRAY_PAPER_H_' . $d . '_EMP_' . $idEmployeeQzTray, $pH);
+        }
+
+        // Update legacy keys for compatibility
+        Configuration::updateValue('MPCUSTOMERINVOICE_WEBPRINT_ENABLE_EMP_' . $idEmployeeQzTray, $qzEnable);
+        Configuration::updateValue('MPCUSTOMERINVOICE_WEBPRINT_HOST_EMP_' . $idEmployeeQzTray, $qzHost);
+        Configuration::updateValue('MPCUSTOMERINVOICE_WEBPRINT_PORT_EMP_' . $idEmployeeQzTray, $qzPort);
+        Configuration::updateValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER_EMP_' . $idEmployeeQzTray, $qzPrinterOrder);
+        Configuration::updateValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE_EMP_' . $idEmployeeQzTray, $qzPrinterInvoice);
+        Configuration::updateValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY_EMP_' . $idEmployeeQzTray, $qzPrinterDelivery);
+        Configuration::updateValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS_EMP_' . $idEmployeeQzTray, $qzPrinterAddress);
+        Configuration::updateValue('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT_EMP_' . $idEmployeeQzTray, $qzPrinterBrt);
     }
 
     public function ajaxProcessSaveSetupConfiguration()
@@ -945,28 +1049,52 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
         }
     }
 
-    public function ajaxProcessGetEmployeeWebPrintConfig()
+    public function ajaxProcessGetEmployeeQzTrayConfig()
     {
-        $idEmployee = (int) Tools::getValue('id_employee_webprint', $this->context->employee->id);
+        $idEmployee = (int) Tools::getValue('id_employee_qztray', Tools::getValue('id_employee_webprint', $this->context->employee->id));
         if ($idEmployee <= 0) {
             $idEmployee = (int) $this->context->employee->id;
+        }
+
+        $defaultsPaper = ['order' => 'A4', 'invoice' => 'A4', 'delivery' => 'A4', 'address' => '100x50', 'brt' => '100x65'];
+        $defaultsW = ['order' => 210, 'invoice' => 210, 'delivery' => 210, 'address' => 100, 'brt' => 100];
+        $defaultsH = ['order' => 297, 'invoice' => 297, 'delivery' => 297, 'address' => 50, 'brt' => 65];
+
+        $printersConfig = [];
+        foreach (['order', 'invoice', 'delivery', 'address', 'brt'] as $doc) {
+            $d = strtoupper($doc);
+            $printersConfig[$doc] = [
+                'printer' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PRINTER_' . $d, $idEmployee, ''),
+                'orientation' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_ORIENT_' . $d, $idEmployee, 'auto'),
+                'rotation' => (int) self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_ROTATION_' . $d, $idEmployee, 0),
+                'rasterize' => (int) self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_RASTER_' . $d, $idEmployee, 0),
+                'paper' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PAPER_' . $d, $idEmployee, $defaultsPaper[$doc]),
+                'paper_w' => (float) self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PAPER_W_' . $d, $idEmployee, $defaultsW[$doc]),
+                'paper_h' => (float) self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PAPER_H_' . $d, $idEmployee, $defaultsH[$doc]),
+            ];
         }
 
         $this->response([
             'success' => true,
             'id_employee' => $idEmployee,
-            'enable' => (int) self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_ENABLE', $idEmployee, 0),
-            'host' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_HOST', $idEmployee, '127.0.0.1'),
-            'port' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PORT', $idEmployee, '8085'),
-            'printer_order' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER', $idEmployee, ''),
-            'printer_invoice' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE', $idEmployee, ''),
-            'printer_delivery' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY', $idEmployee, ''),
-            'printer_address' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS', $idEmployee, ''),
-            'printer_brt' => self::getEmployeeWebPrintConfig('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT', $idEmployee, ''),
+            'enable' => (int) self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_ENABLE', $idEmployee, 0),
+            'host' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_HOST', $idEmployee, '127.0.0.1'),
+            'port' => self::getEmployeeQzTrayConfig('MPCUSTOMERINVOICE_QZTRAY_PORT', $idEmployee, '8182'),
+            'printer_order' => $printersConfig['order']['printer'],
+            'printer_invoice' => $printersConfig['invoice']['printer'],
+            'printer_delivery' => $printersConfig['delivery']['printer'],
+            'printer_address' => $printersConfig['address']['printer'],
+            'printer_brt' => $printersConfig['brt']['printer'],
+            'printers_config' => $printersConfig,
         ]);
     }
 
-    public static function getEmployeeWebPrintConfig(string $key, int $idEmployee, $default = null)
+    public function ajaxProcessGetEmployeeWebPrintConfig()
+    {
+        $this->ajaxProcessGetEmployeeQzTrayConfig();
+    }
+
+    public static function getEmployeeQzTrayConfig(string $key, int $idEmployee, $default = null)
     {
         if ($idEmployee <= 0) {
             $idEmployee = (int) Context::getContext()->employee->id;
@@ -976,17 +1104,38 @@ class AdminMpCustomerInvoiceController extends ModuleAdminController
         $val = Configuration::get($empKey);
 
         if ($val === false || $val === null) {
-            if ($key === 'MPCUSTOMERINVOICE_WEBPRINT_ENABLE') {
+            // Fallback to legacy WebPrint key if QZTRAY key not set
+            $legacyKey = str_replace('QZTRAY', 'WEBPRINT', $key);
+            $legacyEmpKey = $legacyKey . '_EMP_' . $idEmployee;
+            $legacyVal = Configuration::get($legacyEmpKey);
+            if ($legacyVal !== false && $legacyVal !== null) {
+                return $legacyVal;
+            }
+
+            if ($key === 'MPCUSTOMERINVOICE_QZTRAY_ENABLE' || $key === 'MPCUSTOMERINVOICE_WEBPRINT_ENABLE') {
                 return $default !== null ? (int) $default : 0;
             }
+
             $globalVal = Configuration::get($key);
             if ($globalVal !== false && $globalVal !== null) {
                 return $globalVal;
             }
+
+            $globalLegacyVal = Configuration::get($legacyKey);
+            if ($globalLegacyVal !== false && $globalLegacyVal !== null) {
+                return $globalLegacyVal;
+            }
+
             return $default;
         }
 
         return $val;
+    }
+
+    public static function getEmployeeWebPrintConfig(string $key, int $idEmployee, $default = null)
+    {
+        $qzKey = str_replace('WEBPRINT', 'QZTRAY', $key);
+        return self::getEmployeeQzTrayConfig($qzKey, $idEmployee, $default);
     }
 
     private function getSetupConfig(string $key, $default = null)

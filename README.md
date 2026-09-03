@@ -4,6 +4,78 @@ Modulo per gestire i codici della fatturazione elettronica.
 
 ## Changelog
 
+### 1.6.9
+
+- **Pass-through Diretto del PDF Nativo BRT 100x65mm senza Ritaglio Alterato (`BrtPdfMerger.php`)**:
+  - **Eliminazione dello Shift di Ritaglio Errato**: Corretto l'algoritmo in `BrtPdfMerger.php` che interpretava erroneamente le dimensioni in punti (283.46 pt x 184.25 pt = 100x65 mm) spostando ed unendo l'etichetta fuori margine.
+  - **Invio Nativo Inalterato**: Il PDF dell'etichetta generato da BRT (100x65 mm Landscape) viene ora restituito inalterato da PHP a QZ Tray a coordinate `(0, 0)`, garantendo la stampa completa dell'etichetta senza tagli né scostamenti.
+
+### 1.6.8
+
+- **Inoltro Esplicito Orientamento `landscape` a QZ Tray (`MpPrintDialog.js`, `BrtPdfMerger.php`)**:
+  - **Forzatura `orientation: 'landscape'` in QZ Tray**: Aggiornati `executePrint()` ed `executeBatchPrint()` in `MpPrintDialog.js`. Quando la carta è 100x65mm (`paperW >= paperH`), la configurazione QZ Tray invia ora esplicitamente `orientation: 'landscape'`, evitando che il driver di stampa fallback su Portrait (A4) con rotazione arbitraria.
+  - **Preservazione PDF Originale 100x65mm**: Ripristinato in `BrtPdfMerger.php` il formato nativo 100x65mm orizzontale privo di rotazioni forzate, consentendo a QZ Tray di scalare e posizionare l'etichetta 1:1 al 100% della superficie del rotolo termico.
+
+### 1.6.7
+
+- **Rotazione a 90° e Centratura Perfetta Segnacollo BRT (`BrtPdfMerger.php`)**:
+  - **Rotazione Matrice TCPDF di 90°**: Rilevato che i segnacolli BRT generati da BRT REST API contengono il testo dell'etichetta disegnato verticalmente al centro di una pagina A4.
+  - In [`BrtPdfMerger.php`](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpbrtrestapishipments/src/Helpers/BrtPdfMerger.php), applicata la trasformazione di rotazione a 90° attorno al centro della pagina (`$pdf->Rotate(90, $targetCx, $targetCy)`) durante il ritaglio ed inserimento nel canvas nativo **100x65 mm Landscape**.
+  - **Risultato**: L'etichetta BRT viene convertita in un documento orizzontale nativo 100x65 mm perfettamente diritto, leggibile ed orientato correttamente da sinistra a destra senza margini A4.
+
+### 1.6.6
+
+- **Fix Blocco Pulsante Salva e Silenziamento Log jQuery Migrate (`configuration.html.twig`)**:
+  - **Fix Errore JS `Identifier 'selectEmp' has already been declared`**: Rimossa la doppia dichiarazione della variabile `const selectEmp` nello script della pagina di configurazione che bloccava il caricamento del gestore di evento `#btnSaveConfig`.
+  - **Silenziamento Notifiche jQuery Migrate**: Inserito `window.jQuery.migrateMute = true;` in testa allo script per eliminare i log di avviso e deprecazione di jQuery Migrate dalla console del browser.
+
+### 1.6.5
+
+- **Ritaglio Automatico Segnacollo BRT a Formato Nativo 100x65mm (`BrtPdfMerger.php`, `MpPrintDialog.js`)**:
+  - **Eliminazione Telaio A4 e Margini Bianchi**: In `BrtPdfMerger.php`, i PDF di segnacolli BRT ricevuti dall'API (generati su foglio A4 210x297 mm con etichetta al centro) vengono ritagliati ed inseriti in un documento nativo con formato fisso **100x65 mm Landscape**.
+  - **Risoluzione Bug Rotazione 90° e Riduzione Proporzioni**: Eliminato l'invio del canvas A4 a QZ Tray per la stampante termica. Il PDF inviato è ora nativamente di 100x65 mm, consentendo una stampa ad alto rapporto 1:1 sull'intera superficie dell'etichetta senza rotazioni o restringimenti.
+
+### 1.6.4
+
+- **Estensione Larghezza 100% per i Menu a Tendina e Campi Stampa (`configuration.html.twig`)**:
+  - **Espansione Fluida a Larghezza Piena**: Implementato il layout flexbox `shadcn-options-row` con colonne ad espansione automatica `shadcn-option-col` e regola `width: 100% !important; max-width: 100% !important;` per ciascun controllo form.
+  - **Risoluzione Troncatura Testo**: Eliminato qualsiasi vincolo di larghezza massima residuo del CSS di PrestaShop, consentendo a Formato Carta, Orientamento, Rotazione e Modalità PDF di occupare uniformemente l'intero spazio orizzontale della scheda senza troncare le opzioni.
+
+### 1.6.3
+
+- **Restyling Grafico Schede Stampante in Stile Shadcn Compatto (`configuration.html.twig`)**:
+  - **Design Shadcn UI Clean & Flat**: Sostituite le schede pesanti con un layout moderno in stile Shadcn UI con sfondo neutro fisso (`#f8fafc`), bordi sottili e definiti (`#e2e8f0`), senza gradienti.
+  - **Badge Icone in Colori Pastello Tenui**: Ogni tipo di stampante (Ordini, Fatture, Spedizione, Indirizzo, BRT) è identificato da un badge pastello dedicato (Blu tenue, Smeraldo tenue, Ambra tenue, Viola tenue, Rosa tenue).
+  - **Campi e Controlli Compatti**: Controlli form compatti di altezza 34px, etichette in grassetto elegante e padding ottimizzato per una perfetta leggibilità visiva.
+
+### 1.6.2
+
+- **Impostazioni Stampa Diretta QZ Tray Dedicate per Singola Stampante (`configuration.html.twig`, `AdminMpCustomerInvoice.php`, `MpPrintDialog.js`)**:
+  - **Configurazione Indipendente per Stampante**: Ciascuna delle 5 stampanti (Ordini, Fatture, Spedizione/Consegne, Indirizzo, Segnacollo BRT) dispone ora di controlli dedicati per Formato Carta, Misura Personalizzata, Orientamento, Rotazione Gradi e Modalità PDF (Vettoriale / Rasterize).
+  - **Formati Carta Standard e Personalizzati**: Inserita selezione con formati predefiniti (A4, A5, Letter, Legal, Etichetta BRT 100x65mm, Etichetta Indirizzo 100x100mm, 100x50mm, 100x80mm) ed opzione **Misura Personalizzata (mm)** per specificare larghezza e altezza su misura (es. 130x200 mm).
+  - **Salvataggio Multi-Operatore**: Tutti i parametri di ciascuna stampante vengono salvati e ricaricati in modo indipendente per ciascun operatore selezionato.
+
+### 1.6.1
+
+- **Risoluzione Bug Rotazione Stampa Etichette QZ Tray (`MpPrintDialog.js`, `AdminMpCustomerInvoice.php`, `configuration.html.twig`)**:
+  - **Auto-Allineamento Orientamento & Dimensioni Carta**: Per le etichette di indirizzo e segnacolli BRT, vengono trasmesse a QZ Tray le dimensioni esatte della pagina (`size: { width: labelW, height: labelH }, units: 'mm'`, `margins: 0`), prevenendo il fallback dei driver thermal a formati predefiniti A4/Letter.
+  - **Rilevamento Automatico Orientamento Landscape vs Portrait**: Rilevamento automatico dell'orientamento (`landscape` per `labelWidth >= labelHeight`), per prevenire la rotazione automatica di 90° operata dalla libreria PDFBox in QZ Tray.
+  - **Impostazioni Operatore Avanzate (Orientamento, Rotazione, Rasterizzazione)**: Aggiunte le opzioni configurabili Backoffice per operatore per forzare l'orientamento (`auto`, `landscape`, `portrait`), applicare una rotazione manuale (`0°`, `90°`, `180°`, `270°`) ed attivare la modalità di rasterizzazione PDF (`rasterize: true`).
+  - **Ottimizzazione Trasparenza (`ignoreTransparency: true`)**: Aggiunto l'allineamento raccomandato da QZ Tray per evitare artefatti di resa grafica su stampanti termiche.
+
+### 1.6.0
+
+- **Migrazione Motore di Stampa Diretta a QZ Tray v2.2.6 (`qz-tray.js`, `AdminMpCustomerInvoice.php`, `MpPrintDialog.js`)**:
+  - **Integrazione Libreria Ufficiale `qz-tray.js` v2.2**: Incluso il connettore JS ufficiale QZ Tray ([`qz-tray.js`](file:///home/massimiliano/docker/apache/ps_workwear/prestashop/modules/mpcustomerinvoice/views/assets/js/admin/qz-tray.js)) per la gestione standard dell'handshake WebSocket con il daemon locale (porte WSS `8181, 8282, 8383, 8484` e WS `8182, 8283, 8384, 8485`, fallback hosts `127.0.0.1`, `localhost`, `localhost.qz.io`).
+  - **Download Installer QZ Tray**: Aggiornata la scheda di configurazione backoffice con i link di download per i pacchetti di installazione:
+    - **Windows (.exe)**: `qz-tray-2.2.6-x86_64.exe`
+    - **Linux (.run)**: `qz-tray-2.2.6-x86_64.run`
+  - **Rilevamento Stampanti**: Aggiornato il pulsante **"Rileva Stampanti Collegate"** tramite `qz.printers.find()`.
+  - **Stampa Diretta e Massiva PDF Base64 (`MpPrintDialog.js`)**:
+    - Invio diretto dei PDF in formato Base64 (`type: 'pixel', format: 'pdf', flavor: 'base64'`) con configurazione per il numero di copie (`qz.configs.create(printer, { copies })`) direttamente a QZ Tray.
+  - **Configurazione Multi-Operatore (`id_employee`)**:
+    - Mantenuto il salvataggio personalizzato per ciascun operatore (`id_employee_qztray`).
+
 ### 1.5.127
 
 - **Fix Layout Intestazione Stampa Ordine (`PdfOrder.php`)**:

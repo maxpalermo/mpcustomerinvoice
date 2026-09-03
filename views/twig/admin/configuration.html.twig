@@ -1,3 +1,148 @@
+<style>
+.shadcn-printer-card {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 14px 16px !important;
+    margin-bottom: 16px !important;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.02);
+    transition: border-color 0.15s ease-in-out;
+}
+.shadcn-printer-card:hover {
+    border-color: #cbd5e1;
+}
+
+.shadcn-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.shadcn-card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f172a;
+    letter-spacing: -0.01em;
+}
+
+.shadcn-role-icon-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+.shadcn-role-icon-badge.role-order {
+    background-color: #eff6ff;
+    color: #2563eb;
+}
+.shadcn-role-icon-badge.role-invoice {
+    background-color: #ecfdf5;
+    color: #059669;
+}
+.shadcn-role-icon-badge.role-delivery {
+    background-color: #fffbeb;
+    color: #d97706;
+}
+.shadcn-role-icon-badge.role-address {
+    background-color: #faf5ff;
+    color: #7c3aed;
+}
+.shadcn-role-icon-badge.role-brt {
+    background-color: #fff1f2;
+    color: #e11d48;
+}
+
+.shadcn-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #64748b;
+    margin-bottom: 4px;
+}
+
+.shadcn-options-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px;
+    width: 100%;
+    margin: 0 !important;
+}
+
+.shadcn-option-col {
+    flex: 1 1 0px;
+    min-width: 130px;
+    box-sizing: border-box;
+}
+
+.shadcn-option-col.paper-format-col {
+    flex: 1.3 1 0px;
+    min-width: 160px;
+}
+
+.shadcn-printer-card select.shadcn-select,
+.shadcn-printer-card input.shadcn-input,
+.shadcn-printer-card select.form-control,
+.shadcn-printer-card input.form-control {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    height: 34px !important;
+    padding: 4px 10px !important;
+    font-size: 13px !important;
+    color: #0f172a !important;
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 6px !important;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02) !important;
+    transition: all 0.15s ease !important;
+    box-sizing: border-box !important;
+    display: block !important;
+}
+
+.shadcn-printer-card select.shadcn-select:focus,
+.shadcn-printer-card input.shadcn-input:focus,
+.shadcn-printer-card select.form-control:focus,
+.shadcn-printer-card input.form-control:focus {
+    border-color: #3b82f6 !important;
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12) !important;
+}
+
+.shadcn-custom-dim-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+}
+
+.shadcn-custom-dim-group input.shadcn-input {
+    flex: 1 1 0px !important;
+    min-width: 0 !important;
+}
+
+.shadcn-dim-sep {
+    font-weight: 600;
+    color: #94a3b8;
+    font-size: 13px;
+}
+
+.shadcn-dim-unit {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 500;
+}
+</style>
+
 <section class="bootstrap">
 	{% if message %}
 		<div class="alert alert-{{ message.type }}">
@@ -260,12 +405,12 @@
 							</div>
 						</fieldset>
 						<fieldset class="mb-4">
-							<legend class="legend">Stampa Diretta tramite WebPrint (micwallace/WebPrint)</legend>
+							<legend class="legend">Stampa Diretta tramite QZ Tray (v2.2.6)</legend>
 							<div class="form-group alert alert-info p-3 mb-4" style="background:#eef6ff;border:1px solid #b6d4fe;border-radius:6px;">
-								<label for="id_employee_webprint" class="font-weight-bold text-primary mb-2 d-block" style="font-weight:bold;font-size:14px;color:#1e40af;">
+								<label for="id_employee_qztray" class="font-weight-bold text-primary mb-2 d-block" style="font-weight:bold;font-size:14px;color:#1e40af;">
 									<i class="icon icon-user" style="margin-right:5px;"></i> Configurazione per l'operatore:
 								</label>
-								<select id="id_employee_webprint" name="id_employee_webprint" class="form-control" style="max-width:350px;font-weight:600;">
+								<select id="id_employee_qztray" name="id_employee_qztray" class="form-control" style="max-width:350px;font-weight:600;">
 									{% for emp in employeesList %}
 										<option value="{{ emp.id_employee }}" {% if emp.id_employee == selectedEmployeeId %} selected="selected" {% endif %}>
 											{{ emp.firstname }} {{ emp.lastname }} (#{{ emp.id_employee }})
@@ -273,66 +418,131 @@
 									{% endfor %}
 								</select>
 								<p class="help-block mb-0 mt-2" style="font-size:12px;color:#495057;">
-									Seleziona l'operatore di cui desideri personalizzare l'attivazione della stampa diretta, l'host/porta del relè locale ed le stampanti collegate.
+									Seleziona l'operatore di cui desideri personalizzare l'attivazione della stampa diretta, l'host/porta del daemon locale e le stampanti collegate.
 								</p>
 							</div>
 							<div class="form-group">
-								<label class="control-label col-lg-3">Stampa diretta tramite WebPrint</label>
+								<label class="control-label col-lg-3">Stampa diretta tramite QZ Tray</label>
 								<div class="col-lg-9">
 									<span class="switch prestashop-switch fixed-width-lg">
-										<input type="radio" name="MPCUSTOMERINVOICE_WEBPRINT_ENABLE" id="MPCUSTOMERINVOICE_WEBPRINT_ENABLE_on" value="1" {% if MPCUSTOMERINVOICE_WEBPRINT_ENABLE == 1 %} checked="checked" {% endif %}>
-										<label for="MPCUSTOMERINVOICE_WEBPRINT_ENABLE_on">Sì</label>
-										<input type="radio" name="MPCUSTOMERINVOICE_WEBPRINT_ENABLE" id="MPCUSTOMERINVOICE_WEBPRINT_ENABLE_off" value="0" {% if MPCUSTOMERINVOICE_WEBPRINT_ENABLE == 0 %} checked="checked" {% endif %}>
-										<label for="MPCUSTOMERINVOICE_WEBPRINT_ENABLE_off">No</label>
+										<input type="radio" name="MPCUSTOMERINVOICE_QZTRAY_ENABLE" id="MPCUSTOMERINVOICE_QZTRAY_ENABLE_on" value="1" {% if MPCUSTOMERINVOICE_QZTRAY_ENABLE == 1 %} checked="checked" {% endif %}>
+										<label for="MPCUSTOMERINVOICE_QZTRAY_ENABLE_on">Sì</label>
+										<input type="radio" name="MPCUSTOMERINVOICE_QZTRAY_ENABLE" id="MPCUSTOMERINVOICE_QZTRAY_ENABLE_off" value="0" {% if MPCUSTOMERINVOICE_QZTRAY_ENABLE == 0 %} checked="checked" {% endif %}>
+										<label for="MPCUSTOMERINVOICE_QZTRAY_ENABLE_off">No</label>
 										<a class="slide-button btn"></a>
 									</span>
-									<p class="help-block">Abilita l'invio diretto del flusso di stampa al servizio relè WebPrint senza aprire finestre o anteprime browser per l'operatore selezionato.</p>
+									<p class="help-block">Abilita l'invio diretto del flusso di stampa al daemon locale QZ Tray v2.2.6 senza aprire finestre o anteprime browser per l'operatore selezionato.</p>
 								</div>
 							</div>
 							<div class="row">
 								<div class="col-md-6">
 									<div class="form-group">
-										<label for="MPCUSTOMERINVOICE_WEBPRINT_HOST">Host Servizio WebPrint</label>
-										<input type="text" id="MPCUSTOMERINVOICE_WEBPRINT_HOST" name="MPCUSTOMERINVOICE_WEBPRINT_HOST" class="form-control" value="{{ MPCUSTOMERINVOICE_WEBPRINT_HOST|default('127.0.0.1') }}">
+										<label for="MPCUSTOMERINVOICE_QZTRAY_HOST">Host Servizio QZ Tray</label>
+										<input type="text" id="MPCUSTOMERINVOICE_QZTRAY_HOST" name="MPCUSTOMERINVOICE_QZTRAY_HOST" class="form-control" value="{{ MPCUSTOMERINVOICE_QZTRAY_HOST|default('127.0.0.1') }}">
 									</div>
 								</div>
 								<div class="col-md-6">
 									<div class="form-group">
-										<label for="MPCUSTOMERINVOICE_WEBPRINT_PORT">Porta Servizio WebPrint</label>
-										<input type="text" id="MPCUSTOMERINVOICE_WEBPRINT_PORT" name="MPCUSTOMERINVOICE_WEBPRINT_PORT" class="form-control" value="{{ MPCUSTOMERINVOICE_WEBPRINT_PORT|default('8080') }}">
+										<label for="MPCUSTOMERINVOICE_QZTRAY_PORT">Porta Servizio QZ Tray (Default WSS 8182)</label>
+										<input type="text" id="MPCUSTOMERINVOICE_QZTRAY_PORT" name="MPCUSTOMERINVOICE_QZTRAY_PORT" class="form-control" value="{{ MPCUSTOMERINVOICE_QZTRAY_PORT|default('8182') }}">
 									</div>
 								</div>
 							</div>
-							<div class="form-group mt-2 mb-3">
-								<a href="{{ webPrintDownloadUrl }}" class="btn btn-default" download="WebPrint.jar" style="margin-right:10px;">
-									<i class="icon icon-download"></i> Scarica Servizio WebPrint (.jar)
+							<div class="form-group mt-2 mb-3 d-flex flex-wrap gap-2" style="gap:10px;">
+								<a href="{{ qzTrayDownloadWinUrl }}" class="btn btn-default" download="qz-tray-2.2.6-x86_64.exe" style="margin-right:10px;">
+									<i class="icon icon-download"></i> Scarica QZ Tray per Windows (.exe)
 								</a>
-								<button type="button" id="btn-webprint-detect-printers" class="btn btn-info">
+								<a href="{{ qzTrayDownloadLinuxUrl }}" class="btn btn-default" download="qz-tray-2.2.6-x86_64.run" style="margin-right:10px;">
+									<i class="icon icon-download"></i> Scarica QZ Tray per Linux (.run)
+								</a>
+								<button type="button" id="btn-qztray-detect-printers" class="btn btn-info">
 									<i class="icon icon-refresh"></i> Rileva Stampanti Collegate
 								</button>
-								<span id="webprint-detect-status" class="ml-2 font-weight-bold" style="margin-left:10px;"></span>
+								<span id="qztray-detect-status" class="ml-2 font-weight-bold" style="margin-left:10px;align-self:center;"></span>
 							</div>
 
-							<div class="form-group">
-								<label for="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER">Stampante Ordine</label>
-								<input type="text" id="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER" name="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER" class="form-control webprint-printer-input" value="{{ MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER }}">
-							</div>
-							<div class="form-group">
-								<label for="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE">Stampante Fattura</label>
-								<input type="text" id="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE" name="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE" class="form-control webprint-printer-input" value="{{ MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE }}">
-							</div>
-							<div class="form-group">
-								<label for="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY">Stampante Spedizione / Consegna</label>
-								<input type="text" id="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY" name="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY" class="form-control webprint-printer-input" value="{{ MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY }}">
-							</div>
-							<div class="form-group">
-								<label for="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS">Stampante Indirizzo</label>
-								<input type="text" id="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS" name="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS" class="form-control webprint-printer-input" value="{{ MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS }}">
-							</div>
-							<div class="form-group">
-								<label for="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT">Stampante Segnacollo BRT</label>
-								<input type="text" id="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT" name="MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT" class="form-control webprint-printer-input" value="{{ MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT }}">
-							</div>
+							{% set printerRoles = [
+								{'id': 'order', 'title': 'Stampante Ordini', 'icon': 'icon-file-text', 'defaultPaper': 'A4'},
+								{'id': 'invoice', 'title': 'Stampante Fatture', 'icon': 'icon-book', 'defaultPaper': 'A4'},
+								{'id': 'delivery', 'title': 'Stampante Spedizione / Consegne', 'icon': 'icon-truck', 'defaultPaper': 'A4'},
+								{'id': 'address', 'title': 'Stampante Indirizzo', 'icon': 'icon-tag', 'defaultPaper': '100x50'},
+								{'id': 'brt', 'title': 'Stampante Segnacollo BRT', 'icon': 'icon-barcode', 'defaultPaper': '100x65'}
+							] %}
+
+							{% for role in printerRoles %}
+								{% set d = role.id|upper %}
+								<div class="shadcn-printer-card">
+									<div class="shadcn-card-header">
+										<span class="shadcn-role-icon-badge role-{{ role.id }}">
+											<i class="icon {{ role.icon }}"></i>
+										</span>
+										<span class="shadcn-card-title">{{ role.title }}</span>
+									</div>
+									<div class="form-group mb-2" style="margin-bottom: 10px;">
+										<label class="shadcn-label" for="MPCUSTOMERINVOICE_QZTRAY_PRINTER_{{ d }}">Nome Stampante Collegata</label>
+										<input type="text" id="MPCUSTOMERINVOICE_QZTRAY_PRINTER_{{ d }}" name="MPCUSTOMERINVOICE_QZTRAY_PRINTER_{{ d }}" class="form-control shadcn-input qztray-printer-input webprint-printer-input" value="{{ attribute(_context, 'MPCUSTOMERINVOICE_QZTRAY_PRINTER_' ~ d)|default('') }}" placeholder="Es. Zebra_GK420d, PDF...">
+									</div>
+									<div class="shadcn-options-row">
+										<div class="shadcn-option-col paper-format-col">
+											<div class="form-group mb-0">
+												<label class="shadcn-label" for="MPCUSTOMERINVOICE_QZTRAY_PAPER_{{ d }}">Formato Carta</label>
+												<select id="MPCUSTOMERINVOICE_QZTRAY_PAPER_{{ d }}" name="MPCUSTOMERINVOICE_QZTRAY_PAPER_{{ d }}" class="form-control shadcn-select qztray-paper-select" data-role="{{ role.id }}">
+													<option value="A4" {% if attribute(_context, 'MPCUSTOMERINVOICE_QZTRAY_PAPER_' ~ d) == 'A4' or (attribute(_context, 'MPCUSTOMERINVOICE_QZTRAY_PAPER_' ~ d) is empty and role.defaultPaper == 'A4') %} selected {% endif %}>A4 (210 x 297 mm)</option>
+													<option value="A5" {% if attribute(_context, 'MPCUSTOMERINVOICE_QZTRAY_PAPER_' ~ d) == 'A5' %} selected {% endif %}>A5 (148 x 210 mm)</option>
+													<option value="Letter" {% if attribute(_context, 'MPCUSTOMERINVOICE_QZTRAY_PAPER_' ~ d) == 'Letter' %} selected {% endif %}>Letter (216 x 279 mm)</option>
+													<option value="Legal" {% if attribute(_context, 'MPCUSTOMERINVOICE_QZTRAY_PAPER_' ~ d) == 'Legal' %} selected {% endif %}>Legal (216 x 356 mm)</option>
+													<option value="100x65" {% if attribute(_context, 'MPCUSTOMERINVOICE_QZTRAY_PAPER_' ~ d) == '100x65' or (attribute(_context, 'MPCUSTOMERINVOICE_QZTRAY_PAPER_' ~ d) is empty and role.defaultPaper == '100x65') %} selected {% endif %}>Etichetta BRT (100 x 65 mm)</option>
+													<option value="100x100" {% if attribute(_context, 'MPCUSTOMERINVOICE_QZTRAY_PAPER_' ~ d) == '100x100' %} selected {% endif %}>Etichetta Indirizzo (100 x 100 mm)</option>
+													<option value="100x50" {% if attribute(_context, 'MPCUSTOMERINVOICE_QZTRAY_PAPER_' ~ d) == '100x50' or (attribute(_context, 'MPCUSTOMERINVOICE_QZTRAY_PAPER_' ~ d) is empty and role.defaultPaper == '100x50') %} selected {% endif %}>Etichetta Indirizzo (100 x 50 mm)</option>
+													<option value="100x80" {% if attribute(_context, 'MPCUSTOMERINVOICE_QZTRAY_PAPER_' ~ d) == '100x80' %} selected {% endif %}>Etichetta Indirizzo (100 x 80 mm)</option>
+													<option value="custom" {% if attribute(_context, 'MPCUSTOMERINVOICE_QZTRAY_PAPER_' ~ d) == 'custom' %} selected {% endif %}>Misura Personalizzata (mm)</option>
+												</select>
+											</div>
+										</div>
+										<div class="shadcn-option-col qztray-custom-paper-container" id="custom-paper-container-{{ role.id }}" style="{% if attribute(_context, 'MPCUSTOMERINVOICE_QZTRAY_PAPER_' ~ d) != 'custom' %}display:none;{% endif %}">
+											<div class="form-group mb-0">
+												<label class="shadcn-label">Dimensioni (L x H)</label>
+												<div class="shadcn-custom-dim-group">
+													<input type="number" step="0.1" id="MPCUSTOMERINVOICE_QZTRAY_PAPER_W_{{ d }}" name="MPCUSTOMERINVOICE_QZTRAY_PAPER_W_{{ d }}" class="form-control shadcn-input" placeholder="W" value="{{ attribute(_context, 'MPCUSTOMERINVOICE_QZTRAY_PAPER_W_' ~ d)|default(100) }}">
+													<span class="shadcn-dim-sep">×</span>
+													<input type="number" step="0.1" id="MPCUSTOMERINVOICE_QZTRAY_PAPER_H_{{ d }}" name="MPCUSTOMERINVOICE_QZTRAY_PAPER_H_{{ d }}" class="form-control shadcn-input" placeholder="H" value="{{ attribute(_context, 'MPCUSTOMERINVOICE_QZTRAY_PAPER_H_' ~ d)|default(50) }}">
+													<span class="shadcn-dim-unit">mm</span>
+												</div>
+											</div>
+										</div>
+										<div class="shadcn-option-col">
+											<div class="form-group mb-0">
+												<label class="shadcn-label" for="MPCUSTOMERINVOICE_QZTRAY_ORIENT_{{ d }}">Orientamento</label>
+												<select id="MPCUSTOMERINVOICE_QZTRAY_ORIENT_{{ d }}" name="MPCUSTOMERINVOICE_QZTRAY_ORIENT_{{ d }}" class="form-control shadcn-select">
+													<option value="auto" {% if attribute(_context, 'MPCUSTOMERINVOICE_QZTRAY_ORIENT_' ~ d) == 'auto' or attribute(_context, 'MPCUSTOMERINVOICE_QZTRAY_ORIENT_' ~ d) is empty %} selected {% endif %}>Automatico</option>
+													<option value="landscape" {% if attribute(_context, 'MPCUSTOMERINVOICE_QZTRAY_ORIENT_' ~ d) == 'landscape' %} selected {% endif %}>Orizzontale</option>
+													<option value="portrait" {% if attribute(_context, 'MPCUSTOMERINVOICE_QZTRAY_ORIENT_' ~ d) == 'portrait' %} selected {% endif %}>Verticale</option>
+												</select>
+											</div>
+										</div>
+										<div class="shadcn-option-col">
+											<div class="form-group mb-0">
+												<label class="shadcn-label" for="MPCUSTOMERINVOICE_QZTRAY_ROTATION_{{ d }}">Rotazione</label>
+												<select id="MPCUSTOMERINVOICE_QZTRAY_ROTATION_{{ d }}" name="MPCUSTOMERINVOICE_QZTRAY_ROTATION_{{ d }}" class="form-control shadcn-select">
+													<option value="0" {% if attribute(_context, 'MPCUSTOMERINVOICE_QZTRAY_ROTATION_' ~ d) == 0 %} selected {% endif %}>0° (Standard)</option>
+													<option value="90" {% if attribute(_context, 'MPCUSTOMERINVOICE_QZTRAY_ROTATION_' ~ d) == 90 %} selected {% endif %}>90° Orario</option>
+													<option value="180" {% if attribute(_context, 'MPCUSTOMERINVOICE_QZTRAY_ROTATION_' ~ d) == 180 %} selected {% endif %}>180° Capovolto</option>
+													<option value="270" {% if attribute(_context, 'MPCUSTOMERINVOICE_QZTRAY_ROTATION_' ~ d) == 270 %} selected {% endif %}>270° Antiorario</option>
+												</select>
+											</div>
+										</div>
+										<div class="shadcn-option-col">
+											<div class="form-group mb-0">
+												<label class="shadcn-label" for="MPCUSTOMERINVOICE_QZTRAY_RASTER_{{ d }}">Modalità PDF</label>
+												<select id="MPCUSTOMERINVOICE_QZTRAY_RASTER_{{ d }}" name="MPCUSTOMERINVOICE_QZTRAY_RASTER_{{ d }}" class="form-control shadcn-select">
+													<option value="0" {% if attribute(_context, 'MPCUSTOMERINVOICE_QZTRAY_RASTER_' ~ d) == 0 %} selected {% endif %}>Vettoriale</option>
+													<option value="1" {% if attribute(_context, 'MPCUSTOMERINVOICE_QZTRAY_RASTER_' ~ d) == 1 %} selected {% endif %}>Rasterizza PDF</option>
+												</select>
+											</div>
+										</div>
+									</div>
+								</div>
+							{% endfor %}
 						</fieldset>
 					</div>
 				</div>
@@ -371,6 +581,9 @@
 </style>
 
 <script>
+	if (typeof window.jQuery !== 'undefined') {
+		window.jQuery.migrateMute = true;
+	}
 	document.getElementById('update-order-reference-lengths').addEventListener('click', async () => {
 const button = document.getElementById('update-order-reference-lengths');
 const result = document.getElementById('order-reference-lengths-result');
@@ -482,70 +695,101 @@ document.getElementById('savingResultClose').addEventListener('click', function 
 document.getElementById('savingOverlay').style.display = 'none';
 });
 
-// Rilevamento stampanti collegate via WebPrint JS
-document.getElementById('btn-webprint-detect-printers')?.addEventListener('click', function() {
-    const statusEl = document.getElementById('webprint-detect-status');
-    const host = document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_HOST').value || '127.0.0.1';
-    const port = document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_PORT').value || '8085';
+// Rilevamento stampanti collegate via QZ Tray JS
+const btnDetect = document.getElementById('btn-qztray-detect-printers') || document.getElementById('btn-webprint-detect-printers');
+btnDetect?.addEventListener('click', async function() {
+    const statusEl = document.getElementById('qztray-detect-status') || document.getElementById('webprint-detect-status');
+    const hostEl = document.getElementById('MPCUSTOMERINVOICE_QZTRAY_HOST') || document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_HOST');
+    const portEl = document.getElementById('MPCUSTOMERINVOICE_QZTRAY_PORT') || document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_PORT');
+    const host = hostEl ? hostEl.value : '127.0.0.1';
+    const port = portEl ? portEl.value : '8182';
 
     if (statusEl) {
         statusEl.style.color = '#17a2b8';
-        statusEl.textContent = 'Connessione a WebPrint su ' + host + ':' + port + ' in corso...';
+        statusEl.textContent = 'Connessione a QZ Tray in corso...';
     }
 
-    if (typeof WebPrint === 'undefined') {
+    if (typeof qz === 'undefined') {
         if (statusEl) {
             statusEl.style.color = '#dc3545';
-            statusEl.textContent = 'Libreria WebPrint JS non trovata nella pagina.';
+            statusEl.textContent = 'Libreria qz-tray.js non trovata nella pagina.';
         }
         return;
     }
 
-    window.webprintInstance = new WebPrint(false, {
-        relayHost: host,
-        relayPort: port,
-        listPrinterCallback: function(printers) {
-            if (!printers || !Array.isArray(printers) || printers.length === 0) {
-                if (statusEl) {
-                    statusEl.style.color = '#ffc107';
-                    statusEl.textContent = 'Nessuna stampante rilevata dal relè WebPrint.';
-                }
-                return;
+    try {
+        if (!qz.websocket.isActive()) {
+            const hostList = host ? [host, '127.0.0.1', 'localhost', 'localhost.qz.io'] : ['127.0.0.1', 'localhost', 'localhost.qz.io'];
+            const p = parseInt(port, 10);
+            const opts = {
+                host: hostList,
+                retries: 2,
+                delay: 0.5
+            };
+            if (p > 0) {
+                opts.port = {
+                    secure: [p, 8181, 8282, 8383, 8484],
+                    insecure: [p, 8182, 8283, 8384, 8485]
+                };
             }
-            if (statusEl) {
-                statusEl.style.color = '#28a745';
-                statusEl.textContent = '✓ Rilevate ' + printers.length + ' stampanti!';
-            }
-            const printerInputs = document.querySelectorAll('.webprint-printer-input');
-            printerInputs.forEach(input => {
-                const currentVal = input.value;
-                const select = document.createElement('select');
-                select.name = input.name;
-                select.id = input.id;
-                select.className = 'form-control webprint-printer-input';
-
-                let html = '<option value="">-- Seleziona Stampante --</option>';
-                printers.forEach(p => {
-                    const sel = (p === currentVal) ? ' selected="selected"' : '';
-                    html += '<option value="' + p + '"' + sel + '>' + p + '</option>';
-                });
-                select.innerHTML = html;
-                input.parentNode.replaceChild(select, input);
-            });
-        },
-        errorCallback: function(err) {
-            if (statusEl) {
-                statusEl.style.color = '#dc3545';
-                statusEl.textContent = (typeof err === 'string' && err) ? err : ('Impossibile connettersi a WebPrint su http://' + host + ':' + port);
-            }
+            await qz.websocket.connect(opts);
         }
-    });
 
-    window.webprintInstance.requestPrinters();
+        const printers = await qz.printers.find();
+
+        if (!printers || !Array.isArray(printers) || printers.length === 0) {
+            if (statusEl) {
+                statusEl.style.color = '#ffc107';
+                statusEl.textContent = 'Nessuna stampante rilevata da QZ Tray.';
+            }
+            return;
+        }
+
+        if (statusEl) {
+            statusEl.style.color = '#28a745';
+            statusEl.textContent = '✓ Rilevate ' + printers.length + ' stampanti!';
+        }
+
+        const printerInputs = document.querySelectorAll('.qztray-printer-input, .webprint-printer-input');
+        printerInputs.forEach(input => {
+            const currentVal = input.value;
+            const select = document.createElement('select');
+            select.name = input.name;
+            select.id = input.id;
+            select.className = input.className;
+
+            let html = '<option value="">-- Seleziona Stampante --</option>';
+            printers.forEach(p => {
+                const sel = (p === currentVal) ? ' selected="selected"' : '';
+                html += '<option value="' + p + '"' + sel + '>' + p + '</option>';
+            });
+            select.innerHTML = html;
+            if (input.parentNode) {
+                input.parentNode.replaceChild(select, input);
+            }
+        });
+    } catch(err) {
+        if (statusEl) {
+            statusEl.style.color = '#dc3545';
+            statusEl.textContent = (err && err.message) ? err.message : 'Impossibile connettersi a QZ Tray. Verificare che il servizio sia avviato.';
+        }
+    }
 });
 
-// Cambio operatore: ricarica configurazione WebPrint dell'operatore selezionato
-document.getElementById('id_employee_webprint')?.addEventListener('change', async function() {
+// Gestione visibilità campi dimensioni personalizzate carta
+document.querySelectorAll('.qztray-paper-select').forEach(select => {
+    select.addEventListener('change', function() {
+        const role = this.dataset.role;
+        const customContainer = document.getElementById('custom-paper-container-' + role);
+        if (customContainer) {
+            customContainer.style.display = (this.value === 'custom') ? 'block' : 'none';
+        }
+    });
+});
+
+// Cambio operatore: ricarica configurazione QZ Tray dell'operatore selezionato
+const selectEmp = document.getElementById('id_employee_qztray') || document.getElementById('id_employee_webprint');
+selectEmp?.addEventListener('change', async function() {
     const selectedEmpId = this.value;
     if (!selectedEmpId) return;
 
@@ -557,29 +801,52 @@ document.getElementById('id_employee_webprint')?.addEventListener('change', asyn
             },
             body: new URLSearchParams({
                 ajax: '1',
-                action: 'getEmployeeWebPrintConfig',
+                action: 'getEmployeeQzTrayConfig',
+                id_employee_qztray: selectedEmpId,
                 id_employee_webprint: selectedEmpId
             })
         });
         const data = await response.json();
         if (data && data.success) {
-            const enableOn = document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_ENABLE_on');
-            const enableOff = document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_ENABLE_off');
+            const enableOn = document.getElementById('MPCUSTOMERINVOICE_QZTRAY_ENABLE_on') || document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_ENABLE_on');
+            const enableOff = document.getElementById('MPCUSTOMERINVOICE_QZTRAY_ENABLE_off') || document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_ENABLE_off');
             if (data.enable == 1) {
                 if (enableOn) enableOn.checked = true;
             } else {
                 if (enableOff) enableOff.checked = true;
             }
 
-            document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_HOST').value = data.host || '127.0.0.1';
-            document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_PORT').value = data.port || '8085';
-            document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ORDER').value = data.printer_order || '';
-            document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_INVOICE').value = data.printer_invoice || '';
-            document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_DELIVERY').value = data.printer_delivery || '';
-            document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_ADDRESS').value = data.printer_address || '';
-            document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_PRINTER_BRT').value = data.printer_brt || '';
+            const hostInput = document.getElementById('MPCUSTOMERINVOICE_QZTRAY_HOST') || document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_HOST');
+            const portInput = document.getElementById('MPCUSTOMERINVOICE_QZTRAY_PORT') || document.getElementById('MPCUSTOMERINVOICE_WEBPRINT_PORT');
+            if (hostInput) hostInput.value = data.host || '127.0.0.1';
+            if (portInput) portInput.value = data.port || '8182';
 
-            const statusEl = document.getElementById('webprint-detect-status');
+            const roles = ['order', 'invoice', 'delivery', 'address', 'brt'];
+            roles.forEach(role => {
+                const upper = role.toUpperCase();
+                const roleConfig = (data.printers_config && data.printers_config[role]) ? data.printers_config[role] : {};
+
+                const pInput = document.getElementById('MPCUSTOMERINVOICE_QZTRAY_PRINTER_' + upper);
+                const paperSelect = document.getElementById('MPCUSTOMERINVOICE_QZTRAY_PAPER_' + upper);
+                const paperWInput = document.getElementById('MPCUSTOMERINVOICE_QZTRAY_PAPER_W_' + upper);
+                const paperHInput = document.getElementById('MPCUSTOMERINVOICE_QZTRAY_PAPER_H_' + upper);
+                const orientSelect = document.getElementById('MPCUSTOMERINVOICE_QZTRAY_ORIENT_' + upper);
+                const rotSelect = document.getElementById('MPCUSTOMERINVOICE_QZTRAY_ROTATION_' + upper);
+                const rastSelect = document.getElementById('MPCUSTOMERINVOICE_QZTRAY_RASTER_' + upper);
+
+                if (pInput) pInput.value = roleConfig.printer || data['printer_' + role] || '';
+                if (paperSelect) {
+                    paperSelect.value = roleConfig.paper || (role === 'address' ? '100x50' : (role === 'brt' ? '100x65' : 'A4'));
+                    paperSelect.dispatchEvent(new Event('change'));
+                }
+                if (paperWInput) paperWInput.value = roleConfig.paper_w || 100;
+                if (paperHInput) paperHInput.value = roleConfig.paper_h || 50;
+                if (orientSelect) orientSelect.value = roleConfig.orientation || 'auto';
+                if (rotSelect) rotSelect.value = (typeof roleConfig.rotation !== 'undefined') ? roleConfig.rotation : 0;
+                if (rastSelect) rastSelect.value = (typeof roleConfig.rasterize !== 'undefined') ? roleConfig.rasterize : 0;
+            });
+
+            const statusEl = document.getElementById('qztray-detect-status') || document.getElementById('webprint-detect-status');
             if (statusEl) {
                 statusEl.textContent = '';
             }

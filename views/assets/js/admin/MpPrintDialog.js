@@ -735,10 +735,11 @@ class MpPrintDialog {
             const res = await response.json();
 
             if (res && res.success) {
-                const targetPrinter = (window.mpWebPrintPrinters && window.mpWebPrintPrinters[documentType]) || "";
-                const isWebPrintActive = !!(window.mpWebPrintEnable && typeof WebPrint !== "undefined");
+                const printers = window.mpQzTrayPrinters || window.mpWebPrintPrinters || {};
+                const targetPrinter = printers[documentType] || "";
+                const isQzTrayActive = !!((window.mpQzTrayEnable || window.mpWebPrintEnable) && typeof qz !== "undefined");
 
-                if (isWebPrintActive) {
+                if (isQzTrayActive) {
                     if (!targetPrinter) {
                         if (printWindow && !printWindow.closed) {
                             try { printWindow.close(); } catch(e) {}
@@ -751,7 +752,7 @@ class MpPrintDialog {
                             brt: 'Segnacollo BRT'
                         };
                         const docLabel = docLabels[documentType] || documentType;
-                        const msg = `Impossibile completare l'operazione: la stampa diretta WebPrint è attiva per l'operatore corrente, ma non è stata configurata la stampante per "${docLabel}". Configura la stampante nelle impostazioni del modulo.`;
+                        const msg = `Impossibile completare l'operazione: la stampa diretta QZ Tray è attiva per l'operatore corrente, ma non è stata configurata la stampante per "${docLabel}". Configura la stampante nelle impostazioni del modulo.`;
                         if (typeof showErrorMessage === "function") {
                             showErrorMessage(msg);
                         } else {
@@ -764,20 +765,111 @@ class MpPrintDialog {
                         if (printWindow && !printWindow.closed) {
                             try { printWindow.close(); } catch(e) {}
                         }
-                        const host = window.mpWebPrintHost || "127.0.0.1";
-                        const port = window.mpWebPrintPort || "8085";
-                        const wp = new WebPrint(true, {
-                            relayHost: host,
-                            relayPort: port
-                        });
-                        for (let c = 0; c < copies; c++) {
-                            wp.printRaw(res.pdf, targetPrinter);
-                        }
-                        const msg = `Stampa inviata direttamente a "${targetPrinter}" tramite WebPrint (${copies} copia/e).`;
-                        if (typeof showSuccessMessage === "function") {
-                            showSuccessMessage(msg);
-                        } else {
-                            alert(msg);
+                        const host = window.mpQzTrayHost || window.mpWebPrintHost || "127.0.0.1";
+                        const port = window.mpQzTrayPort || window.mpWebPrintPort || "8182";
+                        try {
+                            if (!qz.websocket.isActive()) {
+                                const hostList = host ? [host, "127.0.0.1", "localhost", "localhost.qz.io"] : ["127.0.0.1", "localhost", "localhost.qz.io"];
+                                const p = parseInt(port, 10);
+                                const opts = {
+                                    host: hostList,
+                                    retries: 2,
+                                    delay: 0.5
+                                };
+                                if (p > 0) {
+                                    opts.port = {
+                                        secure: [p, 8181, 8282, 8383, 8484],
+                                        insecure: [p, 8182, 8283, 8384, 8485]
+                                    };
+                                }
+                                await qz.websocket.connect(opts);
+                            }
+
+                            const docConfig = (window.mpQzTrayPrinterConfigs && window.mpQzTrayPrinterConfigs[documentType])
+                                ? window.mpQzTrayPrinterConfigs[documentType]
+                                : {};
+
+                            const targetPrinterRole = targetPrinter;
+                            const isRasterize = Boolean(docConfig.rasterize);
+
+                            const configOpts = {
+                                copies: copies || 1,
+                                scaleContent: true,
+                                rasterize: isRasterize
+                            };
+
+                            const paperType = docConfig.paper || (documentType === 'address' ? '100x50' : (documentType === 'brt' ? '100x65' : 'A4'));
+                            let paperW = parseFloat(docConfig.paper_w) || 0;
+                            let paperH = parseFloat(docConfig.paper_h) || 0;
+
+                            const standardSizes = {
+                                'A4': { w: 210, h: 297 },
+                                'A5': { w: 148, h: 210 },
+                                'Letter': { w: 215.9, h: 279.4 },
+                                'Legal': { w: 215.9, h: 355.6 },
+                                '100x65': { w: 100, h: 65 },
+                                '100x100': { w: 100, h: 100 },
+                                '100x50': { w: 100, h: 50 },
+                                '100x80': { w: 100, h: 80 }
+                            };
+
+                            if (standardSizes[paperType]) {
+                                paperW = standardSizes[paperType].w;
+                                paperH = standardSizes[paperType].h;
+                            } else if (paperType !== 'custom') {
+                                if (documentType === 'address') {
+                                    paperW = parseFloat(window.mpLabelWidth) || 100;
+                                    paperH = parseFloat(window.mpLabelHeight) || 50;
+                                } else if (documentType === 'brt') {
+                                    paperW = 100; paperH = 65;
+                                }
+                            }
+
+                            if (paperW > 0 && paperH > 0) {
+                                configOpts.size = { width: paperW, height: paperH };
+                                configOpts.units = 'mm';
+                                configOpts.margins = 0;
+                            }
+
+                            const userOrientation = docConfig.orientation || window.mpQzTrayOrientation || 'auto';
+                            if (userOrientation === 'landscape') {
+                                configOpts.orientation = 'landscape';
+                            } else if (userOrientation === 'portrait') {
+                                configOpts.orientation = 'portrait';
+                            } else if (paperW > 0 && paperH > 0) {
+                                configOpts.orientation = (paperW >= paperH) ? 'landscape' : 'portrait';
+                            }
+
+                            const rotation = typeof docConfig.rotation !== 'undefined' ? parseInt(docConfig.rotation, 10) : (parseInt(window.mpQzTrayRotation, 10) || 0);
+                            if ([0, 90, 180, 270].includes(rotation)) {
+                                configOpts.rotation = rotation;
+                            }
+
+                            const config = qz.configs.create(targetPrinterRole, configOpts);
+                            const printData = [{
+                                type: 'pixel',
+                                format: 'pdf',
+                                flavor: 'base64',
+                                data: res.pdf,
+                                options: {
+                                    ignoreTransparency: true
+                                }
+                            }];
+                            await qz.print(config, printData);
+
+                            const msg = `Stampa inviata direttamente a "${targetPrinter}" tramite QZ Tray (${copies} copia/e).`;
+                            if (typeof showSuccessMessage === "function") {
+                                showSuccessMessage(msg);
+                            } else {
+                                alert(msg);
+                            }
+                        } catch(err) {
+                            const errMsg = `Errore di stampa QZ Tray: ${err.message || err}`;
+                            if (typeof showErrorMessage === "function") {
+                                showErrorMessage(errMsg);
+                            } else {
+                                alert(errMsg);
+                            }
                         }
                         return;
                     }
@@ -1004,10 +1096,11 @@ class MpPrintDialog {
             const res = await response.json();
 
             if (res && res.success) {
-                const targetPrinter = (window.mpWebPrintPrinters && window.mpWebPrintPrinters[documentType]) || "";
-                const isWebPrintActive = !!(window.mpWebPrintEnable && typeof WebPrint !== "undefined");
+                const printers = window.mpQzTrayPrinters || window.mpWebPrintPrinters || {};
+                const targetPrinter = printers[documentType] || "";
+                const isQzTrayActive = !!((window.mpQzTrayEnable || window.mpWebPrintEnable) && typeof qz !== "undefined");
 
-                if (isWebPrintActive) {
+                if (isQzTrayActive) {
                     if (!targetPrinter) {
                         if (printWindow && !printWindow.closed) {
                             try { printWindow.close(); } catch(e) {}
@@ -1020,7 +1113,7 @@ class MpPrintDialog {
                             brt: 'Segnacollo BRT'
                         };
                         const docLabel = docLabels[documentType] || documentType;
-                        const msg = `Impossibile completare l'operazione: la stampa diretta WebPrint è attiva per l'operatore corrente, ma non è stata configurata la stampante per "${docLabel}". Configura la stampante nelle impostazioni del modulo.`;
+                        const msg = `Impossibile completare l'operazione: la stampa diretta QZ Tray è attiva per l'operatore corrente, ma non è stata configurata la stampante per "${docLabel}". Configura la stampante nelle impostazioni del modulo.`;
                         if (typeof showErrorMessage === "function") {
                             showErrorMessage(msg);
                         } else {
@@ -1033,19 +1126,111 @@ class MpPrintDialog {
                         if (printWindow && !printWindow.closed) {
                             try { printWindow.close(); } catch(e) {}
                         }
-                        const host = window.mpWebPrintHost || "127.0.0.1";
-                        const port = window.mpWebPrintPort || "8085";
-                        const wp = new WebPrint(true, {
-                            relayHost: host,
-                            relayPort: port
-                        });
-                        wp.printRaw(res.pdf, targetPrinter);
+                        const host = window.mpQzTrayHost || window.mpWebPrintHost || "127.0.0.1";
+                        const port = window.mpQzTrayPort || window.mpWebPrintPort || "8182";
+                        try {
+                            if (!qz.websocket.isActive()) {
+                                const hostList = host ? [host, "127.0.0.1", "localhost", "localhost.qz.io"] : ["127.0.0.1", "localhost", "localhost.qz.io"];
+                                const p = parseInt(port, 10);
+                                const opts = {
+                                    host: hostList,
+                                    retries: 2,
+                                    delay: 0.5
+                                };
+                                if (p > 0) {
+                                    opts.port = {
+                                        secure: [p, 8181, 8282, 8383, 8484],
+                                        insecure: [p, 8182, 8283, 8384, 8485]
+                                    };
+                                }
+                                await qz.websocket.connect(opts);
+                            }
 
-                        const msg = `Stampa massiva (${orderIds.length} ordini) inviata direttamente a "${targetPrinter}" tramite WebPrint.`;
-                        if (typeof showSuccessMessage === "function") {
-                            showSuccessMessage(msg);
-                        } else {
-                            alert(msg);
+                            const docConfig = (window.mpQzTrayPrinterConfigs && window.mpQzTrayPrinterConfigs[documentType])
+                                ? window.mpQzTrayPrinterConfigs[documentType]
+                                : {};
+
+                            const targetPrinterRole = targetPrinter;
+                            const isRasterize = Boolean(docConfig.rasterize);
+
+                            const configOpts = {
+                                copies: 1,
+                                scaleContent: true,
+                                rasterize: isRasterize
+                            };
+
+                            const paperType = docConfig.paper || (documentType === 'address' ? '100x50' : (documentType === 'brt' ? '100x65' : 'A4'));
+                            let paperW = parseFloat(docConfig.paper_w) || 0;
+                            let paperH = parseFloat(docConfig.paper_h) || 0;
+
+                            const standardSizes = {
+                                'A4': { w: 210, h: 297 },
+                                'A5': { w: 148, h: 210 },
+                                'Letter': { w: 215.9, h: 279.4 },
+                                'Legal': { w: 215.9, h: 355.6 },
+                                '100x65': { w: 100, h: 65 },
+                                '100x100': { w: 100, h: 100 },
+                                '100x50': { w: 100, h: 50 },
+                                '100x80': { w: 100, h: 80 }
+                            };
+
+                            if (standardSizes[paperType]) {
+                                paperW = standardSizes[paperType].w;
+                                paperH = standardSizes[paperType].h;
+                            } else if (paperType !== 'custom') {
+                                if (documentType === 'address') {
+                                    paperW = parseFloat(window.mpLabelWidth) || 100;
+                                    paperH = parseFloat(window.mpLabelHeight) || 50;
+                                } else if (documentType === 'brt') {
+                                    paperW = 100; paperH = 65;
+                                }
+                            }
+
+                            if (paperW > 0 && paperH > 0) {
+                                configOpts.size = { width: paperW, height: paperH };
+                                configOpts.units = 'mm';
+                                configOpts.margins = 0;
+                            }
+
+                            const userOrientation = docConfig.orientation || window.mpQzTrayOrientation || 'auto';
+                            if (userOrientation === 'landscape') {
+                                configOpts.orientation = 'landscape';
+                            } else if (userOrientation === 'portrait') {
+                                configOpts.orientation = 'portrait';
+                            } else if (paperW > 0 && paperH > 0) {
+                                configOpts.orientation = (paperW >= paperH) ? 'landscape' : 'portrait';
+                            }
+
+                            const rotation = typeof docConfig.rotation !== 'undefined' ? parseInt(docConfig.rotation, 10) : (parseInt(window.mpQzTrayRotation, 10) || 0);
+                            if ([0, 90, 180, 270].includes(rotation)) {
+                                configOpts.rotation = rotation;
+                            }
+
+                            const config = qz.configs.create(targetPrinterRole, configOpts);
+                            const printData = [{
+                                type: 'pixel',
+                                format: 'pdf',
+                                flavor: 'base64',
+                                data: res.pdf,
+                                options: {
+                                    ignoreTransparency: true
+                                }
+                            }];
+                            await qz.print(config, printData);
+
+                            const msg = `Stampa massiva (${orderIds.length} ordini) inviata direttamente a "${targetPrinter}" tramite QZ Tray.`;
+                            if (typeof showSuccessMessage === "function") {
+                                showSuccessMessage(msg);
+                            } else {
+                                alert(msg);
+                            }
+                        } catch(err) {
+                            const errMsg = `Errore di stampa massiva QZ Tray: ${err.message || err}`;
+                            if (typeof showErrorMessage === "function") {
+                                showErrorMessage(errMsg);
+                            } else {
+                                alert(errMsg);
+                            }
                         }
                         return;
                     }
